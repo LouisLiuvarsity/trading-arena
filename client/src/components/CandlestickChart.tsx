@@ -2,6 +2,7 @@
 // Candlestick Chart — lightweight-charts v5 integration
 // Design: Dark background, Binance green/red candles, volume bars
 // No technical indicators — intentionally bare (per blueprint)
+// Supports TP/SL/Entry price lines when position is open
 // ============================================================
 
 import { useEffect, useRef } from 'react';
@@ -13,13 +14,14 @@ import {
   HistogramSeries,
 } from 'lightweight-charts';
 import type { IChartApi, ISeriesApi, CandlestickData, HistogramData, Time } from 'lightweight-charts';
-import type { KlineData, TimeframeKey } from '@/lib/types';
+import type { KlineData, TimeframeKey, Position } from '@/lib/types';
 
 interface Props {
   klines: KlineData[];
   loading: boolean;
   timeframe: TimeframeKey;
   onTimeframeChange: (tf: TimeframeKey) => void;
+  position?: Position | null;
 }
 
 const TIMEFRAMES: { key: TimeframeKey; label: string }[] = [
@@ -30,7 +32,7 @@ const TIMEFRAMES: { key: TimeframeKey; label: string }[] = [
   { key: '4h', label: '4H' },
 ];
 
-export default function CandlestickChart({ klines, loading, timeframe, onTimeframeChange }: Props) {
+export default function CandlestickChart({ klines, loading, timeframe, onTimeframeChange, position }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
@@ -132,6 +134,60 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
     volumeSeriesRef.current.setData(volumeData);
   }, [klines]);
 
+  // Update price lines for position (entry, TP, SL)
+  useEffect(() => {
+    if (!candleSeriesRef.current) return;
+    const series = candleSeriesRef.current;
+
+    // Remove all existing price lines first
+    const existingLines = series.priceLines();
+    existingLines.forEach((line: any) => {
+      series.removePriceLine(line);
+    });
+
+    if (!position) return;
+
+    // Entry price line — white dashed
+    series.createPriceLine({
+      price: position.entryPrice,
+      color: '#D1D4DC',
+      lineWidth: 1,
+      lineStyle: 2, // Dashed
+      axisLabelVisible: true,
+      title: `Entry ${position.direction === 'long' ? '▲' : '▼'} ${position.entryPrice.toFixed(5)}`,
+      axisLabelColor: '#D1D4DC',
+      axisLabelTextColor: '#0B0E11',
+    });
+
+    // Take Profit line — green dashed
+    if (position.takeProfit) {
+      series.createPriceLine({
+        price: position.takeProfit,
+        color: '#0ECB81',
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: `TP ${position.takeProfit.toFixed(5)}`,
+        axisLabelColor: '#0ECB81',
+        axisLabelTextColor: '#0B0E11',
+      });
+    }
+
+    // Stop Loss line — red dashed
+    if (position.stopLoss) {
+      series.createPriceLine({
+        price: position.stopLoss,
+        color: '#F6465D',
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: `SL ${position.stopLoss.toFixed(5)}`,
+        axisLabelColor: '#F6465D',
+        axisLabelTextColor: '#0B0E11',
+      });
+    }
+  }, [position?.entryPrice, position?.takeProfit, position?.stopLoss, position?.direction]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Timeframe selector */}
@@ -159,6 +215,41 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#0B0E11]/80 z-10">
             <div className="text-[#848E9C] text-sm">Loading chart data...</div>
+          </div>
+        )}
+
+        {/* Position indicator overlay */}
+        {position && (
+          <div className="absolute top-2 left-3 z-10 flex items-center gap-2">
+            <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-mono ${
+              position.direction === 'long'
+                ? 'bg-[#0ECB81]/15 text-[#0ECB81] border border-[#0ECB81]/20'
+                : 'bg-[#F6465D]/15 text-[#F6465D] border border-[#F6465D]/20'
+            }`}>
+              <span>{position.direction === 'long' ? '▲ LONG' : '▼ SHORT'}</span>
+              <span className="text-[#848E9C]">|</span>
+              <span>{position.size.toFixed(0)}U</span>
+              <span className="text-[#848E9C]">@</span>
+              <span>{position.entryPrice.toFixed(5)}</span>
+            </div>
+            <div className={`px-2 py-1 rounded text-[10px] font-mono font-bold ${
+              position.unrealizedPnl >= 0
+                ? 'bg-[#0ECB81]/10 text-[#0ECB81]'
+                : 'bg-[#F6465D]/10 text-[#F6465D]'
+            }`}>
+              {position.unrealizedPnl >= 0 ? '+' : ''}{position.unrealizedPnl.toFixed(2)}U
+              ({position.unrealizedPnlPct >= 0 ? '+' : ''}{position.unrealizedPnlPct.toFixed(2)}%)
+            </div>
+            {position.takeProfit && (
+              <div className="px-1.5 py-1 rounded text-[9px] font-mono bg-[#0ECB81]/10 text-[#0ECB81] border border-[#0ECB81]/15">
+                TP {position.takeProfit.toFixed(5)}
+              </div>
+            )}
+            {position.stopLoss && (
+              <div className="px-1.5 py-1 rounded text-[9px] font-mono bg-[#F6465D]/10 text-[#F6465D] border border-[#F6465D]/15">
+                SL {position.stopLoss.toFixed(5)}
+              </div>
+            )}
           </div>
         )}
       </div>

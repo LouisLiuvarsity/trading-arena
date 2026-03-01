@@ -2,49 +2,31 @@
 // Rules Introduction Page — Competition mechanics overview
 // Design: Obsidian Exchange — Dark, structured, informative
 // Shows before entering the trading interface
+// Updated: Consolidated settlement, trading report, no-leverage stages
 // ============================================================
 
 import { useState } from 'react';
 import {
   Trophy, Clock, TrendingUp, Shield, Zap, ChevronRight,
-  ArrowUpRight, ArrowDownRight, Target, AlertTriangle, Star,
-  BarChart3, Users, Timer, Wallet, Award
+  Target, AlertTriangle, Star,
+  BarChart3, Users, Timer, Wallet, Award, FileText, SkipForward
 } from 'lucide-react';
 
 interface RulesPageProps {
   username: string;
   onEnterArena: () => void;
+  onSkipRules?: () => void;
 }
 
-export default function RulesPage({ username, onEnterArena }: RulesPageProps) {
+export default function RulesPage({ username, onEnterArena, onSkipRules }: RulesPageProps) {
   const [currentSection, setCurrentSection] = useState(0);
   const [isReady, setIsReady] = useState(false);
 
   const sections = [
-    {
-      id: 'overview',
-      title: '比赛概览',
-      icon: Trophy,
-      color: '#F0B90B',
-    },
-    {
-      id: 'trading',
-      title: '交易规则',
-      icon: BarChart3,
-      color: '#0ECB81',
-    },
-    {
-      id: 'scoring',
-      title: '积分与分润',
-      icon: Wallet,
-      color: '#F0B90B',
-    },
-    {
-      id: 'promotion',
-      title: '晋级体系',
-      icon: Award,
-      color: '#3B82F6',
-    },
+    { id: 'overview', title: '比赛概览', icon: Trophy, color: '#F0B90B' },
+    { id: 'trading', title: '交易规则', icon: BarChart3, color: '#0ECB81' },
+    { id: 'scoring', title: '积分与分润', icon: Wallet, color: '#F0B90B' },
+    { id: 'promotion', title: '晋级体系', icon: Award, color: '#3B82F6' },
   ];
 
   const handleNext = () => {
@@ -70,9 +52,21 @@ export default function RulesPage({ username, onEnterArena }: RulesPageProps) {
           <span className="text-white text-sm font-bold" style={{ fontFamily: "'DM Mono', monospace" }}>TRADING ARENA</span>
           <span className="text-[#5E6673] text-xs">/ Rules</span>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-[#848E9C] text-xs">Welcome, </span>
-          <span className="text-[#F0B90B] text-xs font-medium" style={{ fontFamily: "'DM Mono', monospace" }}>{username}</span>
+        <div className="flex items-center gap-4">
+          {/* Skip rules button for returning users */}
+          {onSkipRules && (
+            <button
+              onClick={onSkipRules}
+              className="flex items-center gap-1.5 text-[#848E9C] hover:text-[#D1D4DC] text-xs transition-colors"
+            >
+              <SkipForward className="w-3.5 h-3.5" />
+              跳过规则
+            </button>
+          )}
+          <div className="flex items-center gap-2">
+            <span className="text-[#848E9C] text-xs">Welcome, </span>
+            <span className="text-[#F0B90B] text-xs font-medium" style={{ fontFamily: "'DM Mono', monospace" }}>{username}</span>
+          </div>
         </div>
       </div>
 
@@ -147,7 +141,7 @@ export default function RulesPage({ username, onEnterArena }: RulesPageProps) {
                   <div className="grid grid-cols-2 gap-3">
                     {[
                       { icon: Wallet, label: '比赛本金', value: '5,000 USDT', desc: '平台提供，无需充值', color: '#F0B90B' },
-                      { icon: Shield, label: '杠杆', value: '1x（无杠杆）', desc: '不可能爆仓', color: '#0ECB81' },
+                      { icon: Shield, label: '杠杆', value: '1x（无杠杆）', desc: '全阶段均无杠杆', color: '#0ECB81' },
                       { icon: Clock, label: '比赛时长', value: '24 小时', desc: '覆盖多个市场周期', color: '#3B82F6' },
                       { icon: Users, label: '每场人数', value: '1,000 人', desc: '按收益率排名', color: '#848E9C' },
                       { icon: Target, label: '交易品种', value: 'HYPERUSDT 永续', desc: '纯择时问题', color: '#F0B90B' },
@@ -169,17 +163,17 @@ export default function RulesPage({ username, onEnterArena }: RulesPageProps) {
                     })}
                   </div>
 
-                  {/* 3-match cycle */}
+                  {/* 3-match cycle — CONSOLIDATED SETTLEMENT */}
                   <div className="bg-[#1C2030]/60 border border-[rgba(255,255,255,0.04)] rounded-lg p-5">
                     <div className="text-white text-sm font-bold mb-3 flex items-center gap-2">
                       <Zap className="w-4 h-4 text-[#F0B90B]" />
-                      3 场周期制
+                      3 场周期制 — 集中结算
                     </div>
                     <div className="flex items-center gap-3">
                       {[
                         { num: 1, label: '试探期', desc: '熟悉环境，建立基线', status: 'completed' },
                         { num: 2, label: '认真期', desc: '计算晋级，策略分化', status: 'active' },
-                        { num: 3, label: '决胜期', desc: '最终排名，提现结算', status: 'pending' },
+                        { num: 3, label: '决胜期', desc: '最终排名，集中结算', status: 'pending' },
                       ].map((match, i) => (
                         <div key={i} className="flex-1 flex items-center gap-3">
                           <div className={`flex-1 rounded-lg p-3 border ${
@@ -208,8 +202,32 @@ export default function RulesPage({ username, onEnterArena }: RulesPageProps) {
                         </div>
                       ))}
                     </div>
-                    <div className="mt-3 text-[#848E9C] text-[10px]">
-                      完成 3 场后可提现。各场亏损独立结算，不侵蚀往期利润。
+
+                    {/* Consolidated settlement explanation */}
+                    <div className="mt-4 space-y-2">
+                      <div className="bg-[#F0B90B]/5 border border-[#F0B90B]/15 rounded-lg p-3">
+                        <div className="text-[#F0B90B] text-xs font-bold mb-1">⚡ 核心规则：3 场集中结算</div>
+                        <div className="text-[#848E9C] text-[10px] space-y-1">
+                          <p>• 必须完成 <span className="text-white font-bold">3 场比赛</span> 才能提现，不可中途退出</p>
+                          <p>• 3 场的盈亏 <span className="text-[#F6465D] font-bold">集中到一起结算</span>，亏损会抵消盈利</p>
+                          <p>• 例：第1场 +200U，第2场 -80U，第3场 +150U → 累计 +270U → 按分成比例提现</p>
+                          <p>• 例：第1场 +100U，第2场 -200U，第3场 +50U → 累计 -50U → <span className="text-[#F6465D]">无法提现</span></p>
+                        </div>
+                      </div>
+
+                      <div className="bg-[#3B82F6]/5 border border-[#3B82F6]/15 rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <FileText className="w-3.5 h-3.5 text-[#3B82F6]" />
+                          <span className="text-[#3B82F6] text-xs font-bold">交易分析报告</span>
+                        </div>
+                        <div className="text-[#848E9C] text-[10px] space-y-1">
+                          <p>完成 3 场周期后，你将收到一份 <span className="text-white font-bold">个人交易分析报告</span>，包含：</p>
+                          <p>• 交易行为画像（频率、仓位偏好、持仓时长分布）</p>
+                          <p>• 盈亏归因分析（哪些交易贡献最大/最小）</p>
+                          <p>• 情绪化交易检测（追涨杀跌、恐慌平仓、FOMO 开仓等）</p>
+                          <p>• 与全场平均水平的对比和改进建议</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -227,67 +245,49 @@ export default function RulesPage({ username, onEnterArena }: RulesPageProps) {
 
                   {/* Position rules */}
                   <div className="bg-[#1C2030]/60 border border-[rgba(255,255,255,0.04)] rounded-lg p-5">
-                    <div className="text-white text-sm font-bold mb-4 flex items-center gap-2">
+                    <div className="text-white text-sm font-bold mb-3 flex items-center gap-2">
                       <BarChart3 className="w-4 h-4 text-[#0ECB81]" />
-                      持仓规则
+                      仓位与交易限制
                     </div>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <ArrowUpRight className="w-4 h-4 text-[#0ECB81] shrink-0" />
-                        <div className="text-[#D1D4DC] text-xs">
-                          <span className="text-[#0ECB81] font-bold">做多 (Long)</span> — 预期价格上涨时开仓
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { label: '杠杆', value: '1x（无杠杆）', desc: '所有阶段均为无杠杆', color: '#0ECB81' },
+                        { label: '最大仓位', value: '100% 本金', desc: '可全仓 5,000U', color: '#F0B90B' },
+                        { label: '最小仓位', value: '10% 本金', desc: '至少 500U', color: '#848E9C' },
+                        { label: '同时持仓', value: '仅 1 笔', desc: '不可同时多空', color: '#F6465D' },
+                      ].map((item, i) => (
+                        <div key={i} className="bg-[rgba(255,255,255,0.03)] rounded-lg p-3">
+                          <div className="text-[#5E6673] text-[10px] uppercase tracking-wider">{item.label}</div>
+                          <div className="text-sm font-bold mt-0.5" style={{ color: item.color, fontFamily: "'DM Mono', monospace" }}>{item.value}</div>
+                          <div className="text-[#5E6673] text-[10px] mt-0.5">{item.desc}</div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <ArrowDownRight className="w-4 h-4 text-[#F6465D] shrink-0" />
-                        <div className="text-[#D1D4DC] text-xs">
-                          <span className="text-[#F6465D] font-bold">做空 (Short)</span> — 预期价格下跌时开仓
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Shield className="w-4 h-4 text-[#848E9C] shrink-0" />
-                        <div className="text-[#D1D4DC] text-xs">
-                          同一时间只能持有 <span className="text-white font-bold">1 个仓位</span>，仓位大小可自选
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Clock className="w-4 h-4 text-[#848E9C] shrink-0" />
-                        <div className="text-[#D1D4DC] text-xs">
-                          单笔持仓上限 <span className="text-white font-bold">4 小时</span>，到时自动平仓
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Target className="w-4 h-4 text-[#848E9C] shrink-0" />
-                        <div className="text-[#D1D4DC] text-xs">
-                          可设置 <span className="text-[#0ECB81] font-bold">止盈 (TP)</span> 和 <span className="text-[#F6465D] font-bold">止损 (SL)</span>，价格触及自动平仓
-                        </div>
-                      </div>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Hold duration weight table */}
+                  {/* Hold duration weight */}
                   <div className="bg-[#1C2030]/60 border border-[rgba(255,255,255,0.04)] rounded-lg p-5">
                     <div className="text-white text-sm font-bold mb-3 flex items-center gap-2">
                       <Timer className="w-4 h-4 text-[#F0B90B]" />
-                      持仓时长权重 — 越久越值钱
+                      持仓时长权重
                     </div>
-                    <div className="text-[#848E9C] text-[10px] mb-3">
-                      盈亏和积分都会乘以对应权重。短线快进快出的权重很低（0.2x），鼓励有信心的持仓。
-                    </div>
+                    <p className="text-[#848E9C] text-[10px] mb-3">
+                      持仓越久，盈亏权重越高。这鼓励有信念的交易，惩罚频繁进出。
+                    </p>
                     <div className="overflow-hidden rounded-lg border border-[rgba(255,255,255,0.06)]">
-                      <table className="w-full text-xs">
+                      <table className="w-full text-[11px]">
                         <thead>
                           <tr className="bg-[rgba(255,255,255,0.03)]">
-                            <th className="text-left text-[#5E6673] font-medium px-3 py-2">持仓时长</th>
-                            <th className="text-center text-[#5E6673] font-medium px-3 py-2">权重</th>
-                            <th className="text-right text-[#5E6673] font-medium px-3 py-2">效果</th>
+                            <th className="text-left text-[#5E6673] px-3 py-2 font-medium">持仓时长</th>
+                            <th className="text-center text-[#5E6673] px-3 py-2 font-medium">权重</th>
+                            <th className="text-right text-[#5E6673] px-3 py-2 font-medium">效果</th>
                           </tr>
                         </thead>
                         <tbody>
                           {[
-                            { duration: '< 1 分钟', weight: '0.2x', effect: '惩罚闪电交易', color: '#F6465D' },
-                            { duration: '1-3 分钟', weight: '0.4x', effect: '低权重', color: '#F6465D' },
-                            { duration: '3-10 分钟', weight: '0.7x', effect: '中等权重', color: '#F0B90B' },
+                            { duration: '< 2 分钟', weight: '0.2x', effect: '严重惩罚', color: '#F6465D' },
+                            { duration: '2-5 分钟', weight: '0.4x', effect: '惩罚', color: '#F6465D' },
+                            { duration: '5-10 分钟', weight: '0.7x', effect: '轻度惩罚', color: '#848E9C' },
                             { duration: '10-30 分钟', weight: '1.0x', effect: '标准权重', color: '#D1D4DC' },
                             { duration: '30分钟-2小时', weight: '1.15x', effect: '奖励持仓', color: '#0ECB81' },
                             { duration: '2-4 小时', weight: '1.3x', effect: '最高奖励', color: '#0ECB81' },
@@ -304,6 +304,20 @@ export default function RulesPage({ username, onEnterArena }: RulesPageProps) {
                           ))}
                         </tbody>
                       </table>
+                    </div>
+                  </div>
+
+                  {/* TP/SL */}
+                  <div className="bg-[#1C2030]/60 border border-[rgba(255,255,255,0.04)] rounded-lg p-5">
+                    <div className="text-white text-sm font-bold mb-3 flex items-center gap-2">
+                      <Target className="w-4 h-4 text-[#F0B90B]" />
+                      止盈 / 止损
+                    </div>
+                    <div className="text-[#848E9C] text-[10px] space-y-1">
+                      <p>• 开仓时可预设止盈（TP）和止损（SL）价格</p>
+                      <p>• 持仓中可随时修改或清除 TP/SL</p>
+                      <p>• 价格触及后自动平仓，权重按实际持仓时长计算</p>
+                      <p>• TP/SL 线会在 K 线图上以彩色虚线标注</p>
                     </div>
                   </div>
 
@@ -397,12 +411,13 @@ export default function RulesPage({ username, onEnterArena }: RulesPageProps) {
                     </div>
                   </div>
 
-                  {/* Withdrawable calculation */}
+                  {/* Withdrawable calculation — CONSOLIDATED */}
                   <div className="bg-[#0ECB81]/5 border border-[#0ECB81]/20 rounded-lg p-4">
-                    <div className="text-[#0ECB81] text-xs font-bold mb-2">💰 可提现金额 = 累计盈利 × 分成比例</div>
-                    <div className="text-[#848E9C] text-[10px]">
-                      例：3 场累计盈利 +500U，积分达到 40,000（25% 分成）→ 可提现 125U。
-                      各场亏损独立结算，不会侵蚀往期利润。
+                    <div className="text-[#0ECB81] text-xs font-bold mb-2">💰 可提现金额 = 3场累计净盈利 × 分成比例</div>
+                    <div className="text-[#848E9C] text-[10px] space-y-1">
+                      <p>例：3 场盈亏分别为 +300U、-80U、+250U → 累计净盈利 +470U</p>
+                      <p>积分达到 40,000（25% 分成）→ <span className="text-[#0ECB81] font-bold">可提现 117.5U</span></p>
+                      <p className="text-[#F6465D]">⚠️ 如果 3 场累计净盈利为负，则无法提现。各场亏损不独立结算！</p>
                     </div>
                   </div>
                 </div>
@@ -414,11 +429,11 @@ export default function RulesPage({ username, onEnterArena }: RulesPageProps) {
                   <div>
                     <h2 className="text-2xl font-bold text-white mb-2">晋级体系</h2>
                     <p className="text-[#848E9C] text-sm leading-relaxed">
-                      3 场平均排名前 30% 即可晋级到更高阶段——更大本金、更高杠杆、更多盈利空间。
+                      3 场平均排名前 30% 即可晋级到更高阶段——更大本金，更多盈利空间。<span className="text-white font-bold">所有阶段均无杠杆。</span>
                     </p>
                   </div>
 
-                  {/* Stage progression */}
+                  {/* Stage progression — ALL NO LEVERAGE */}
                   <div className="bg-[#1C2030]/60 border border-[rgba(255,255,255,0.04)] rounded-lg p-5">
                     <div className="text-white text-sm font-bold mb-4 flex items-center gap-2">
                       <TrendingUp className="w-4 h-4 text-[#0ECB81]" />
@@ -426,9 +441,9 @@ export default function RulesPage({ username, onEnterArena }: RulesPageProps) {
                     </div>
                     <div className="space-y-3">
                       {[
-                        { stage: 1, name: '入门', capital: '5,000U', leverage: '1x', promote: '前30%晋级', demote: '无', color: '#848E9C', active: true },
-                        { stage: 2, name: '进阶', capital: '10,000U', leverage: '最高3x', promote: '前30%晋级', demote: '未达标降级', color: '#F0B90B', active: false },
-                        { stage: 3, name: '精英', capital: '20,000U', leverage: '最高10x', promote: '保持前30%', demote: '未达标降级', color: '#0ECB81', active: false },
+                        { stage: 1, name: '入门', capital: '5,000U', leverage: '无杠杆', promote: '前30%晋级', demote: '无', color: '#848E9C', active: true },
+                        { stage: 2, name: '中级', capital: '10,000U', leverage: '无杠杆', promote: '前30%晋级', demote: '未达标降级', color: '#F0B90B', active: false },
+                        { stage: 3, name: '高级', capital: '20,000U', leverage: '无杠杆', promote: '保持前30%', demote: '未达标降级', color: '#0ECB81', active: false },
                       ].map((s) => (
                         <div key={s.stage} className={`rounded-lg p-4 border ${
                           s.active
@@ -467,6 +482,29 @@ export default function RulesPage({ username, onEnterArena }: RulesPageProps) {
                         </div>
                       ))}
                     </div>
+
+                    {/* Capital comparison */}
+                    <div className="mt-4 bg-[rgba(255,255,255,0.03)] rounded-lg p-3">
+                      <div className="text-[#848E9C] text-[10px] mb-2">晋级本金增长：</div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-3 bg-[#848E9C]/20 rounded-full overflow-hidden">
+                          <div className="h-full bg-[#848E9C] rounded-full" style={{ width: '25%' }} />
+                        </div>
+                        <span className="text-[10px] text-[#848E9C] font-mono w-14 text-right">5,000U</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex-1 h-3 bg-[#F0B90B]/20 rounded-full overflow-hidden">
+                          <div className="h-full bg-[#F0B90B] rounded-full" style={{ width: '50%' }} />
+                        </div>
+                        <span className="text-[10px] text-[#F0B90B] font-mono w-14 text-right">10,000U</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex-1 h-3 bg-[#0ECB81]/20 rounded-full overflow-hidden">
+                          <div className="h-full bg-[#0ECB81] rounded-full" style={{ width: '100%' }} />
+                        </div>
+                        <span className="text-[10px] text-[#0ECB81] font-mono w-14 text-right">20,000U</span>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Promotion score */}
@@ -493,7 +531,8 @@ export default function RulesPage({ username, onEnterArena }: RulesPageProps) {
                     </div>
                     <div className="text-[#848E9C] text-[10px]">
                       已在高阶段的用户如果 3 场平均排名未达标，将被降回上一阶段。
-                      降级意味着失去已获得的本金和杠杆优势。<span className="text-[#F6465D]">损失厌恶比晋级渴望更强。</span>
+                      降级意味着失去已获得的本金优势（从 20,000U 降回 10,000U，或从 10,000U 降回 5,000U）。
+                      <span className="text-[#F6465D]"> 损失厌恶比晋级渴望更强。</span>
                     </div>
                   </div>
                 </div>

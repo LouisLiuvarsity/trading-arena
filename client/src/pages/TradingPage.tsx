@@ -290,6 +290,7 @@ export default function TradingPage() {
                 loading={klinesLoading}
                 timeframe={timeframe}
                 onTimeframeChange={setTimeframe}
+                position={position}
               />
             </div>
 

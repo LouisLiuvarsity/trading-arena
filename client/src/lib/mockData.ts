@@ -117,7 +117,7 @@ export function generateCycleState(): CycleState {
     avgPromotionScore: 764,
     cumulativePnl: 465,
     cumulativeWithdrawable: 104.3,
-    promotionTarget: '进阶（10,000U / 3x杠杆）',
+    promotionTarget: '进阶（10,000U / 无杠杆）',
   };
 }
 

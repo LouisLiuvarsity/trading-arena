@@ -22,13 +22,24 @@ function App() {
     setScreen('trading');
   }, []);
 
+  // Skip rules — go directly to trading (for returning users)
+  const handleSkipRules = useCallback(() => {
+    setScreen('trading');
+  }, []);
+
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster theme="dark" position="top-right" toastOptions={{ style: { background: '#1C2030', border: '1px solid rgba(255,255,255,0.1)', color: '#D1D4DC' } }} />
           {screen === 'login' && <LoginPage onLogin={handleLogin} />}
-          {screen === 'rules' && <RulesPage username={username} onEnterArena={handleEnterArena} />}
+          {screen === 'rules' && (
+            <RulesPage
+              username={username}
+              onEnterArena={handleEnterArena}
+              onSkipRules={handleSkipRules}
+            />
+          )}
           {screen === 'trading' && <TradingPage />}
         </TooltipProvider>
       </ThemeProvider>
