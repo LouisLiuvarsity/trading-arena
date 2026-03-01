@@ -342,10 +342,10 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
                     </div>
                     <div className="space-y-2">
                       {[
-                        { tier: '< 10,000 积分', pct: '10%', color: '#848E9C', bg: 'rgba(255,255,255,0.03)', width: '25%' },
-                        { tier: '10,000 - 25,000', pct: '15%', color: '#F0B90B', bg: '#F0B90B10', width: '50%' },
-                        { tier: '25,000 - 40,000', pct: '20%', color: '#F0B90B', bg: '#F0B90B15', width: '75%' },
-                        { tier: '≥ 40,000 积分', pct: '25%', color: '#0ECB81', bg: '#0ECB8115', width: '100%' },
+                        { tier: '< 10,000 积分', pct: '5%', color: '#848E9C', bg: 'rgba(255,255,255,0.03)', width: '25%' },
+                        { tier: '10,000 - 25,000', pct: '10%', color: '#F0B90B', bg: '#F0B90B10', width: '50%' },
+                        { tier: '25,000 - 40,000', pct: '15%', color: '#F0B90B', bg: '#F0B90B15', width: '75%' },
+                        { tier: '≥ 40,000 积分', pct: '20%', color: '#0ECB81', bg: '#0ECB8115', width: '100%' },
                       ].map((tier, i) => (
                         <div key={i} className="flex items-center gap-3 rounded-lg p-3" style={{ background: tier.bg }}>
                           <div className="w-16 text-[10px] text-[#5E6673] shrink-0">{tier.tier}</div>
@@ -374,7 +374,7 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
                           <span className="text-[#F0B90B]">2,500U 仓位</span> × 持仓 15 分钟（权重 1.0x）
                         </div>
                         <div className="text-[#0ECB81] font-bold mt-1" style={{ fontFamily: "'DM Mono', monospace" }}>
-                          = 2,500 积分 → 需 16 笔达到 40,000（25% 分成）
+                          = 2,500 积分 → 需 16 笔达到 40,000（20% 分成）
                         </div>
                       </div>
                       <div className="bg-[rgba(255,255,255,0.03)] rounded-lg p-3">
@@ -382,7 +382,7 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
                           <span className="text-[#F0B90B]">5,000U 满仓</span> × 持仓 35 分钟（权重 1.15x）
                         </div>
                         <div className="text-[#0ECB81] font-bold mt-1" style={{ fontFamily: "'DM Mono', monospace" }}>
-                          = 5,750 积分 → 需 7 笔达到 40,000（25% 分成）
+                          = 5,750 积分 → 需 7 笔达到 40,000（20% 分成）
                         </div>
                       </div>
                       <div className="bg-[#F6465D]/5 rounded-lg p-3 border border-[#F6465D]/10">
@@ -404,7 +404,7 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
                     <div className="text-[#0ECB81] text-xs font-bold mb-2">💰 可提现金额 = 3场累计净盈利 × 分成比例</div>
                     <div className="text-[#848E9C] text-[10px] space-y-1">
                       <p>例：3 场盈亏分别为 +300U、-80U、+250U → 累计净盈利 +470U</p>
-                      <p>积分达到 40,000（25% 分成）→ <span className="text-[#0ECB81] font-bold">可提现 117.5U</span></p>
+                      <p>积分达到 40,000（20% 分成）→ <span className="text-[#0ECB81] font-bold">可提现 94U</span></p>
                       <p className="text-[#F6465D]">⚠️ 如果 3 场累计净盈利为负，则无法提现。各场亏损不独立结算！</p>
                     </div>
                   </div>

@@ -75,7 +75,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           </div>
           <div className="w-px h-8 bg-[rgba(255,255,255,0.06)]" />
           <div className="text-center">
-            <div className="text-[#0ECB81] text-lg font-bold" style={{ fontFamily: "'DM Mono', monospace" }}>25%</div>
+            <div className="text-[#0ECB81] text-lg font-bold" style={{ fontFamily: "'DM Mono', monospace" }}>20%</div>
             <div className="text-[#5E6673] text-[10px] uppercase tracking-wider">Max Share</div>
           </div>
         </div>
@@ -139,7 +139,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             <Trophy className="w-4 h-4 text-[#F0B90B] shrink-0 mt-0.5" />
             <div>
               <div className="text-white text-xs font-medium">Profit Sharing</div>
-              <div className="text-[#5E6673] text-[10px] mt-0.5">Keep 10%-25% profits</div>
+              <div className="text-[#5E6673] text-[10px] mt-0.5">Keep 5%-20% profits</div>
             </div>
           </div>
           <div className="bg-[#1C2030]/40 border border-[rgba(255,255,255,0.04)] rounded-lg p-3 flex items-start gap-2.5">

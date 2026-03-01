@@ -1,12 +1,11 @@
 // ============================================================
-// Trading Page — Core trading competition interface (v3 Layout)
+// Trading Page — Core trading competition interface (v5 Layout)
 // Design: Obsidian Exchange — Dark exchange + esports arena
-// Layout v3 (swapped):
+// Layout v5:
 //   Top: StatusBar → NewsTicker
 //   Left: TickerBar + Chart + OrderBook
-//   Right: Tabs (Chat / Trades / Leaderboard / News)
-//   Bottom: TradingPanel (horizontal)
-//   Footer: SocialBar
+//   Right: Tabs (Chat / Trades / Rank / Stats / News)
+//   Bottom: TradingPanel (compact) + RankAnxietyStrip (prominent)
 // ============================================================
 
 import { useState, useEffect, useCallback, useRef, memo } from 'react';
@@ -21,7 +20,8 @@ import ChatRoom from '@/components/ChatRoom';
 import NewsFeed from '@/components/NewsFeed';
 import NewsTicker from '@/components/NewsTicker';
 import CompetitionNotifications from '@/components/CompetitionNotifications';
-import SocialBar from '@/components/SocialBar';
+import MarketStats from '@/components/MarketStats';
+import RankAnxietyStrip from '@/components/RankAnxietyStrip';
 import TickerBar from '@/components/TickerBar';
 import TradeHistory from '@/components/TradeHistory';
 import { useBinanceKline, useBinanceTicker, useBinanceDepth } from '@/hooks/useBinanceWS';
@@ -41,7 +41,8 @@ const MemoizedCandlestickChart = memo(CandlestickChart);
 const MemoizedOrderBookPanel = memo(OrderBookPanel);
 const MemoizedLeaderboard = memo(Leaderboard);
 const MemoizedNewsFeed = memo(NewsFeed);
-const MemoizedSocialBar = memo(SocialBar);
+const MemoizedMarketStats = memo(MarketStats);
+const MemoizedRankAnxietyStrip = memo(RankAnxietyStrip);
 const MemoizedTickerBar = memo(TickerBar);
 const MemoizedTradeHistory = memo(TradeHistory);
 
@@ -144,12 +145,12 @@ export default function TradingPage() {
 
     // Weighted message pool: brag and panic messages appear more often to create pressure
     const messagePool: Array<{ msg: string; type: ChatMessage['type']; weight: number }> = [
-      // Brag messages (envy trigger)
+      // Brag messages (envy trigger) — 5%-20% tiers
       { msg: '刚平仓+85U！排名直接跳了32名 🚀', type: 'brag', weight: 3 },
       { msg: '满仓做多赚了120U！晋级稳了 💰', type: 'brag', weight: 3 },
       { msg: '连赢4笔了，今天手感太好了', type: 'brag', weight: 2 },
       { msg: '权重1.3x加成太爽了，+62U 直接起飞', type: 'brag', weight: 2 },
-      { msg: '积分已经40000了，25%分成到手 😎', type: 'brag', weight: 2 },
+      { msg: '积分已经40000了，20%分成到手 😎', type: 'brag', weight: 2 },
       { msg: '排名进前100了！可提现280U', type: 'brag', weight: 2 },
       { msg: '这波空头吃了58U，感谢CPI数据', type: 'brag', weight: 2 },
       { msg: '从#400冲到#180，两笔翻盘 🔥', type: 'brag', weight: 2 },
@@ -176,11 +177,11 @@ export default function TradingPage() {
       { msg: '订单簿上方有大卖单，小心', type: 'user', weight: 1 },
       { msg: '看裸K线就够了，别想太多', type: 'user', weight: 1 },
       { msg: '支撑位很强，多头别慌', type: 'user', weight: 1 },
-      // Pressure messages
+      // Pressure messages — 5%-20% tiers
       { msg: '晋级线附近好紧张...还差0.3%', type: 'panic', weight: 2 },
       { msg: '被3个人超越了，排名在跌', type: 'panic', weight: 2 },
       { msg: '权重还是0.4x，要不要继续拿？', type: 'user', weight: 1 },
-      { msg: '积分才1200，50%分成遥遥无期', type: 'user', weight: 1 },
+      { msg: '积分才12000，20%分成遥遥无期', type: 'user', weight: 1 },
       { msg: '降级的话本金直接砍半...', type: 'panic', weight: 1 },
     ];
 
@@ -248,11 +249,12 @@ export default function TradingPage() {
   // Right panel tab
   const [rightTab, setRightTab] = useState<string>('chat');
 
-  const tabTriggerClass = "data-[state=active]:bg-transparent data-[state=active]:text-[#F0B90B] data-[state=active]:border-b-2 data-[state=active]:border-[#F0B90B] data-[state=active]:shadow-none rounded-none text-[11px] px-3 py-1.5 text-[#848E9C] hover:text-[#D1D4DC] transition-colors";
+  const tabTriggerClass = "data-[state=active]:bg-transparent data-[state=active]:text-[#F0B90B] data-[state=active]:border-b-2 data-[state=active]:border-[#F0B90B] data-[state=active]:shadow-none text-[#848E9C] hover:text-[#D1D4DC] text-[10px] h-7 px-2 rounded-none transition-colors";
 
   // Unread chat indicator
   const [unreadChat, setUnreadChat] = useState(0);
   const prevMsgCount = useRef(chatMessages.length);
+
   useEffect(() => {
     if (rightTab !== 'chat' && chatMessages.length > prevMsgCount.current) {
       setUnreadChat(prev => prev + (chatMessages.length - prevMsgCount.current));
@@ -305,7 +307,7 @@ export default function TradingPage() {
           </div>
         </div>
 
-        {/* RIGHT: Tabs (Chat / Trades / Leaderboard / News) */}
+        {/* RIGHT: Tabs (Chat / Trades / Rank / Stats / News) */}
         <div className="w-[320px] border-l border-[rgba(255,255,255,0.06)] flex flex-col">
           <Tabs value={rightTab} onValueChange={setRightTab} className="flex flex-col h-full">
             <TabsList className="bg-transparent border-b border-[rgba(255,255,255,0.06)] rounded-none h-7 px-1 gap-0 justify-start w-full shrink-0">
@@ -326,10 +328,12 @@ export default function TradingPage() {
               <TabsTrigger value="leaderboard" className={tabTriggerClass}>
                 Rank
               </TabsTrigger>
+              <TabsTrigger value="stats" className={tabTriggerClass}>
+                Stats
+              </TabsTrigger>
               <TabsTrigger value="news" className={tabTriggerClass}>
                 News
               </TabsTrigger>
-
             </TabsList>
 
             <TabsContent value="chat" className="flex-1 overflow-hidden mt-0">
@@ -341,16 +345,18 @@ export default function TradingPage() {
             <TabsContent value="leaderboard" className="flex-1 overflow-hidden mt-0">
               <MemoizedLeaderboard entries={leaderboard} myRank={account.rank} promotionLineRank={300} />
             </TabsContent>
+            <TabsContent value="stats" className="flex-1 overflow-hidden mt-0">
+              <MemoizedMarketStats social={social} account={account} match={match} />
+            </TabsContent>
             <TabsContent value="news" className="flex-1 overflow-hidden mt-0">
               <MemoizedNewsFeed news={news} />
             </TabsContent>
-
           </Tabs>
         </div>
       </div>
 
-      {/* Bottom: Trading Panel (horizontal) */}
-      <div className="h-[90px] border-t border-[rgba(255,255,255,0.06)]">
+      {/* Bottom: Trading Panel (compact) */}
+      <div className="h-[80px] shrink-0 border-t border-[rgba(255,255,255,0.06)]">
         <TradingPanel
           account={account}
           position={position}
@@ -362,8 +368,10 @@ export default function TradingPage() {
         />
       </div>
 
-      {/* Footer: Social Information Bar */}
-      <MemoizedSocialBar social={social} account={account} />
+      {/* Footer: Enhanced Rank Anxiety Strip */}
+      <div className="shrink-0">
+        <MemoizedRankAnxietyStrip account={account} social={social} />
+      </div>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 // ============================================================
-// Simulated Trading Engine — 5000U Capital / 10%-25% Profit Share
+// Simulated Trading Engine — 5000U Capital / 5%-20% Profit Share
 // Pure frontend mock trading with realistic competition mechanics
 // Supports TP/SL auto-close, hold duration weights, participation scoring
 // ============================================================
@@ -40,12 +40,12 @@ function getNextWeightThresholdFn(seconds: number): { nextWeight: number; second
   return null;
 }
 
-// 5000U model: 10%-25% profit sharing tiers
+// 5000U model: 5%-20% profit sharing tiers
 function getProfitShareTier(score: number): number {
-  if (score >= 40000) return 25;
-  if (score >= 25000) return 20;
-  if (score >= 10000) return 15;
-  return 10;
+  if (score >= 40000) return 20;
+  if (score >= 25000) return 15;
+  if (score >= 10000) return 10;
+  return 5;
 }
 
 export function useTrading(currentPrice: number) {

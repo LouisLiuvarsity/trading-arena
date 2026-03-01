@@ -1,6 +1,6 @@
 // ============================================================
 // Mock Data for Trading Arena Demo
-// Capital: 5000 USDT / No leverage / 10%-25% profit sharing
+// Capital: 5000 USDT / No leverage / 5%-20% profit sharing
 // Enhanced with emotional pressure elements
 // ============================================================
 
@@ -31,7 +31,7 @@ export function generateLeaderboard(myRank: number = 285): LeaderboardEntry[] {
   for (let i = 1; i <= 1000; i++) {
     const pnlPct = 12 - (i / 1000) * 18 + (Math.random() - 0.5) * 2;
     const pnl = pnlPct * 50; // 5000U base → pnl in absolute terms
-    const profitSharePct = pnlPct > 0 ? (i <= 100 ? 25 : i <= 300 ? 20 : i <= 500 ? 15 : 10) : 10;
+    const profitSharePct = pnlPct > 0 ? (i <= 100 ? 20 : i <= 300 ? 15 : i <= 500 ? 10 : 5) : 5;
     const withdrawable = pnl > 0 ? pnl * (profitSharePct / 100) : 0;
     entries.push({
       rank: i,
@@ -110,8 +110,8 @@ export function generateCycleState(): CycleState {
   return {
     cycleId: 'cycle-001',
     matches: [
-      { matchNumber: 1, status: 'completed', rank: 187, promotionScore: 813, pnl: 225, profitSharePct: 25, withdrawable: 56.3 },
-      { matchNumber: 2, status: 'active', rank: 285, promotionScore: 715, pnl: 240, profitSharePct: 20, withdrawable: 48 },
+      { matchNumber: 1, status: 'completed', rank: 187, promotionScore: 813, pnl: 225, profitSharePct: 15, withdrawable: 33.8 },
+      { matchNumber: 2, status: 'active', rank: 285, promotionScore: 715, pnl: 240, profitSharePct: 10, withdrawable: 24 },
       { matchNumber: 3, status: 'pending' },
     ],
     avgPromotionScore: 764,
@@ -133,7 +133,7 @@ export function generateAccountState(): AccountState {
     promotionScore: 715,
     promotionThreshold: 700,
     participationScore: 28000,
-    profitSharePct: 20,
+    profitSharePct: 10,
     withdrawable: 48,
     stage: 1,
     stageCapital: 5000,
@@ -170,7 +170,7 @@ export const EMOTIONAL_CHAT_MESSAGES = {
     '连赢{streak}笔了，今天手感太好了',
     '权重1.3x加成太爽了，+{pnl}U 直接起飞',
     '刚从#350冲到#260，一笔翻盘 🔥',
-    '积分已经40000了，25%分成到手 😎',
+    '积分已经40000了，20%分成到手 😎',
     '这波空头吃了{pnl}U，感谢CPI数据',
     '排名进前100了！可提现{withdraw}U',
   ],
@@ -208,7 +208,7 @@ export const EMOTIONAL_CHAT_MESSAGES = {
     '晋级线附近好紧张...还差{gap}%',
     '被{count}个人超越了，排名在跌',
     '权重还是0.4x，要不要继续拿？',
-    '积分才{score}，25%分成遥遥无期',
+    '积分才{score}，20%分成遥遥无期',
     '第3场了，累计才赚{total}U，压力好大',
     '降级的话本金直接砍半...',
   ],
@@ -226,5 +226,5 @@ export const SYSTEM_ALERTS = [
   '💰 当前全场平均可提现：{avgWithdraw}U',
   '⚡ {count}名选手正在连亏中（3笔+）',
   '📊 全场平均交易{avgTrades}笔，你已交易{yourTrades}笔',
-  '🎯 距离25%分成还需{scoreGap}积分',
+  '🎯 距离20%分成还需{scoreGap}积分',
 ];

@@ -155,7 +155,7 @@ export default function StatusBar({ account, match, cycle }: Props) {
         <div className="h-2.5 w-px bg-white/10" />
         <span className="text-[#848E9C]">Cumulative PnL: <span className={`font-mono ${cycle.cumulativePnl >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>{cycle.cumulativePnl >= 0 ? '+' : ''}{cycle.cumulativePnl.toFixed(1)}U</span></span>
         <div className="h-2.5 w-px bg-white/10" />
-        <span className="text-[#848E9C]">Est. Withdraw: <span className="font-mono text-[#0ECB81]">{cycle.cumulativePnl > 0 ? (cycle.cumulativePnl * 0.2).toFixed(1) : '0.0'}U</span></span>
+        <span className="text-[#848E9C]">Est. Withdraw(20%): <span className="font-mono text-[#0ECB81]">{cycle.cumulativePnl > 0 ? (cycle.cumulativePnl * 0.2).toFixed(1) : '0.0'}U</span></span>
         <div className="h-2.5 w-px bg-white/10" />
         <span className="text-[#F0B90B] text-[9px]">3场集中结算</span>
       </div>
