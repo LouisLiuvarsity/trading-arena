@@ -19,13 +19,13 @@ export default function OrderBookPanel({ orderBook, lastPrice, priceDirection }:
     <div className="flex flex-col h-full text-[11px] font-mono">
       <div className="panel-header flex justify-between">
         <span>Order Book</span>
-        <span className="text-[#848E9C]">BTCUSDT</span>
+        <span className="text-[#848E9C]">SOLUSDT</span>
       </div>
 
       {/* Column headers */}
       <div className="flex justify-between px-2 py-1 text-[10px] text-[#848E9C]">
         <span>Price(USDT)</span>
-        <span>Qty(BTC)</span>
+        <span>Qty(SOL)</span>
         <span>Total</span>
       </div>
 

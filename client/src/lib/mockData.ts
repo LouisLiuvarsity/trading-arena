@@ -154,7 +154,7 @@ export function generateMatchState(): MatchState {
     endTime,
     elapsed: Math.min(elapsed, 1),
     remainingSeconds,
-    symbol: 'BTCUSDT',
+    symbol: 'SOLUSDT',
     participantCount: 1000,
   };
 }
@@ -218,7 +218,7 @@ export const SYSTEM_ALERTS = [
   '📊 晋级线 #300 当前收益率：+{pnl}%',
   '⚡ 晋级线附近竞争激烈！#290-#310 有 {count} 人',
   '🏆 距离比赛结束还有不到{hours}小时！',
-  '📈 BTCUSDT 突破关键阻力位',
+  '📈 SOLUSDT 突破关键阻力位',
   '⚠️ 资金费率即将结算',
   '🔔 前10名平均收益率 +{topPnl}%',
   '📉 过去30分钟有{overtaken}人被超越',

@@ -207,7 +207,7 @@ export default function TradingPage() {
         { msg: '📊 晋级线 #300 当前收益率：+6.54%', type: 'system' as const },
         { msg: '⚡ 晋级线附近竞争激烈！#290-#310 有 47 人', type: 'alert' as const },
         { msg: '🏆 距离比赛结束还有不到6小时！', type: 'system' as const },
-        { msg: '📈 BTCUSDT 突破关键阻力位', type: 'alert' as const },
+        { msg: '📈 SOLUSDT 突破关键阻力位', type: 'alert' as const },
         { msg: '⚠️ 资金费率即将结算', type: 'alert' as const },
         { msg: '🔔 前10名平均收益率 +11.2%', type: 'system' as const },
         { msg: '📉 过去30分钟有23人排名下降', type: 'alert' as const },

@@ -10,8 +10,8 @@ import type { KlineData, TickerData, OrderBook, TimeframeKey } from '@/lib/types
 
 const REST_BASE = 'https://data-api.binance.vision/api/v3';
 const WS_BASE = 'wss://data-stream.binance.vision/stream?streams=';
-const SYMBOL = 'BTCUSDT';
-const SYMBOL_LC = 'btcusdt';
+const SYMBOL = 'SOLUSDT';
+const SYMBOL_LC = 'solusdt';
 
 // ─── WebSocket Manager (Batched) ────────────────────────────
 // Collects all subscriptions, then connects once with all streams

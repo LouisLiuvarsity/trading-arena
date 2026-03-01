@@ -206,7 +206,7 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
           </button>
         ))}
         <div className="ml-auto text-[10px] text-[#848E9C] font-mono">
-          BTCUSDT Perpetual
+          SOLUSDT Perpetual
         </div>
       </div>
 
