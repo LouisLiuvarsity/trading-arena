@@ -47,6 +47,9 @@ export interface Position {
   holdDurationWeight: number;
   participationScore: number;
   tradeNumber: number;
+  // TP/SL
+  takeProfit: number | null;
+  stopLoss: number | null;
 }
 
 export interface CompletedTrade {

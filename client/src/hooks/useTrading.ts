@@ -1,7 +1,7 @@
 // ============================================================
 // Simulated Trading Engine
 // Pure frontend mock trading with realistic competition mechanics
-// FIX: Use refs to break the setState→useEffect→setState loop
+// Supports TP/SL auto-close, hold duration weights, participation scoring
 // ============================================================
 
 import { useState, useCallback, useRef } from 'react';
@@ -58,7 +58,10 @@ export function useTrading(currentPrice: number) {
   const priceRef = useRef(currentPrice);
   priceRef.current = currentPrice;
 
-  const openPosition = useCallback((direction: 'long' | 'short', sizeUsdt: number) => {
+  // Ref for the close function to avoid circular dependency
+  const closePositionRef = useRef<(exitPrice?: number, reason?: 'manual' | 'sl' | 'tp') => CompletedTrade | null>(null);
+
+  const openPosition = useCallback((direction: 'long' | 'short', sizeUsdt: number, tp?: number | null, sl?: number | null) => {
     if (positionRef.current) return; // Already have a position
     setAccount(prev => {
       if (tradeCounterRef.current >= prev.tradesMax) return prev;
@@ -75,6 +78,8 @@ export function useTrading(currentPrice: number) {
         holdDurationWeight: 0.2,
         participationScore: 0,
         tradeNumber: tradeCounterRef.current,
+        takeProfit: tp ?? null,
+        stopLoss: sl ?? null,
       };
       positionRef.current = newPosition;
       setPosition(newPosition);
@@ -85,7 +90,7 @@ export function useTrading(currentPrice: number) {
     });
   }, []);
 
-  const closePosition = useCallback((exitPrice?: number) => {
+  const closePosition = useCallback((exitPrice?: number, reason?: 'manual' | 'sl' | 'tp') => {
     const pos = positionRef.current;
     if (!pos) return null;
 
@@ -110,7 +115,7 @@ export function useTrading(currentPrice: number) {
       holdDuration: holdSeconds,
       holdDurationWeight: weight,
       participationScore: Math.round(participationScore),
-      closeReason: 'manual',
+      closeReason: reason || 'manual',
       openTime: pos.openTime,
       closeTime: Date.now(),
     };
@@ -145,12 +150,50 @@ export function useTrading(currentPrice: number) {
     return trade;
   }, []);
 
-  // Update unrealized PnL — uses refs, so it's stable and won't cause loops
+  // Store closePosition in ref for use in updatePosition
+  closePositionRef.current = closePosition;
+
+  // Set TP/SL on existing position
+  const setTpSl = useCallback((tp: number | null, sl: number | null) => {
+    const pos = positionRef.current;
+    if (!pos) return;
+    const updated: Position = {
+      ...pos,
+      takeProfit: tp,
+      stopLoss: sl,
+    };
+    positionRef.current = updated;
+    setPosition(updated);
+  }, []);
+
+  // Update unrealized PnL and check TP/SL triggers
   const updatePosition = useCallback(() => {
     const pos = positionRef.current;
     if (!pos) return;
     const price = priceRef.current;
     if (price <= 0) return;
+
+    // Check TP/SL triggers
+    if (pos.takeProfit !== null) {
+      if (pos.direction === 'long' && price >= pos.takeProfit) {
+        closePositionRef.current?.(pos.takeProfit, 'tp');
+        return;
+      }
+      if (pos.direction === 'short' && price <= pos.takeProfit) {
+        closePositionRef.current?.(pos.takeProfit, 'tp');
+        return;
+      }
+    }
+    if (pos.stopLoss !== null) {
+      if (pos.direction === 'long' && price <= pos.stopLoss) {
+        closePositionRef.current?.(pos.stopLoss, 'sl');
+        return;
+      }
+      if (pos.direction === 'short' && price >= pos.stopLoss) {
+        closePositionRef.current?.(pos.stopLoss, 'sl');
+        return;
+      }
+    }
 
     const holdSeconds = (Date.now() - pos.openTime) / 1000;
     const weight = getHoldWeight(holdSeconds);
@@ -182,5 +225,6 @@ export function useTrading(currentPrice: number) {
     closePosition,
     updatePosition,
     getNextWeightThreshold,
+    setTpSl,
   };
 }

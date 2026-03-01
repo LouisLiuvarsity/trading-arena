@@ -2,7 +2,7 @@
 // Trading Page — Core trading competition interface
 // Design: Obsidian Exchange — Dark exchange + esports arena
 // Layout: Binance-style three-column with competition overlay
-// FIX: Replaced unstable useEffect deps with interval-based PnL update
+// Supports: TP/SL auto-close, hold duration weights, participation scoring
 // ============================================================
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -51,26 +51,53 @@ export default function TradingPage() {
     closePosition: rawClosePosition,
     updatePosition,
     getNextWeightThreshold,
+    setTpSl,
   } = useTrading(currentPrice);
 
   // Keep a ref for currentPrice to use in toast without causing re-creation
   const currentPriceRef = useRef(currentPrice);
   currentPriceRef.current = currentPrice;
 
+  // Track previous position to detect TP/SL auto-closes
+  const prevPositionRef = useRef(position);
+  useEffect(() => {
+    // Detect when position closes (was open, now null) — check for TP/SL close
+    if (prevPositionRef.current && !position && completedTrades.length > 0) {
+      const lastTrade = completedTrades[0];
+      if (lastTrade.closeReason === 'tp' || lastTrade.closeReason === 'sl') {
+        const isProfitable = lastTrade.pnl >= 0;
+        const reasonLabel = lastTrade.closeReason === 'tp' ? '🎯 Take Profit' : '🛑 Stop Loss';
+        toast(`${reasonLabel} — ${isProfitable ? '+' : ''}${lastTrade.pnl.toFixed(2)} USDT`, {
+          description: `Auto-closed at ${lastTrade.exitPrice.toFixed(4)} | Weight: ${lastTrade.holdDurationWeight}x | Score: +${lastTrade.participationScore}`,
+          style: {
+            background: '#1C2030',
+            border: `1px solid ${lastTrade.closeReason === 'tp' ? '#0ECB81' : '#F6465D'}`,
+            color: '#D1D4DC',
+          },
+        });
+      }
+    }
+    prevPositionRef.current = position;
+  }, [position, completedTrades]);
+
   // Wrap trading actions with toast notifications
-  const openPosition = useCallback((direction: 'long' | 'short', size: number) => {
-    rawOpenPosition(direction, size);
+  const openPosition = useCallback((direction: 'long' | 'short', size: number, tp?: number | null, sl?: number | null) => {
+    rawOpenPosition(direction, size, tp, sl);
     const color = direction === 'long' ? '#0ECB81' : '#F6465D';
     const label = direction === 'long' ? 'LONG' : 'SHORT';
+    const tpSlInfo = [];
+    if (tp) tpSlInfo.push(`TP: ${tp.toFixed(4)}`);
+    if (sl) tpSlInfo.push(`SL: ${sl.toFixed(4)}`);
+    const tpSlStr = tpSlInfo.length > 0 ? ` | ${tpSlInfo.join(' | ')}` : '';
     toast(`${label} ${size} USDT @ ${currentPriceRef.current.toFixed(4)}`, {
-      description: `Position opened. Hold duration weight starts at 0.2x`,
+      description: `Position opened. Weight starts at 0.2x${tpSlStr}`,
       style: { background: '#1C2030', border: `1px solid ${color}`, color: '#D1D4DC' },
     });
   }, [rawOpenPosition]);
 
   const closePosition = useCallback(() => {
     const trade = rawClosePosition();
-    if (trade) {
+    if (trade && trade.closeReason === 'manual') {
       const isProfitable = trade.pnl >= 0;
       toast(`Closed ${trade.direction.toUpperCase()} — ${isProfitable ? '+' : ''}${trade.pnl.toFixed(2)} USDT`, {
         description: `Weight: ${trade.holdDurationWeight}x | Weighted PnL: ${trade.weightedPnl >= 0 ? '+' : ''}${trade.weightedPnl.toFixed(2)} | Score: +${trade.participationScore}`,
@@ -229,6 +256,7 @@ export default function TradingPage() {
               onOpenPosition={openPosition}
               onClosePosition={closePosition}
               getNextWeightThreshold={getNextWeightThreshold}
+              onSetTpSl={setTpSl}
             />
           </div>
 
