@@ -249,7 +249,7 @@ export default function TradingPage() {
   // Right panel tab
   const [rightTab, setRightTab] = useState<string>('chat');
 
-  const tabTriggerClass = "data-[state=active]:bg-transparent data-[state=active]:text-[#F0B90B] data-[state=active]:border-b-2 data-[state=active]:border-[#F0B90B] data-[state=active]:shadow-none text-[#848E9C] hover:text-[#D1D4DC] text-[10px] h-7 px-2 rounded-none transition-colors";
+  const tabTriggerClass = "data-[state=active]:bg-[#F0B90B]/10 data-[state=active]:text-[#F0B90B] data-[state=active]:border-[#F0B90B]/60 data-[state=active]:shadow-none border border-[rgba(255,255,255,0.12)] text-[#848E9C] hover:text-[#D1D4DC] hover:border-[rgba(255,255,255,0.25)] hover:bg-white/[0.03] text-[10px] h-6 px-2.5 rounded-md mx-0.5 transition-all duration-200";
 
   // Unread chat indicator
   const [unreadChat, setUnreadChat] = useState(0);
@@ -310,7 +310,7 @@ export default function TradingPage() {
         {/* RIGHT: Tabs (Chat / Trades / Rank / Stats / News) */}
         <div className="w-[320px] border-l border-[rgba(255,255,255,0.06)] flex flex-col">
           <Tabs value={rightTab} onValueChange={setRightTab} className="flex flex-col h-full">
-            <TabsList className="bg-transparent border-b border-[rgba(255,255,255,0.06)] rounded-none h-7 px-1 gap-0 justify-start w-full shrink-0">
+            <TabsList className="bg-[rgba(255,255,255,0.02)] border-b border-[rgba(255,255,255,0.08)] rounded-none h-8 px-1.5 gap-0 justify-start w-full shrink-0 items-center">
               <TabsTrigger value="chat" className={tabTriggerClass}>
                 Chat
                 {unreadChat > 0 && (
