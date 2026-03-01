@@ -4,8 +4,8 @@
 // Layout v3 (swapped):
 //   Top: StatusBar → NewsTicker
 //   Left: TickerBar + Chart + OrderBook
-//   Right: Tabs (Chat / Trades / Leaderboard / News / Market)
-//   Bottom: TradingPanel (horizontal) + MiniLeaderboard (compact)
+//   Right: Tabs (Chat / Trades / Leaderboard / News)
+//   Bottom: TradingPanel (horizontal)
 //   Footer: SocialBar
 // ============================================================
 
@@ -16,17 +16,15 @@ import CandlestickChart from '@/components/CandlestickChart';
 import OrderBookPanel from '@/components/OrderBookPanel';
 import TradingPanel from '@/components/TradingPanel';
 import StatusBar from '@/components/StatusBar';
-import MiniLeaderboard from '@/components/MiniLeaderboard';
 import Leaderboard from '@/components/Leaderboard';
 import ChatRoom from '@/components/ChatRoom';
 import NewsFeed from '@/components/NewsFeed';
 import NewsTicker from '@/components/NewsTicker';
 import CompetitionNotifications from '@/components/CompetitionNotifications';
 import SocialBar from '@/components/SocialBar';
-import RecentTrades from '@/components/RecentTrades';
 import TickerBar from '@/components/TickerBar';
 import TradeHistory from '@/components/TradeHistory';
-import { useBinanceKline, useBinanceTicker, useBinanceDepth, useBinanceAggTrades } from '@/hooks/useBinanceWS';
+import { useBinanceKline, useBinanceTicker, useBinanceDepth } from '@/hooks/useBinanceWS';
 import { useTrading } from '@/hooks/useTrading';
 import {
   generateLeaderboard,
@@ -41,11 +39,9 @@ import type { TimeframeKey, ChatMessage } from '@/lib/types';
 // Memoized sub-components to prevent unnecessary re-renders
 const MemoizedCandlestickChart = memo(CandlestickChart);
 const MemoizedOrderBookPanel = memo(OrderBookPanel);
-const MemoizedMiniLeaderboard = memo(MiniLeaderboard);
 const MemoizedLeaderboard = memo(Leaderboard);
 const MemoizedNewsFeed = memo(NewsFeed);
 const MemoizedSocialBar = memo(SocialBar);
-const MemoizedRecentTrades = memo(RecentTrades);
 const MemoizedTickerBar = memo(TickerBar);
 const MemoizedTradeHistory = memo(TradeHistory);
 
@@ -56,7 +52,6 @@ export default function TradingPage() {
   const { klines, loading: klinesLoading } = useBinanceKline(timeframe);
   const { ticker, priceDirection } = useBinanceTicker();
   const { orderBook } = useBinanceDepth();
-  const { trades: aggTrades } = useBinanceAggTrades();
 
   const currentPrice = ticker?.lastPrice ?? 0;
 
@@ -263,7 +258,7 @@ export default function TradingPage() {
           </div>
         </div>
 
-        {/* RIGHT: Tabs (Chat / Trades / Leaderboard / News / Market) */}
+        {/* RIGHT: Tabs (Chat / Trades / Leaderboard / News) */}
         <div className="w-[320px] border-l border-[rgba(255,255,255,0.06)] flex flex-col">
           <Tabs value={rightTab} onValueChange={setRightTab} className="flex flex-col h-full">
             <TabsList className="bg-transparent border-b border-[rgba(255,255,255,0.06)] rounded-none h-7 px-1 gap-0 justify-start w-full shrink-0">
@@ -287,9 +282,7 @@ export default function TradingPage() {
               <TabsTrigger value="news" className={tabTriggerClass}>
                 News
               </TabsTrigger>
-              <TabsTrigger value="recent" className={tabTriggerClass}>
-                Market
-              </TabsTrigger>
+
             </TabsList>
 
             <TabsContent value="chat" className="flex-1 overflow-hidden mt-0">
@@ -304,36 +297,22 @@ export default function TradingPage() {
             <TabsContent value="news" className="flex-1 overflow-hidden mt-0">
               <MemoizedNewsFeed news={news} />
             </TabsContent>
-            <TabsContent value="recent" className="flex-1 overflow-hidden mt-0">
-              <MemoizedRecentTrades trades={aggTrades} />
-            </TabsContent>
+
           </Tabs>
         </div>
       </div>
 
-      {/* Bottom: Trading Panel (horizontal) + Mini Leaderboard */}
-      <div className="h-[90px] flex border-t border-[rgba(255,255,255,0.06)]">
-        {/* Trading Panel — takes most of the width */}
-        <div className="flex-1 overflow-hidden">
-          <TradingPanel
-            account={account}
-            position={position}
-            currentPrice={currentPrice}
-            onOpenPosition={openPosition}
-            onClosePosition={closePosition}
-            getNextWeightThreshold={getNextWeightThreshold}
-            onSetTpSl={setTpSl}
-          />
-        </div>
-
-        {/* Mini Leaderboard — compact right strip */}
-        <div className="w-[200px] border-l border-[rgba(255,255,255,0.06)] overflow-hidden">
-          <MemoizedMiniLeaderboard
-            entries={leaderboard}
-            myRank={account.rank}
-            promotionLineRank={300}
-          />
-        </div>
+      {/* Bottom: Trading Panel (horizontal) */}
+      <div className="h-[90px] border-t border-[rgba(255,255,255,0.06)]">
+        <TradingPanel
+          account={account}
+          position={position}
+          currentPrice={currentPrice}
+          onOpenPosition={openPosition}
+          onClosePosition={closePosition}
+          getNextWeightThreshold={getNextWeightThreshold}
+          onSetTpSl={setTpSl}
+        />
       </div>
 
       {/* Footer: Social Information Bar */}
