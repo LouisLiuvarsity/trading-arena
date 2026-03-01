@@ -189,10 +189,45 @@
     51%, 100% { opacity: 0.3; }
   }
 
+  @keyframes slide-in-right {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  @keyframes fade-in-up {
+    from { transform: translateY(8px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  @keyframes rank-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+  }
+
   .animate-pulse-gold { animation: pulse-gold 2s ease-in-out infinite; }
   .animate-flash-green { animation: flash-green 0.5s ease-out; }
   .animate-flash-red { animation: flash-red 0.5s ease-out; }
   .animate-blink { animation: blink-urgent 1s step-end infinite; }
+  .animate-slide-in { animation: slide-in-right 0.3s ease-out; }
+  .animate-fade-in-up { animation: fade-in-up 0.3s ease-out; }
+  .animate-rank-pulse { animation: rank-pulse 0.5s ease-in-out; }
+
+  /* Tab content transitions */
+  [data-state="active"][role="tabpanel"] {
+    animation: fade-in-up 0.15s ease-out;
+  }
+
+  /* Sonner toast override for trading theme */
+  [data-sonner-toaster] {
+    --normal-bg: #1C2030 !important;
+    --normal-text: #D1D4DC !important;
+    --normal-border: rgba(255,255,255,0.1) !important;
+  }
 }
 
 /* Scrollbar styling for dark theme */
