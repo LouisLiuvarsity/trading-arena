@@ -1,13 +1,12 @@
 // ============================================================
 // Rules Introduction Page — Competition mechanics overview
-// Design: Obsidian Exchange — Dark, structured, informative
-// Shows before entering the trading interface
-// Updated: Consolidated settlement, trading report, no-leverage stages
+// Design: Full-width centered layout with side arrow navigation
+// No left sidebar — content centered with large prev/next arrows
 // ============================================================
 
 import { useState } from 'react';
 import {
-  Trophy, Clock, TrendingUp, Shield, Zap, ChevronRight,
+  Trophy, Clock, TrendingUp, Shield, Zap, ChevronRight, ChevronLeft,
   Target, AlertTriangle, Star,
   BarChart3, Users, Timer, Wallet, Award, FileText, SkipForward
 } from 'lucide-react';
@@ -43,6 +42,9 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
     }
   };
 
+  const currentSectionData = sections[currentSection];
+  const CurrentIcon = currentSectionData.icon;
+
   return (
     <div className="h-screen w-screen bg-[#0B0E11] flex flex-col overflow-hidden">
       {/* Header */}
@@ -53,7 +55,6 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
           <span className="text-[#5E6673] text-xs">/ Rules</span>
         </div>
         <div className="flex items-center gap-4">
-          {/* Skip rules button for returning users */}
           {onSkipRules && (
             <button
               onClick={onSkipRules}
@@ -70,62 +71,59 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left: Section navigation */}
-        <div className="w-[220px] border-r border-[rgba(255,255,255,0.06)] p-4 shrink-0">
-          <div className="text-[#5E6673] text-[10px] uppercase tracking-wider mb-4">Competition Guide</div>
-          <div className="space-y-1">
-            {sections.map((section, idx) => {
-              const Icon = section.icon;
-              const isActive = idx === currentSection;
-              const isPast = idx < currentSection;
-              return (
-                <button
-                  key={section.id}
-                  onClick={() => setCurrentSection(idx)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200 ${
-                    isActive
-                      ? 'bg-[rgba(255,255,255,0.06)] text-white'
-                      : isPast
-                        ? 'text-[#0ECB81] hover:bg-[rgba(255,255,255,0.03)]'
-                        : 'text-[#5E6673] hover:bg-[rgba(255,255,255,0.03)] hover:text-[#848E9C]'
-                  }`}
-                >
-                  <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${
-                    isActive ? 'bg-[#F0B90B]/15' : isPast ? 'bg-[#0ECB81]/10' : 'bg-[rgba(255,255,255,0.04)]'
-                  }`}>
-                    {isPast ? (
-                      <div className="w-2 h-2 rounded-full bg-[#0ECB81]" />
-                    ) : (
-                      <Icon className="w-3.5 h-3.5" style={{ color: isActive ? section.color : undefined }} />
-                    )}
-                  </div>
-                  <span className="text-xs font-medium">{section.title}</span>
-                </button>
-              );
-            })}
+      {/* Main content area with side arrows */}
+      <div className="flex-1 flex items-stretch overflow-hidden relative">
+        {/* Left arrow button */}
+        <button
+          onClick={handlePrev}
+          disabled={currentSection === 0}
+          className={`w-16 shrink-0 flex items-center justify-center transition-all duration-300 group ${
+            currentSection === 0
+              ? 'opacity-20 cursor-not-allowed'
+              : 'opacity-60 hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)] cursor-pointer'
+          }`}
+        >
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+            currentSection === 0
+              ? 'bg-[rgba(255,255,255,0.04)]'
+              : 'bg-[rgba(255,255,255,0.06)] group-hover:bg-[rgba(255,255,255,0.12)] group-hover:scale-110'
+          }`}>
+            <ChevronLeft className="w-5 h-5 text-[#848E9C] group-hover:text-white transition-colors" />
           </div>
+        </button>
 
-          {/* Progress */}
-          <div className="mt-6 px-3">
-            <div className="flex items-center justify-between text-[10px] text-[#5E6673] mb-1.5">
-              <span>Progress</span>
-              <span>{currentSection + 1}/{sections.length}</span>
-            </div>
-            <div className="h-1 bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-[#F0B90B] to-[#0ECB81] rounded-full transition-all duration-500"
-                style={{ width: `${((currentSection + 1) / sections.length) * 100}%` }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Content area */}
+        {/* Center content */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-8">
-            <div className="max-w-[720px] mx-auto">
+          {/* Section header with indicator dots */}
+          <div className="flex items-center justify-center gap-6 py-4 shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${currentSectionData.color}15` }}>
+                <CurrentIcon className="w-4 h-4" style={{ color: currentSectionData.color }} />
+              </div>
+              <span className="text-white text-sm font-bold">{currentSectionData.title}</span>
+              <span className="text-[#5E6673] text-[10px] ml-1">{currentSection + 1}/{sections.length}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {sections.map((s, i) => (
+                <button
+                  key={s.id}
+                  onClick={() => setCurrentSection(i)}
+                  className={`h-1.5 rounded-full transition-all duration-500 cursor-pointer ${
+                    i === currentSection ? 'w-8' :
+                    i < currentSection ? 'w-3' : 'w-3'
+                  }`}
+                  style={{
+                    background: i === currentSection ? currentSectionData.color :
+                      i < currentSection ? '#0ECB81' : 'rgba(255,255,255,0.1)'
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto px-4">
+            <div className="max-w-[720px] mx-auto pb-6">
               {/* Section 0: Overview */}
               {currentSection === 0 && (
                 <div className="space-y-6">
@@ -163,7 +161,7 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
                     })}
                   </div>
 
-                  {/* 3-match cycle — CONSOLIDATED SETTLEMENT */}
+                  {/* 3-match cycle */}
                   <div className="bg-[#1C2030]/60 border border-[rgba(255,255,255,0.04)] rounded-lg p-5">
                     <div className="text-white text-sm font-bold mb-3 flex items-center gap-2">
                       <Zap className="w-4 h-4 text-[#F0B90B]" />
@@ -203,7 +201,6 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
                       ))}
                     </div>
 
-                    {/* Consolidated settlement explanation */}
                     <div className="mt-4 space-y-2">
                       <div className="bg-[#F0B90B]/5 border border-[#F0B90B]/15 rounded-lg p-3">
                         <div className="text-[#F0B90B] text-xs font-bold mb-1">⚡ 核心规则：3 场集中结算</div>
@@ -320,7 +317,6 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
                       <p>• TP/SL 线会在 K 线图上以彩色虚线标注</p>
                     </div>
                   </div>
-
                 </div>
               )}
 
@@ -399,7 +395,7 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
                     </div>
                   </div>
 
-                  {/* Withdrawable calculation — CONSOLIDATED */}
+                  {/* Withdrawable calculation */}
                   <div className="bg-[#0ECB81]/5 border border-[#0ECB81]/20 rounded-lg p-4">
                     <div className="text-[#0ECB81] text-xs font-bold mb-2">💰 可提现金额 = 3场累计净盈利 × 分成比例</div>
                     <div className="text-[#848E9C] text-[10px] space-y-1">
@@ -421,7 +417,7 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
                     </p>
                   </div>
 
-                  {/* Stage progression — ALL NO LEVERAGE */}
+                  {/* Stage progression */}
                   <div className="bg-[#1C2030]/60 border border-[rgba(255,255,255,0.04)] rounded-lg p-5">
                     <div className="text-white text-sm font-bold mb-4 flex items-center gap-2">
                       <TrendingUp className="w-4 h-4 text-[#0ECB81]" />
@@ -528,44 +524,55 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
             </div>
           </div>
 
-          {/* Bottom navigation */}
-          <div className="h-16 border-t border-[rgba(255,255,255,0.06)] flex items-center justify-between px-8 shrink-0">
-            <button
-              onClick={handlePrev}
-              disabled={currentSection === 0}
-              className="text-[#848E9C] text-xs hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              ← Previous
-            </button>
-
-            <div className="flex items-center gap-1.5">
-              {sections.map((_, i) => (
-                <div key={i} className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  i === currentSection ? 'bg-[#F0B90B] w-6' :
-                  i < currentSection ? 'bg-[#0ECB81]' : 'bg-[rgba(255,255,255,0.1)]'
-                }`} />
-              ))}
-            </div>
-
+          {/* Bottom: Enter Arena button (only on last section when ready) */}
+          <div className="h-14 border-t border-[rgba(255,255,255,0.06)] flex items-center justify-center px-8 shrink-0">
             {isReady ? (
               <button
                 onClick={onEnterArena}
-                className="bg-gradient-to-r from-[#F0B90B] to-[#F0B90B]/90 text-[#0B0E11] font-bold px-6 py-2 rounded-lg text-xs flex items-center gap-2 hover:shadow-lg hover:shadow-[#F0B90B]/20 transition-all"
+                className="bg-gradient-to-r from-[#F0B90B] to-[#F0B90B]/90 text-[#0B0E11] font-bold px-10 py-2.5 rounded-lg text-sm flex items-center gap-2 hover:shadow-lg hover:shadow-[#F0B90B]/20 transition-all"
               >
                 Enter Arena
                 <ChevronRight className="w-4 h-4" />
               </button>
-            ) : (
+            ) : currentSection === sections.length - 1 ? (
               <button
                 onClick={handleNext}
-                className="bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.1)] text-white px-6 py-2 rounded-lg text-xs flex items-center gap-2 transition-colors"
+                className="bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.14)] text-white px-8 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-colors font-medium"
               >
-                {currentSection === sections.length - 1 ? 'I Understand' : 'Next'}
+                I Understand — Ready to Trade
                 <ChevronRight className="w-4 h-4" />
               </button>
+            ) : (
+              <div className="flex items-center gap-2 text-[#5E6673] text-xs">
+                <span>Use</span>
+                <kbd className="px-1.5 py-0.5 rounded bg-[rgba(255,255,255,0.06)] text-[#848E9C] text-[10px] font-mono">←</kbd>
+                <kbd className="px-1.5 py-0.5 rounded bg-[rgba(255,255,255,0.06)] text-[#848E9C] text-[10px] font-mono">→</kbd>
+                <span>arrows to navigate</span>
+              </div>
             )}
           </div>
         </div>
+
+        {/* Right arrow button */}
+        <button
+          onClick={handleNext}
+          disabled={isReady}
+          className={`w-16 shrink-0 flex items-center justify-center transition-all duration-300 group ${
+            isReady
+              ? 'opacity-20 cursor-not-allowed'
+              : 'opacity-60 hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)] cursor-pointer'
+          }`}
+        >
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+            isReady
+              ? 'bg-[rgba(255,255,255,0.04)]'
+              : 'bg-[rgba(255,255,255,0.06)] group-hover:bg-[#F0B90B]/20 group-hover:scale-110'
+          }`}>
+            <ChevronRight className={`w-5 h-5 transition-colors ${
+              isReady ? 'text-[#848E9C]' : 'text-[#848E9C] group-hover:text-[#F0B90B]'
+            }`} />
+          </div>
+        </button>
       </div>
     </div>
   );

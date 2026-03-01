@@ -297,7 +297,7 @@ export default function TradingPage() {
             </div>
 
             {/* Order Book */}
-            <div className="w-[200px] border-l border-[rgba(255,255,255,0.06)]">
+            <div className="w-[180px] border-l border-[rgba(255,255,255,0.06)]">
               <MemoizedOrderBookPanel
                 orderBook={orderBook}
                 lastPrice={currentPrice}
@@ -308,7 +308,7 @@ export default function TradingPage() {
         </div>
 
         {/* RIGHT: Tabs (Chat / Trades / Rank / Stats / News) */}
-        <div className="w-[320px] border-l border-[rgba(255,255,255,0.06)] flex flex-col">
+        <div className="w-[300px] border-l border-[rgba(255,255,255,0.06)] flex flex-col">
           <Tabs value={rightTab} onValueChange={setRightTab} className="flex flex-col h-full">
             <TabsList className="bg-[rgba(255,255,255,0.02)] border-b border-[rgba(255,255,255,0.08)] rounded-none h-8 px-1.5 gap-0 justify-start w-full shrink-0 items-center">
               <TabsTrigger value="chat" className={tabTriggerClass}>
@@ -356,7 +356,7 @@ export default function TradingPage() {
       </div>
 
       {/* Bottom: Trading Panel (compact) */}
-      <div className="h-[80px] shrink-0 border-t border-[rgba(255,255,255,0.06)]">
+      <div className="h-[76px] shrink-0 border-t border-[rgba(255,255,255,0.06)]">
         <TradingPanel
           account={account}
           position={position}
