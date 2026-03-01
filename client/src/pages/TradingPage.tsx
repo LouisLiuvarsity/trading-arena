@@ -80,7 +80,7 @@ export default function TradingPage() {
         const isProfitable = lastTrade.pnl >= 0;
         const reasonLabel = lastTrade.closeReason === 'tp' ? '🎯 Take Profit' : '🛑 Stop Loss';
         toast(`${reasonLabel} — ${isProfitable ? '+' : ''}${lastTrade.pnl.toFixed(2)} USDT`, {
-          description: `Auto-closed at ${lastTrade.exitPrice.toFixed(4)} | Weight: ${lastTrade.holdDurationWeight}x | Score: +${lastTrade.participationScore}`,
+          description: `Auto-closed at ${lastTrade.exitPrice.toFixed(2)} | Weight: ${lastTrade.holdDurationWeight}x | Score: +${lastTrade.participationScore}`,
           style: {
             background: '#1C2030',
             border: `1px solid ${lastTrade.closeReason === 'tp' ? '#0ECB81' : '#F6465D'}`,
@@ -98,10 +98,10 @@ export default function TradingPage() {
     const color = direction === 'long' ? '#0ECB81' : '#F6465D';
     const label = direction === 'long' ? 'LONG' : 'SHORT';
     const tpSlInfo = [];
-    if (tp) tpSlInfo.push(`TP: ${tp.toFixed(4)}`);
-    if (sl) tpSlInfo.push(`SL: ${sl.toFixed(4)}`);
+    if (tp) tpSlInfo.push(`TP: ${tp.toFixed(2)}`);
+    if (sl) tpSlInfo.push(`SL: ${sl.toFixed(2)}`);
     const tpSlStr = tpSlInfo.length > 0 ? ` | ${tpSlInfo.join(' | ')}` : '';
-    toast(`${label} ${size} USDT @ ${currentPriceRef.current.toFixed(4)}`, {
+    toast(`${label} ${size} USDT @ ${currentPriceRef.current.toFixed(2)}`, {
       description: `Position opened. Weight starts at 0.2x${tpSlStr}`,
       style: { background: '#1C2030', border: `1px solid ${color}`, color: '#D1D4DC' },
     });
@@ -206,7 +206,7 @@ export default function TradingPage() {
         { msg: '📊 晋级线 #300 当前收益率：+6.54%', type: 'system' as const },
         { msg: '⚡ 晋级线附近竞争激烈！#290-#310 有 47 人', type: 'alert' as const },
         { msg: '🏆 距离比赛结束还有不到6小时！', type: 'system' as const },
-        { msg: '📈 HYPERUSDT 突破关键阻力位', type: 'alert' as const },
+        { msg: '📈 BTCUSDT 突破关键阻力位', type: 'alert' as const },
         { msg: '⚠️ 资金费率即将结算', type: 'alert' as const },
         { msg: '🔔 前10名平均收益率 +11.2%', type: 'system' as const },
         { msg: '📉 过去30分钟有23人排名下降', type: 'alert' as const },

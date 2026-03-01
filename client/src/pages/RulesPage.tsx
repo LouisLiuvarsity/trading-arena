@@ -144,7 +144,7 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
                       { icon: Shield, label: '杠杆', value: '1x（无杠杆）', desc: '全阶段均无杠杆', color: '#0ECB81' },
                       { icon: Clock, label: '比赛时长', value: '24 小时', desc: '覆盖多个市场周期', color: '#3B82F6' },
                       { icon: Users, label: '每场人数', value: '1,000 人', desc: '按收益率排名', color: '#848E9C' },
-                      { icon: Target, label: '交易品种', value: 'HYPERUSDT 永续', desc: '纯择时问题', color: '#F0B90B' },
+                      { icon: Target, label: '交易品种', value: 'BTCUSDT 永续', desc: '纯择时问题', color: '#F0B90B' },
                       { icon: Timer, label: '交易次数', value: '最多 40 笔', desc: '鼓励少而精', color: '#F6465D' },
                     ].map((item, i) => {
                       const Icon = item.icon;

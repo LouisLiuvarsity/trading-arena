@@ -154,7 +154,7 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
       lineWidth: 1,
       lineStyle: 2, // Dashed
       axisLabelVisible: true,
-      title: `Entry ${position.direction === 'long' ? '▲' : '▼'} ${position.entryPrice.toFixed(5)}`,
+      title: `Entry ${position.direction === 'long' ? '▲' : '▼'} ${position.entryPrice.toFixed(2)}`,
       axisLabelColor: '#D1D4DC',
       axisLabelTextColor: '#0B0E11',
     });
@@ -167,7 +167,7 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
         lineWidth: 1,
         lineStyle: 2,
         axisLabelVisible: true,
-        title: `TP ${position.takeProfit.toFixed(5)}`,
+        title: `TP ${position.takeProfit.toFixed(2)}`,
         axisLabelColor: '#0ECB81',
         axisLabelTextColor: '#0B0E11',
       });
@@ -181,7 +181,7 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
         lineWidth: 1,
         lineStyle: 2,
         axisLabelVisible: true,
-        title: `SL ${position.stopLoss.toFixed(5)}`,
+        title: `SL ${position.stopLoss.toFixed(2)}`,
         axisLabelColor: '#F6465D',
         axisLabelTextColor: '#0B0E11',
       });
@@ -206,7 +206,7 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
           </button>
         ))}
         <div className="ml-auto text-[10px] text-[#848E9C] font-mono">
-          HYPERUSDT Perpetual
+          BTCUSDT Perpetual
         </div>
       </div>
 
@@ -230,7 +230,7 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
               <span className="text-[#848E9C]">|</span>
               <span>{position.size.toFixed(0)}U</span>
               <span className="text-[#848E9C]">@</span>
-              <span>{position.entryPrice.toFixed(5)}</span>
+              <span>{position.entryPrice.toFixed(2)}</span>
             </div>
             <div className={`px-2 py-1 rounded text-[10px] font-mono font-bold ${
               position.unrealizedPnl >= 0
@@ -242,12 +242,12 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
             </div>
             {position.takeProfit && (
               <div className="px-1.5 py-1 rounded text-[9px] font-mono bg-[#0ECB81]/10 text-[#0ECB81] border border-[#0ECB81]/15">
-                TP {position.takeProfit.toFixed(5)}
+                TP {position.takeProfit.toFixed(2)}
               </div>
             )}
             {position.stopLoss && (
               <div className="px-1.5 py-1 rounded text-[9px] font-mono bg-[#F6465D]/10 text-[#F6465D] border border-[#F6465D]/15">
-                SL {position.stopLoss.toFixed(5)}
+                SL {position.stopLoss.toFixed(2)}
               </div>
             )}
           </div>

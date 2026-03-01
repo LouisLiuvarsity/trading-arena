@@ -19,13 +19,13 @@ export default function OrderBookPanel({ orderBook, lastPrice, priceDirection }:
     <div className="flex flex-col h-full text-[11px] font-mono">
       <div className="panel-header flex justify-between">
         <span>Order Book</span>
-        <span className="text-[#848E9C]">HYPERUSDT</span>
+        <span className="text-[#848E9C]">BTCUSDT</span>
       </div>
 
       {/* Column headers */}
       <div className="flex justify-between px-2 py-1 text-[10px] text-[#848E9C]">
         <span>Price(USDT)</span>
-        <span>Qty(HYPER)</span>
+        <span>Qty(BTC)</span>
         <span>Total</span>
       </div>
 
@@ -37,9 +37,9 @@ export default function OrderBookPanel({ orderBook, lastPrice, priceDirection }:
               className="absolute right-0 top-0 bottom-0 bg-[#F6465D]/10"
               style={{ width: `${(ask.total / maxAskTotal) * 100}%` }}
             />
-            <span className="relative text-[#F6465D]">{ask.price.toFixed(4)}</span>
-            <span className="relative text-[#D1D4DC]">{ask.quantity.toFixed(1)}</span>
-            <span className="relative text-[#848E9C]">{ask.total.toFixed(1)}</span>
+            <span className="relative text-[#F6465D]">{ask.price.toFixed(2)}</span>
+            <span className="relative text-[#D1D4DC]">{ask.quantity.toFixed(5)}</span>
+            <span className="relative text-[#848E9C]">{ask.total.toFixed(5)}</span>
           </div>
         ))}
       </div>
@@ -48,13 +48,13 @@ export default function OrderBookPanel({ orderBook, lastPrice, priceDirection }:
       <div className={`flex items-center justify-center py-1.5 border-y border-[rgba(255,255,255,0.06)] ${
         priceDirection === 'up' ? 'text-[#0ECB81]' : priceDirection === 'down' ? 'text-[#F6465D]' : 'text-[#D1D4DC]'
       }`}>
-        <span className="text-sm font-semibold">{lastPrice.toFixed(4)}</span>
+        <span className="text-sm font-semibold">{lastPrice.toFixed(2)}</span>
         <span className="ml-1 text-[10px]">
           {priceDirection === 'up' ? '↑' : priceDirection === 'down' ? '↓' : ''}
         </span>
         {orderBook.asks.length > 0 && orderBook.bids.length > 0 && (
           <span className="ml-2 text-[10px] text-[#848E9C]">
-            Spread: {(orderBook.asks[0].price - orderBook.bids[0].price).toFixed(4)}
+            Spread: {(orderBook.asks[0].price - orderBook.bids[0].price).toFixed(2)}
           </span>
         )}
       </div>
@@ -67,9 +67,9 @@ export default function OrderBookPanel({ orderBook, lastPrice, priceDirection }:
               className="absolute right-0 top-0 bottom-0 bg-[#0ECB81]/10"
               style={{ width: `${(bid.total / maxBidTotal) * 100}%` }}
             />
-            <span className="relative text-[#0ECB81]">{bid.price.toFixed(4)}</span>
-            <span className="relative text-[#D1D4DC]">{bid.quantity.toFixed(1)}</span>
-            <span className="relative text-[#848E9C]">{bid.total.toFixed(1)}</span>
+            <span className="relative text-[#0ECB81]">{bid.price.toFixed(2)}</span>
+            <span className="relative text-[#D1D4DC]">{bid.quantity.toFixed(5)}</span>
+            <span className="relative text-[#848E9C]">{bid.total.toFixed(5)}</span>
           </div>
         ))}
       </div>

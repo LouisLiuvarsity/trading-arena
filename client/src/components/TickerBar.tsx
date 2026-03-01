@@ -46,7 +46,7 @@ export default function TickerBar({ ticker, priceDirection }: Props) {
     return (
       <div className="flex items-center gap-6 px-3 py-2.5 border-b border-[rgba(255,255,255,0.06)] text-xs">
         <div className="flex items-center gap-2">
-          <span className="font-display font-bold text-white text-sm">HYPERUSDT</span>
+          <span className="font-display font-bold text-white text-sm">BTCUSDT</span>
           <span className="text-[10px] text-[#848E9C] bg-white/5 px-1.5 py-0.5 rounded">Perp</span>
         </div>
         <span className="text-[#848E9C] animate-pulse">Connecting...</span>
@@ -60,7 +60,7 @@ export default function TickerBar({ ticker, priceDirection }: Props) {
     <div className="flex items-center gap-5 px-3 py-2 border-b border-[rgba(255,255,255,0.06)] text-xs">
       {/* Symbol + Price */}
       <div className="flex items-center gap-2">
-        <span className="font-display font-bold text-white text-sm tracking-wide">HYPERUSDT</span>
+        <span className="font-display font-bold text-white text-sm tracking-wide">BTCUSDT</span>
         <span className="text-[10px] text-[#848E9C] bg-white/5 px-1.5 py-0.5 rounded">Perp</span>
       </div>
 

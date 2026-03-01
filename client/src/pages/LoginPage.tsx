@@ -125,7 +125,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             <Zap className="w-4 h-4 text-[#F0B90B] shrink-0 mt-0.5" />
             <div>
               <div className="text-white text-xs font-medium">Real-Time Market</div>
-              <div className="text-[#5E6673] text-[10px] mt-0.5">Live HYPERUSDT data</div>
+              <div className="text-[#5E6673] text-[10px] mt-0.5">Live BTCUSDT data</div>
             </div>
           </div>
           <div className="bg-[#1C2030]/40 border border-[rgba(255,255,255,0.04)] rounded-lg p-3 flex items-start gap-2.5">
