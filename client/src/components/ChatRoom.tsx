@@ -1,10 +1,11 @@
 // ============================================================
-// Chat Room — Participant real-time chat
-// Design: Dark chat with system alerts highlighted
-// Compact for bottom panel usage
+// Chat Room — Participant real-time chat with emotional pressure
+// Design: Dark chat with color-coded message types
+// Message types: user, system, alert, brag, panic, fomo
+// Emotional messages are styled to trigger FOMO, panic, envy
 // ============================================================
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import type { ChatMessage } from '@/lib/types';
 
 interface Props {
@@ -17,55 +18,107 @@ function formatTime(ts: number): string {
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 }
 
-export default function ChatRoom({ messages, onSendMessage }: Props) {
+const MESSAGE_STYLES: Record<string, { bg: string; nameColor: string; textColor: string; icon?: string }> = {
+  user: { bg: '', nameColor: 'text-[#848E9C]', textColor: 'text-[#D1D4DC]' },
+  system: { bg: 'bg-[#F0B90B]/[0.06] border-l-2 border-[#F0B90B]/30', nameColor: 'text-[#F0B90B]', textColor: 'text-[#F0B90B]', icon: '📢' },
+  alert: { bg: 'bg-[#F6465D]/[0.06] border-l-2 border-[#F6465D]/30', nameColor: 'text-[#F6465D]', textColor: 'text-[#F6465D]', icon: '⚠️' },
+  brag: { bg: 'bg-[#0ECB81]/[0.04]', nameColor: 'text-[#0ECB81]', textColor: 'text-[#0ECB81]/90', icon: '💰' },
+  panic: { bg: 'bg-[#F6465D]/[0.03]', nameColor: 'text-[#F6465D]/80', textColor: 'text-[#D1D4DC]/80', icon: '😰' },
+  fomo: { bg: 'bg-[#F0B90B]/[0.03]', nameColor: 'text-[#F0B90B]/80', textColor: 'text-[#D1D4DC]/90', icon: '🔥' },
+};
+
+function ChatRoom({ messages, onSendMessage }: Props) {
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [isAutoScroll, setIsAutoScroll] = useState(true);
 
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && isAutoScroll) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isAutoScroll]);
+
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+      setIsAutoScroll(scrollHeight - scrollTop - clientHeight < 50);
+    }
+  };
 
   const handleSend = () => {
     if (input.trim()) {
       onSendMessage(input.trim());
       setInput('');
+      setIsAutoScroll(true);
     }
   };
+
+  const onlineCount = 847 + Math.floor(Math.random() * 50);
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-1 border-b border-[rgba(255,255,255,0.04)]">
-        <span className="text-[10px] text-[#848E9C] uppercase tracking-wider font-semibold">Chat Room</span>
-        <span className="text-[9px] text-[#0ECB81]">● 1,000 online</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-[#848E9C] uppercase tracking-wider font-semibold">Chat Room</span>
+          <span className="text-[8px] text-[#848E9C]/50">Messages persist across matches</span>
+        </div>
+        <span className="text-[9px] text-[#0ECB81]">● {onlineCount} online</span>
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-2 py-1 space-y-0.5">
-        {messages.map(msg => (
-          <div key={msg.id} className={`text-[11px] leading-relaxed px-1.5 py-0.5 rounded ${
-            msg.type === 'system' ? 'bg-[#F0B90B]/5' :
-            msg.type === 'alert' ? 'bg-[#F6465D]/5' : ''
-          }`}>
-            <span className="text-[9px] text-[#848E9C]/60 mr-1 font-mono">{formatTime(msg.timestamp)}</span>
-            {msg.type === 'user' && (
-              <>
-                <span className={`font-semibold mr-1 ${msg.username === 'You' ? 'text-[#0ECB81]' : 'text-[#F0B90B]/80'}`}>
-                  {msg.username}:
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto px-1.5 py-1 space-y-0.5"
+      >
+        {messages.map(msg => {
+          const style = MESSAGE_STYLES[msg.type] || MESSAGE_STYLES.user;
+          const isYou = msg.username === 'You';
+          const isSystemType = msg.type === 'system' || msg.type === 'alert';
+
+          return (
+            <div
+              key={msg.id}
+              className={`text-[11px] leading-relaxed px-2 py-[3px] rounded-sm ${style.bg} ${
+                msg.type === 'brag' ? 'animate-fade-in-up' : ''
+              }`}
+            >
+              <span className="text-[8px] text-[#848E9C]/40 mr-1 font-mono tabular-nums">
+                {formatTime(msg.timestamp)}
+              </span>
+
+              {isSystemType ? (
+                <span className={style.textColor}>
+                  {style.icon} {msg.message}
                 </span>
-                <span className="text-[#D1D4DC]">{msg.message}</span>
-              </>
-            )}
-            {msg.type === 'system' && (
-              <span className="text-[#F0B90B]">📢 {msg.message}</span>
-            )}
-            {msg.type === 'alert' && (
-              <span className="text-[#F6465D]">⚠ {msg.message}</span>
-            )}
-          </div>
-        ))}
+              ) : (
+                <>
+                  {style.icon && !isYou && (
+                    <span className="mr-0.5">{style.icon}</span>
+                  )}
+                  <span className={`font-semibold mr-1 ${isYou ? 'text-[#0ECB81]' : style.nameColor}`}>
+                    {msg.username}:
+                  </span>
+                  <span className={style.textColor}>{msg.message}</span>
+                </>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Scroll to bottom indicator */}
+        {!isAutoScroll && (
+          <button
+            onClick={() => {
+              setIsAutoScroll(true);
+              if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            }}
+            className="sticky bottom-1 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#F0B90B]/20 text-[#F0B90B] text-[9px] rounded-full hover:bg-[#F0B90B]/30 transition-colors"
+          >
+            ↓ New messages
+          </button>
+        )}
       </div>
 
       {/* Input */}
@@ -88,3 +141,5 @@ export default function ChatRoom({ messages, onSendMessage }: Props) {
     </div>
   );
 }
+
+export default memo(ChatRoom);

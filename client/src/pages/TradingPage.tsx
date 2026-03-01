@@ -138,49 +138,95 @@ export default function TradingPage() {
   const [cycle] = useState(() => generateCycleState());
   const [match] = useState(() => generateMatchState());
 
-  // Simulate incoming chat messages (reduced frequency for perf)
+  // Enhanced emotional chat simulation — brag, panic, fomo, analysis, pressure
   useEffect(() => {
-    const botMessages = [
-      '这波行情太刺激了！', '有人看到那根大阳线了吗？', '排名又掉了两位...',
-      '权重快到1.0x了，再忍忍', '空头小心，支撑位很强', '晋级线附近好紧张',
-      '刚平了一笔+1.5U', '资金费率变了，注意', '大家冲啊，最后几小时了！',
-      '这波假突破差点被骗', '看这个量能，主力在吸筹', '我已经晋级了！大家加油',
-      '这个价位做空风险太大了', '持仓权重终于到1.0x了', '还剩3笔交易机会，要谨慎',
-      '有人在聊天室带节奏吧？', '别被新闻骗了，看K线', '满仓梭哈了，祝我好运',
-      '刚被止损打了，心态崩了', '稳住，还有时间翻盘',
+    const usernames = ['CryptoWhale', 'BearSlayer', 'MoonTrader', 'AlphaHunter', 'ScalpGod', 'ChartMaster', 'DeFiKing', 'SwingPro', 'BTCMaxi', 'DeltaNeutral', 'GammaSqueezer', 'VolumeKing', 'OrderFlow', 'SmartMoney', 'TrendRider', 'BreakoutKing'];
+
+    // Weighted message pool: brag and panic messages appear more often to create pressure
+    const messagePool: Array<{ msg: string; type: ChatMessage['type']; weight: number }> = [
+      // Brag messages (envy trigger)
+      { msg: '刚平仓+8.5U！排名直接跳了32名 🚀', type: 'brag', weight: 3 },
+      { msg: '满仓做多赚了12U！晋级稳了 💰', type: 'brag', weight: 3 },
+      { msg: '连赢4笔了，今天手感太好了', type: 'brag', weight: 2 },
+      { msg: '权重1.3x加成太爽了，+6.2U 直接起飞', type: 'brag', weight: 2 },
+      { msg: '积分已经4000了，50%分成到手 😎', type: 'brag', weight: 2 },
+      { msg: '排名进前100了！可提现28U', type: 'brag', weight: 2 },
+      { msg: '这波空头吃了5.8U，感谢CPI数据', type: 'brag', weight: 2 },
+      { msg: '从#400冲到#180，两笔翻盘 🔥', type: 'brag', weight: 2 },
+      // Panic messages (fear trigger)
+      { msg: '连亏4笔了...还有救吗', type: 'panic', weight: 3 },
+      { msg: '排名又掉了15名，晋级线越来越远了', type: 'panic', weight: 3 },
+      { msg: '止损被打了，-6.3U 心态崩了', type: 'panic', weight: 2 },
+      { msg: '只剩5笔交易机会了，好慌', type: 'panic', weight: 2 },
+      { msg: '可提现从18U跌到8U了...', type: 'panic', weight: 2 },
+      { msg: '晋级分掉到620了，还能晋级吗？', type: 'panic', weight: 2 },
+      { msg: '满仓反向了，-9U 想退赛了', type: 'panic', weight: 2 },
+      { msg: '刚被假突破骗了，又亏了一笔', type: 'panic', weight: 2 },
+      // FOMO messages (urgency trigger)
+      { msg: '大家都在做多，我要不要跟？', type: 'user', weight: 2 },
+      { msg: '这波拉盘不上车就来不及了吧', type: 'user', weight: 2 },
+      { msg: '64%的人做多，少数服从多数？', type: 'user', weight: 2 },
+      { msg: '最后6小时了，必须搏一把', type: 'user', weight: 2 },
+      { msg: '排名掉太多了，只能满仓梭哈了', type: 'user', weight: 2 },
+      { msg: '前面的人都在加仓，我也满仓了', type: 'user', weight: 1 },
+      // Analysis messages (noise)
+      { msg: '这个位置做空风险太大了', type: 'user', weight: 1 },
+      { msg: '4h级别看空，但1h还在多头趋势', type: 'user', weight: 1 },
+      { msg: '资金费率变了，注意方向', type: 'user', weight: 1 },
+      { msg: '订单簿上方有大卖单，小心', type: 'user', weight: 1 },
+      { msg: '看裸K线就够了，别想太多', type: 'user', weight: 1 },
+      { msg: '支撑位很强，多头别慌', type: 'user', weight: 1 },
+      // Pressure messages
+      { msg: '晋级线附近好紧张...还差0.3%', type: 'panic', weight: 2 },
+      { msg: '被3个人超越了，排名在跌', type: 'panic', weight: 2 },
+      { msg: '权重还是0.4x，要不要继续拿？', type: 'user', weight: 1 },
+      { msg: '积分才1200，50%分成遥遥无期', type: 'user', weight: 1 },
+      { msg: '降级的话本金直接砍半...', type: 'panic', weight: 1 },
     ];
-    const usernames = ['CryptoWhale', 'BearSlayer', 'MoonTrader', 'AlphaHunter', 'ScalpGod', 'ChartMaster', 'DeFiKing', 'SwingPro', 'BTCMaxi', 'DeltaNeutral', 'GammaSqueezer', 'VolumeKing'];
+
+    // Build weighted array
+    const weighted: typeof messagePool = [];
+    messagePool.forEach(m => { for (let i = 0; i < m.weight; i++) weighted.push(m); });
 
     const interval = setInterval(() => {
+      const pick = weighted[Math.floor(Math.random() * weighted.length)];
       const msg: ChatMessage = {
-        id: `bot-${Date.now()}`,
+        id: `bot-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         username: usernames[Math.floor(Math.random() * usernames.length)],
-        message: botMessages[Math.floor(Math.random() * botMessages.length)],
+        message: pick.msg,
         timestamp: Date.now(),
-        type: 'user',
+        type: pick.type,
       };
-      setChatMessages(prev => [...prev.slice(-60), msg]);
-    }, 5000 + Math.random() * 10000);
+      setChatMessages(prev => [...prev.slice(-80), msg]);
+    }, 4000 + Math.random() * 8000);
 
+    // System alerts — more frequent and varied
     const alertInterval = setInterval(() => {
       const alerts = [
-        '📊 晋级线 #300 当前收益率：+6.54%',
-        '⚡ 晋级线附近竞争激烈！#290-#310 有 47 人',
-        '🏆 距离比赛结束还有不到6小时！',
-        '📈 HYPERUSDT 突破关键阻力位',
-        '⚠️ 资金费率即将结算',
-        '🔔 前10名平均收益率 +11.2%',
-        '📉 过去30分钟有23人被超越',
+        { msg: '📊 晋级线 #300 当前收益率：+6.54%', type: 'system' as const },
+        { msg: '⚡ 晋级线附近竞争激烈！#290-#310 有 47 人', type: 'alert' as const },
+        { msg: '🏆 距离比赛结束还有不到6小时！', type: 'system' as const },
+        { msg: '📈 HYPERUSDT 突破关键阻力位', type: 'alert' as const },
+        { msg: '⚠️ 资金费率即将结算', type: 'alert' as const },
+        { msg: '🔔 前10名平均收益率 +11.2%', type: 'system' as const },
+        { msg: '📉 过去30分钟有23人排名下降', type: 'alert' as const },
+        { msg: '🔥 过去5分钟有34笔交易成交', type: 'system' as const },
+        { msg: '💰 全场平均可提现：8.3 USDT', type: 'system' as const },
+        { msg: '⚡ 89名选手正在连亏中（3笔+）', type: 'alert' as const },
+        { msg: '📊 全场平均交易12笔 | 47%选手正在持仓', type: 'system' as const },
+        { msg: '🏃 SmartMoney 刚从 #350 冲到 #180！', type: 'alert' as const },
+        { msg: '📊 全场62%选手亏损中 | 平均亏损 -2.1%', type: 'alert' as const },
       ];
+      const pick = alerts[Math.floor(Math.random() * alerts.length)];
       const alertMsg: ChatMessage = {
         id: `alert-${Date.now()}`,
         username: 'System',
-        message: alerts[Math.floor(Math.random() * alerts.length)],
+        message: pick.msg,
         timestamp: Date.now(),
-        type: Math.random() > 0.5 ? 'system' : 'alert',
+        type: pick.type,
       };
-      setChatMessages(prev => [...prev.slice(-60), alertMsg]);
-    }, 25000 + Math.random() * 20000);
+      setChatMessages(prev => [...prev.slice(-80), alertMsg]);
+    }, 18000 + Math.random() * 15000);
 
     return () => {
       clearInterval(interval);
@@ -226,7 +272,7 @@ export default function TradingPage() {
       <NewsTicker news={news} />
 
       {/* Competition Push Notifications (side-effect only) */}
-      <CompetitionNotifications account={account} match={match} />
+      <CompetitionNotifications account={account} match={match} social={social} />
 
       {/* Main content area: Left (chart+orderbook) + Right (tabs) */}
       <div className="flex-1 flex overflow-hidden">
@@ -316,7 +362,7 @@ export default function TradingPage() {
       </div>
 
       {/* Footer: Social Information Bar */}
-      <MemoizedSocialBar social={social} />
+      <MemoizedSocialBar social={social} account={account} />
     </div>
   );
 }

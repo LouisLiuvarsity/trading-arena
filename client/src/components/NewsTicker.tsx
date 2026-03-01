@@ -1,17 +1,18 @@
 // ============================================================
 // News Ticker — Scrolling news banner below status bar
 // Design: Horizontal scrolling tape with sentiment-colored dots
+// High-impact news items flash to grab attention
 // Acts as passive information disruption per blueprint
 // ============================================================
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, memo } from 'react';
 import type { NewsItem } from '@/lib/types';
 
 interface Props {
   news: NewsItem[];
 }
 
-export default function NewsTicker({ news }: Props) {
+function NewsTicker({ news }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isPaused, setIsPaused] = useState(false);
 
@@ -33,7 +34,6 @@ export default function NewsTicker({ news }: Props) {
 
   if (news.length === 0) return null;
 
-  // Double the items for seamless loop
   const items = [...news, ...news];
 
   return (
@@ -42,28 +42,57 @@ export default function NewsTicker({ news }: Props) {
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-[#0B0E11] to-transparent z-10 flex items-center justify-center">
+      <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#0B0E11] to-transparent z-10 flex items-center justify-center">
         <span className="text-[9px] text-[#F0B90B]">📰</span>
       </div>
       <div
         ref={scrollRef}
-        className="flex items-center gap-8 h-full overflow-hidden whitespace-nowrap pl-8 pr-4"
+        className="flex items-center gap-8 h-full overflow-hidden whitespace-nowrap pl-10 pr-4"
       >
-        {items.map((item, i) => (
-          <div key={`${item.id}-${i}`} className="flex items-center gap-1.5 shrink-0">
-            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-              item.sentiment === 'bullish' ? 'bg-[#0ECB81]' :
-              item.sentiment === 'bearish' ? 'bg-[#F6465D]' :
-              'bg-[#848E9C]'
-            }`} />
-            <span className="text-[10px] text-[#D1D4DC]/80 hover:text-[#D1D4DC] transition-colors cursor-pointer">
-              {item.title}
-            </span>
-            <span className="text-[9px] text-[#848E9C]/50">{item.source}</span>
-          </div>
-        ))}
+        {items.map((item, i) => {
+          const isHigh = item.impact === 'high';
+          const isBreaking = item.isBreaking;
+
+          return (
+            <div key={`${item.id}-${i}`} className="flex items-center gap-1.5 shrink-0">
+              {/* Breaking badge */}
+              {isBreaking && (
+                <span className="text-[8px] font-bold text-[#F6465D] bg-[#F6465D]/15 px-1 py-0.5 rounded-sm animate-pulse tracking-wider">
+                  BREAKING
+                </span>
+              )}
+
+              {/* Sentiment dot - glowing for high impact */}
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                item.sentiment === 'bullish'
+                  ? `bg-[#0ECB81] ${isHigh ? 'shadow-[0_0_4px_#0ECB81]' : ''}`
+                  : item.sentiment === 'bearish'
+                  ? `bg-[#F6465D] ${isHigh ? 'shadow-[0_0_4px_#F6465D]' : ''}`
+                  : 'bg-[#848E9C]'
+              }`} />
+
+              {/* Title - high impact items are brighter */}
+              <span className={`text-[10px] transition-colors cursor-pointer ${
+                isHigh
+                  ? 'text-[#D1D4DC] font-medium hover:text-white'
+                  : 'text-[#D1D4DC]/70 hover:text-[#D1D4DC]'
+              }`}>
+                {item.title}
+              </span>
+
+              {/* Impact indicator */}
+              {isHigh && (
+                <span className="text-[8px] text-[#F6465D] font-mono">●</span>
+              )}
+
+              <span className="text-[9px] text-[#848E9C]/40">{item.source}</span>
+            </div>
+          );
+        })}
       </div>
-      <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[#0B0E11] to-transparent z-10" />
+      <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#0B0E11] to-transparent z-10" />
     </div>
   );
 }
+
+export default memo(NewsTicker);

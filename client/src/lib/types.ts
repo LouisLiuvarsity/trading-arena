@@ -132,7 +132,7 @@ export interface ChatMessage {
   username: string;
   message: string;
   timestamp: number;
-  type: 'user' | 'system' | 'alert';
+  type: 'user' | 'system' | 'alert' | 'brag' | 'panic';
 }
 
 export interface NewsItem {
@@ -142,15 +142,38 @@ export interface NewsItem {
   timestamp: number;
   url?: string;
   sentiment?: 'bullish' | 'bearish' | 'neutral';
+  impact?: 'high' | 'medium' | 'low';
+  isBreaking?: boolean;
 }
 
 export interface SocialData {
+  // L/S Ratio
   longPct: number;
   shortPct: number;
+  longPctDelta: number; // change in last 5 min
+  // Profit/Loss distribution
   profitablePct: number;
   losingPct: number;
+  avgProfitPct: number; // average profit % of profitable traders
+  avgLossPct: number; // average loss % of losing traders
+  // Trading activity
+  avgTradesPerPerson: number;
+  medianTradesPerPerson: number;
+  activeTradersPct: number; // % currently in a position
+  // Promotion zone
   nearPromotionCount: number;
   nearPromotionRange: string;
+  nearPromotionDelta: number; // change in last 10 min
+  // Streaks
+  consecutiveLossLeader: number; // max consecutive losses in the match
+  tradersOnLosingStreak: number; // traders with 3+ consecutive losses
+  // Crowd behavior
+  recentDirectionBias: 'long' | 'short' | 'neutral'; // last 5 min dominant direction
+  recentTradeVolume: number; // trades in last 5 min
+  // Rank volatility
+  avgRankChange30m: number; // average rank change in last 30 min
+  tradersOvertakenYou: number; // traders who passed you in last 30 min
+  youOvertook: number; // traders you passed in last 30 min
 }
 
 export type TimeframeKey = '1m' | '5m' | '15m' | '1h' | '4h';
