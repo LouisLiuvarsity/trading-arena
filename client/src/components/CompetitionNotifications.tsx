@@ -1,18 +1,25 @@
 // ============================================================
-// Competition Notifications — Enhanced push notification system
-// Design: Blueprint-defined push schedule + emotional triggers
+// Competition Notifications — Draggable & closeable floating panel
+// Design: Floating notification panel that can be moved and dismissed
 // Includes: rank changes, trade pace, withdrawal anxiety,
 // promotion line proximity, overtaken alerts
 // ============================================================
 
-import { useEffect, useRef, useCallback } from 'react';
-import { toast } from 'sonner';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { X, GripHorizontal, Bell, BellOff } from 'lucide-react';
 import type { AccountState, MatchState, SocialData } from '@/lib/types';
 
 interface Props {
   account: AccountState;
   match: MatchState;
   social?: SocialData;
+}
+
+interface NotificationItem {
+  id: string;
+  message: string;
+  borderColor: string;
+  timestamp: number;
 }
 
 interface ScheduledNotification {
@@ -79,85 +86,55 @@ const NOTIFICATIONS: ScheduledNotification[] = [
 ];
 
 export default function CompetitionNotifications({ account, match, social }: Props) {
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [isVisible, setIsVisible] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
+  const [position, setPosition] = useState({ x: 16, y: 48 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragOffset = useRef({ x: 0, y: 0 });
+  const panelRef = useRef<HTMLDivElement>(null);
   const firedRef = useRef<Set<string>>(new Set());
-  const intervalCountRef = useRef(0);
   const emotionalCountRef = useRef(0);
+  const maxNotifications = 4;
+
+  const addNotification = useCallback((message: string, borderColor: string) => {
+    if (isMuted) return;
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    setNotifications(prev => {
+      const next = [{ id, message, borderColor, timestamp: Date.now() }, ...prev];
+      return next.slice(0, maxNotifications);
+    });
+    // Auto-show panel when new notification arrives
+    setIsVisible(true);
+  }, [isMuted]);
+
+  const removeNotification = useCallback((id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  }, []);
 
   const getElapsedPct = useCallback(() => {
     const now = Date.now();
     return Math.min(1, (now - match.startTime) / (match.endTime - match.startTime));
   }, [match]);
 
-  // Scheduled notifications (blueprint section 2.8)
+  // Scheduled notifications
   useEffect(() => {
     const interval = setInterval(() => {
       const elapsed = getElapsedPct();
-
       NOTIFICATIONS.forEach(notif => {
         if (elapsed >= notif.triggerElapsedPct && !firedRef.current.has(notif.id)) {
           firedRef.current.add(notif.id);
           const remainingHours = (1 - elapsed) * 24;
           const { title, description, urgency } = notif.getMessage(account, remainingHours);
           const borderColor = urgency === 'critical' ? '#F6465D' : urgency === 'warning' ? '#F0B90B' : '#0ECB81';
-
-          toast(title, {
-            description,
-            duration: urgency === 'critical' ? 12000 : 7000,
-            style: {
-              background: '#1C2030',
-              border: `1px solid ${borderColor}`,
-              color: '#D1D4DC',
-              boxShadow: urgency === 'critical' ? `0 0 20px ${borderColor}40` : undefined,
-            },
-          });
+          addNotification(`${title}\n${description}`, borderColor);
         }
       });
     }, 5000);
-
     return () => clearInterval(interval);
-  }, [account, match, getElapsedPct]);
+  }, [account, match, getElapsedPct, addNotification]);
 
-  // Periodic rank notifications (blueprint: near promotion line = frequency x2)
-  useEffect(() => {
-    const isNearPromotionLine = Math.abs(account.rank - 300) <= 30;
-    const elapsed = getElapsedPct();
-    if (elapsed < 0.66) return;
-
-    const baseInterval = elapsed > 0.958 ? 60000 : elapsed > 0.917 ? 120000 : elapsed > 0.833 ? 180000 : 300000;
-    const interval = isNearPromotionLine ? baseInterval / 2 : baseInterval;
-
-    const timer = setInterval(() => {
-      intervalCountRef.current++;
-      if (intervalCountRef.current > 12) return;
-
-      const messages = isNearPromotionLine
-        ? [
-            `⚡ 你在晋级线附近！当前 #${account.rank}`,
-            `🏃 晋级线 #300 竞争激烈！你 #${account.rank}`,
-            `📊 晋级分 ${account.promotionScore} | 距晋级线 ${account.rank <= 300 ? '已达标 ✓' : `差 ${account.rank - 300} 名`}`,
-            `🔥 #290-#310 有 ${social?.nearPromotionCount ?? 47} 人在争夺晋级名额！`,
-          ]
-        : [
-            `📊 当前排名 #${account.rank} | 晋级分 ${account.promotionScore}`,
-            `💰 可提现 ${account.withdrawable.toFixed(1)} USDT | 排名 #${account.rank}`,
-          ];
-
-      const msg = messages[Math.floor(Math.random() * messages.length)];
-      toast(msg, {
-        duration: 4000,
-        style: {
-          background: '#1C2030',
-          border: `1px solid ${isNearPromotionLine ? '#F0B90B' : 'rgba(255,255,255,0.1)'}`,
-          color: '#D1D4DC',
-          fontSize: '12px',
-        },
-      });
-    }, interval);
-
-    return () => clearInterval(timer);
-  }, [account, social, getElapsedPct]);
-
-  // Emotional pressure notifications (new: overtaken, trade pace, withdrawal anxiety)
+  // Emotional pressure notifications
   useEffect(() => {
     const emotionalInterval = setInterval(() => {
       emotionalCountRef.current++;
@@ -166,23 +143,18 @@ export default function CompetitionNotifications({ account, match, social }: Pro
       const elapsed = getElapsedPct();
       const messages: Array<{ msg: string; border: string }> = [];
 
-      // "被超越" notification
       if (social && social.tradersOvertakenYou > 0) {
         messages.push({
           msg: `📉 过去30分钟有 ${social.tradersOvertakenYou} 人超越了你！排名 #${account.rank}`,
           border: '#F6465D',
         });
       }
-
-      // Trade pace comparison
       if (social && social.avgTradesPerPerson > account.tradesUsed + 2) {
         messages.push({
           msg: `📊 全场平均已交易 ${social.avgTradesPerPerson.toFixed(0)} 笔，你才 ${account.tradesUsed} 笔`,
           border: '#F0B90B',
         });
       }
-
-      // Participation score gap
       if (account.participationScore < 25000) {
         const gap = 40000 - account.participationScore;
         messages.push({
@@ -190,24 +162,18 @@ export default function CompetitionNotifications({ account, match, social }: Pro
           border: '#F0B90B',
         });
       }
-
-      // Withdrawal anxiety (especially in later stages)
       if (elapsed > 0.7 && account.withdrawable > 50) {
         messages.push({
           msg: `💰 当前可提现 ${account.withdrawable.toFixed(1)} USDT — 保住利润还是冲击更高排名？`,
           border: '#F0B90B',
         });
       }
-
-      // Losing majority reminder
       if (social && social.losingPct > 55) {
         messages.push({
           msg: `📊 全场 ${social.losingPct}% 选手亏损中 | 平均亏损 ${social.avgLossPct}%`,
           border: '#F6465D',
         });
       }
-
-      // Trades remaining warning
       if (account.tradesMax - account.tradesUsed <= 10 && account.tradesMax - account.tradesUsed > 0) {
         messages.push({
           msg: `⚠️ 仅剩 ${account.tradesMax - account.tradesUsed} 笔交易机会！每一笔都很关键`,
@@ -215,23 +181,157 @@ export default function CompetitionNotifications({ account, match, social }: Pro
         });
       }
 
-      // Pick one random message to show
       if (messages.length > 0) {
         const pick = messages[Math.floor(Math.random() * messages.length)];
-        toast(pick.msg, {
-          duration: 5000,
-          style: {
-            background: '#1C2030',
-            border: `1px solid ${pick.border}`,
-            color: '#D1D4DC',
-            fontSize: '11px',
-          },
-        });
+        addNotification(pick.msg, pick.border);
       }
-    }, 20000 + Math.random() * 15000); // Every 20-35 seconds
+    }, 20000 + Math.random() * 15000);
 
     return () => clearInterval(emotionalInterval);
-  }, [account, social, getElapsedPct]);
+  }, [account, social, getElapsedPct, addNotification]);
 
-  return null;
+  // Auto-remove old notifications after 15 seconds
+  useEffect(() => {
+    const cleanup = setInterval(() => {
+      const now = Date.now();
+      setNotifications(prev => prev.filter(n => now - n.timestamp < 15000));
+    }, 3000);
+    return () => clearInterval(cleanup);
+  }, []);
+
+  // Drag handlers
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (!panelRef.current) return;
+    setIsDragging(true);
+    dragOffset.current = {
+      x: e.clientX - position.x,
+      y: e.clientY - position.y,
+    };
+    e.preventDefault();
+  }, [position]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      setPosition({
+        x: Math.max(0, Math.min(window.innerWidth - 320, e.clientX - dragOffset.current.x)),
+        y: Math.max(0, Math.min(window.innerHeight - 100, e.clientY - dragOffset.current.y)),
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
+  // Minimized bell icon when panel is hidden
+  if (!isVisible) {
+    return (
+      <button
+        onClick={() => setIsVisible(true)}
+        className="fixed z-[9999] w-8 h-8 rounded-full bg-[#1C2030] border border-[rgba(255,255,255,0.15)] flex items-center justify-center hover:bg-[rgba(255,255,255,0.1)] transition-colors cursor-pointer"
+        style={{ left: position.x, top: position.y }}
+        title="显示通知"
+      >
+        <Bell className="w-3.5 h-3.5 text-[#F0B90B]" />
+        {notifications.length > 0 && (
+          <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#F6465D] rounded-full flex items-center justify-center">
+            <span className="text-[8px] text-white font-bold">{notifications.length}</span>
+          </div>
+        )}
+      </button>
+    );
+  }
+
+  return (
+    <div
+      ref={panelRef}
+      className="fixed z-[9999] w-[300px] max-h-[280px] flex flex-col"
+      style={{
+        left: position.x,
+        top: position.y,
+        cursor: isDragging ? 'grabbing' : 'auto',
+      }}
+    >
+      {/* Panel header — draggable */}
+      <div
+        onMouseDown={handleMouseDown}
+        className="flex items-center justify-between px-2.5 py-1.5 bg-[#1C2030] border border-[rgba(255,255,255,0.12)] rounded-t-lg cursor-grab active:cursor-grabbing select-none"
+      >
+        <div className="flex items-center gap-1.5">
+          <GripHorizontal className="w-3.5 h-3.5 text-[#5E6673]" />
+          <Bell className="w-3 h-3 text-[#F0B90B]" />
+          <span className="text-[10px] text-[#848E9C] font-medium">通知</span>
+          {notifications.length > 0 && (
+            <span className="text-[9px] bg-[#F0B90B]/20 text-[#F0B90B] px-1.5 py-0.5 rounded-full font-bold">{notifications.length}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setIsMuted(!isMuted)}
+            className="p-1 rounded hover:bg-[rgba(255,255,255,0.08)] transition-colors"
+            title={isMuted ? '取消静音' : '静音通知'}
+          >
+            {isMuted ? (
+              <BellOff className="w-3 h-3 text-[#F6465D]" />
+            ) : (
+              <Bell className="w-3 h-3 text-[#848E9C]" />
+            )}
+          </button>
+          <button
+            onClick={() => setIsVisible(false)}
+            className="p-1 rounded hover:bg-[rgba(255,255,255,0.08)] transition-colors"
+            title="关闭通知面板"
+          >
+            <X className="w-3 h-3 text-[#848E9C] hover:text-white" />
+          </button>
+        </div>
+      </div>
+
+      {/* Notification list */}
+      <div className="flex-1 overflow-y-auto bg-[#0B0E11]/95 border-x border-b border-[rgba(255,255,255,0.08)] rounded-b-lg backdrop-blur-sm">
+        {notifications.length === 0 ? (
+          <div className="py-4 text-center text-[#5E6673] text-[10px]">
+            {isMuted ? '通知已静音' : '暂无新通知'}
+          </div>
+        ) : (
+          <div className="p-1.5 space-y-1">
+            {notifications.map((notif) => (
+              <div
+                key={notif.id}
+                className="relative group rounded-md px-2.5 py-2 text-[11px] text-[#D1D4DC] leading-relaxed animate-in slide-in-from-top-2 duration-300"
+                style={{
+                  background: '#1C2030',
+                  borderLeft: `3px solid ${notif.borderColor}`,
+                }}
+              >
+                <button
+                  onClick={() => removeNotification(notif.id)}
+                  className="absolute top-1 right-1 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-[rgba(255,255,255,0.1)] transition-all"
+                >
+                  <X className="w-2.5 h-2.5 text-[#5E6673]" />
+                </button>
+                {notif.message.split('\n').map((line, i) => (
+                  <div key={i} className={i === 0 ? 'font-medium text-white text-[11px]' : 'text-[10px] text-[#848E9C] mt-0.5'}>
+                    {line}
+                  </div>
+                ))}
+                <div className="text-[8px] text-[#5E6673] mt-1">
+                  {new Date(notif.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

@@ -558,27 +558,33 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
           </div>
         </div>
 
-        {/* Right arrow button — large & prominent */}
+        {/* Right arrow button — large, prominent, blinking */}
         <button
           onClick={handleNext}
           disabled={isReady}
-          className={`w-20 shrink-0 flex flex-col items-center justify-center gap-2 transition-all duration-300 group ${
+          className={`w-24 shrink-0 flex flex-col items-center justify-center gap-2 transition-all duration-300 group ${
             isReady
               ? 'opacity-15 cursor-not-allowed'
-              : 'opacity-70 hover:opacity-100 cursor-pointer'
+              : 'cursor-pointer'
           }`}
         >
-          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 border ${
-            isReady
-              ? 'bg-[rgba(255,255,255,0.03)] border-[rgba(255,255,255,0.04)]'
-              : 'bg-[#F0B90B]/10 border-[#F0B90B]/30 group-hover:bg-[#F0B90B]/20 group-hover:border-[#F0B90B]/50 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-[#F0B90B]/10'
-          }`}>
-            <ChevronRight className={`w-7 h-7 transition-colors ${
-              isReady ? 'text-[#5E6673]' : 'text-[#F0B90B]/70 group-hover:text-[#F0B90B]'
-            }`} />
+          {/* Pulsing glow ring behind the button */}
+          <div className="relative">
+            {!isReady && (
+              <div className="absolute inset-0 w-16 h-16 rounded-2xl bg-[#F0B90B]/20 animate-ping" style={{ animationDuration: '2s' }} />
+            )}
+            <div className={`relative w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-300 border-2 ${
+              isReady
+                ? 'bg-[rgba(255,255,255,0.03)] border-[rgba(255,255,255,0.04)]'
+                : 'bg-[#F0B90B]/15 border-[#F0B90B]/60 shadow-[0_0_20px_rgba(240,185,11,0.3)] group-hover:bg-[#F0B90B]/25 group-hover:border-[#F0B90B] group-hover:scale-110 group-hover:shadow-[0_0_30px_rgba(240,185,11,0.5)]'
+            }`}>
+              <ChevronRight className={`w-8 h-8 transition-colors ${
+                isReady ? 'text-[#5E6673]' : 'text-[#F0B90B] group-hover:text-[#F0B90B]'
+              }`} />
+            </div>
           </div>
-          <span className={`text-[10px] font-medium tracking-wider uppercase transition-colors ${
-            isReady ? 'text-[#5E6673]/50' : 'text-[#F0B90B]/50 group-hover:text-[#F0B90B]'
+          <span className={`text-xs font-bold tracking-wider uppercase transition-colors ${
+            isReady ? 'text-[#5E6673]/50' : 'text-[#F0B90B] group-hover:text-[#F0B90B]'
           }`}>Next</span>
         </button>
       </div>
