@@ -321,18 +321,6 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
                     </div>
                   </div>
 
-                  {/* What's NOT provided */}
-                  <div className="bg-[#F6465D]/5 border border-[#F6465D]/20 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="w-4 h-4 text-[#F6465D]" />
-                      <span className="text-[#F6465D] text-xs font-bold">刻意不提供</span>
-                    </div>
-                    <div className="text-[#848E9C] text-[10px] space-y-1">
-                      <p>• 无技术指标（MA、RSI、MACD 等）— 只有裸K线和成交量</p>
-                      <p>• 无历史回测 — 不能用过去验证策略</p>
-                      <p>• 无模拟交易 — 每一笔都是真实排名</p>
-                    </div>
-                  </div>
                 </div>
               )}
 
