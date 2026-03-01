@@ -100,7 +100,7 @@ export default function StatusBar({ account, match, cycle }: Props) {
           </div>
           <div className="flex items-center gap-1">
             <span className="text-[10px] text-[#848E9C]">Score</span>
-            <span className="font-mono text-[#D1D4DC]">{account.participationScore}/4000</span>
+            <span className="font-mono text-[#D1D4DC]">{account.participationScore.toLocaleString()}/40,000</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="text-[10px] text-[#848E9C]">Trades</span>

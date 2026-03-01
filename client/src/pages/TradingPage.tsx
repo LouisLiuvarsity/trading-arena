@@ -145,22 +145,22 @@ export default function TradingPage() {
     // Weighted message pool: brag and panic messages appear more often to create pressure
     const messagePool: Array<{ msg: string; type: ChatMessage['type']; weight: number }> = [
       // Brag messages (envy trigger)
-      { msg: '刚平仓+8.5U！排名直接跳了32名 🚀', type: 'brag', weight: 3 },
-      { msg: '满仓做多赚了12U！晋级稳了 💰', type: 'brag', weight: 3 },
+      { msg: '刚平仓+85U！排名直接跳了32名 🚀', type: 'brag', weight: 3 },
+      { msg: '满仓做多赚了120U！晋级稳了 💰', type: 'brag', weight: 3 },
       { msg: '连赢4笔了，今天手感太好了', type: 'brag', weight: 2 },
-      { msg: '权重1.3x加成太爽了，+6.2U 直接起飞', type: 'brag', weight: 2 },
-      { msg: '积分已经4000了，50%分成到手 😎', type: 'brag', weight: 2 },
-      { msg: '排名进前100了！可提现28U', type: 'brag', weight: 2 },
-      { msg: '这波空头吃了5.8U，感谢CPI数据', type: 'brag', weight: 2 },
+      { msg: '权重1.3x加成太爽了，+62U 直接起飞', type: 'brag', weight: 2 },
+      { msg: '积分已经40000了，25%分成到手 😎', type: 'brag', weight: 2 },
+      { msg: '排名进前100了！可提现280U', type: 'brag', weight: 2 },
+      { msg: '这波空头吃了58U，感谢CPI数据', type: 'brag', weight: 2 },
       { msg: '从#400冲到#180，两笔翻盘 🔥', type: 'brag', weight: 2 },
       // Panic messages (fear trigger)
       { msg: '连亏4笔了...还有救吗', type: 'panic', weight: 3 },
       { msg: '排名又掉了15名，晋级线越来越远了', type: 'panic', weight: 3 },
-      { msg: '止损被打了，-6.3U 心态崩了', type: 'panic', weight: 2 },
+      { msg: '止损被打了，-63U 心态崩了', type: 'panic', weight: 2 },
       { msg: '只剩5笔交易机会了，好慌', type: 'panic', weight: 2 },
-      { msg: '可提现从18U跌到8U了...', type: 'panic', weight: 2 },
+      { msg: '可提现从180U跌到80U了...', type: 'panic', weight: 2 },
       { msg: '晋级分掉到620了，还能晋级吗？', type: 'panic', weight: 2 },
-      { msg: '满仓反向了，-9U 想退赛了', type: 'panic', weight: 2 },
+      { msg: '满仓反向了，-90U 想退赛了', type: 'panic', weight: 2 },
       { msg: '刚被假突破骗了，又亏了一笔', type: 'panic', weight: 2 },
       // FOMO messages (urgency trigger)
       { msg: '大家都在做多，我要不要跟？', type: 'user', weight: 2 },
@@ -211,11 +211,11 @@ export default function TradingPage() {
         { msg: '🔔 前10名平均收益率 +11.2%', type: 'system' as const },
         { msg: '📉 过去30分钟有23人排名下降', type: 'alert' as const },
         { msg: '🔥 过去5分钟有34笔交易成交', type: 'system' as const },
-        { msg: '💰 全场平均可提现：8.3 USDT', type: 'system' as const },
+        { msg: '💰 全场平均可提现：83 USDT', type: 'system' as const },
         { msg: '⚡ 89名选手正在连亏中（3笔+）', type: 'alert' as const },
         { msg: '📊 全场平均交易12笔 | 47%选手正在持仓', type: 'system' as const },
         { msg: '🏃 SmartMoney 刚从 #350 冲到 #180！', type: 'alert' as const },
-        { msg: '📊 全场62%选手亏损中 | 平均亏损 -2.1%', type: 'alert' as const },
+        { msg: '📊 全场62%选手亏损中 | 平均亏损 -105U', type: 'alert' as const },
       ];
       const pick = alerts[Math.floor(Math.random() * alerts.length)];
       const alertMsg: ChatMessage = {

@@ -82,7 +82,7 @@ export interface MatchState {
 }
 
 export interface AccountState {
-  capital: number; // 500
+  capital: number; // 5000
   equity: number;
   pnl: number;
   pnlPct: number;

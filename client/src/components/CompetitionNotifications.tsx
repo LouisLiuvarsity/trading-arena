@@ -36,7 +36,7 @@ const NOTIFICATIONS: ScheduledNotification[] = [
     id: 'half',
     getMessage: (a) => ({
       title: `📈 半程报告 — 预计可提现 ${a.withdrawable.toFixed(1)} USDT`,
-      description: `排名 #${a.rank} | 晋级分 ${a.promotionScore}${a.promotionScore >= 700 ? ' ✓达标' : ` (需≥700, 差${700 - a.promotionScore})`} | 再交易 ${Math.max(0, Math.ceil((4000 - a.participationScore) / 300))} 笔可升至50%分成`,
+      description: `排名 #${a.rank} | 晋级分 ${a.promotionScore}${a.promotionScore >= 700 ? ' ✓达标' : ` (需≥700, 差${700 - a.promotionScore})`} | 再交易 ${Math.max(0, Math.ceil((40000 - a.participationScore) / 3000))} 笔可升至25%分成`,
       urgency: 'info',
     }),
   },
@@ -183,16 +183,16 @@ export default function CompetitionNotifications({ account, match, social }: Pro
       }
 
       // Participation score gap
-      if (account.participationScore < 2500) {
-        const gap = 4000 - account.participationScore;
+      if (account.participationScore < 25000) {
+        const gap = 40000 - account.participationScore;
         messages.push({
-          msg: `🎯 距50%分成还需 ${gap} 积分 | 当前分成 ${account.profitSharePct}%`,
+          msg: `🎯 距25%分成还需 ${gap.toLocaleString()} 积分 | 当前分成 ${account.profitSharePct}%`,
           border: '#F0B90B',
         });
       }
 
       // Withdrawal anxiety (especially in later stages)
-      if (elapsed > 0.7 && account.withdrawable > 5) {
+      if (elapsed > 0.7 && account.withdrawable > 50) {
         messages.push({
           msg: `💰 当前可提现 ${account.withdrawable.toFixed(1)} USDT — 保住利润还是冲击更高排名？`,
           border: '#F0B90B',

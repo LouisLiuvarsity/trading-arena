@@ -1,6 +1,6 @@
 // ============================================================
 // Mock Data for Trading Arena Demo
-// Generates realistic competition data for demonstration
+// Capital: 5000 USDT / No leverage / 10%-25% profit sharing
 // Enhanced with emotional pressure elements
 // ============================================================
 
@@ -25,12 +25,13 @@ const USERNAMES = [
   'PerpSwap', 'SpotFutures', 'CrossMargin', 'IsolatedPro', 'LeverageKing',
 ];
 
+// 5000U capital: pnl range is roughly -500U to +500U per match
 export function generateLeaderboard(myRank: number = 285): LeaderboardEntry[] {
   const entries: LeaderboardEntry[] = [];
   for (let i = 1; i <= 1000; i++) {
     const pnlPct = 12 - (i / 1000) * 18 + (Math.random() - 0.5) * 2;
-    const pnl = pnlPct * 5;
-    const profitSharePct = pnlPct > 0 ? (i <= 100 ? 50 : i <= 300 ? 45 : i <= 500 ? 40 : 30) : 30;
+    const pnl = pnlPct * 50; // 5000U base → pnl in absolute terms
+    const profitSharePct = pnlPct > 0 ? (i <= 100 ? 25 : i <= 300 ? 20 : i <= 500 ? 15 : 10) : 10;
     const withdrawable = pnl > 0 ? pnl * (profitSharePct / 100) : 0;
     entries.push({
       rank: i,
@@ -59,10 +60,10 @@ export function generateChatMessages(): ChatMessage[] {
     { id: '9', username: 'DiamondHands', message: '拿住！权重马上升到1.0x了', timestamp: Date.now() - 900000, type: 'user' },
     { id: '10', username: 'DeFiKing', message: '资金费率转负了，空头要付费', timestamp: Date.now() - 600000, type: 'user' },
     { id: '11', username: 'System', message: '⚡ 晋级线附近竞争激烈！#290-#310 有 47 人', timestamp: Date.now() - 300000, type: 'alert' },
-    { id: '12', username: 'SwingPro', message: '刚平了一笔+8.5U！排名直接从#320跳到#278 🚀', timestamp: Date.now() - 120000, type: 'brag' },
+    { id: '12', username: 'SwingPro', message: '刚平了一笔+85U！排名直接从#320跳到#278 🚀', timestamp: Date.now() - 120000, type: 'brag' },
     { id: '13', username: 'BTCMaxi', message: '大家注意CPI数据快出了', timestamp: Date.now() - 60000, type: 'user' },
     { id: '14', username: 'OrderFlow', message: '订单簿上方有大卖单，小心', timestamp: Date.now() - 30000, type: 'user' },
-    { id: '15', username: 'GammaScalp', message: '满仓做多+12.3U！直接晋级线以上了 💰💰', timestamp: Date.now() - 15000, type: 'brag' },
+    { id: '15', username: 'GammaScalp', message: '满仓做多+123U！直接晋级线以上了 💰💰', timestamp: Date.now() - 15000, type: 'brag' },
   ];
   return messages;
 }
@@ -84,7 +85,7 @@ export function generateSocialData(): SocialData {
   return {
     longPct: 64,
     shortPct: 36,
-    longPctDelta: +3.2, // shifted +3.2% toward long in last 5 min
+    longPctDelta: +3.2,
     profitablePct: 38,
     losingPct: 62,
     avgProfitPct: 3.8,
@@ -94,7 +95,7 @@ export function generateSocialData(): SocialData {
     activeTradersPct: 47,
     nearPromotionCount: 47,
     nearPromotionRange: '#290-#310',
-    nearPromotionDelta: +5, // 5 more traders entered zone in last 10 min
+    nearPromotionDelta: +5,
     consecutiveLossLeader: 7,
     tradersOnLosingStreak: 89,
     recentDirectionBias: 'long',
@@ -109,39 +110,39 @@ export function generateCycleState(): CycleState {
   return {
     cycleId: 'cycle-001',
     matches: [
-      { matchNumber: 1, status: 'completed', rank: 187, promotionScore: 813, pnl: 22.5, profitSharePct: 50, withdrawable: 11.3 },
-      { matchNumber: 2, status: 'active', rank: 285, promotionScore: 715, pnl: 4.0, profitSharePct: 45, withdrawable: 1.8 },
+      { matchNumber: 1, status: 'completed', rank: 187, promotionScore: 813, pnl: 225, profitSharePct: 25, withdrawable: 56.3 },
+      { matchNumber: 2, status: 'active', rank: 285, promotionScore: 715, pnl: 240, profitSharePct: 20, withdrawable: 48 },
       { matchNumber: 3, status: 'pending' },
     ],
     avgPromotionScore: 764,
-    cumulativePnl: 26.5,
-    cumulativeWithdrawable: 13.1,
-    promotionTarget: '进阶（1,000U / 3x杠杆）',
+    cumulativePnl: 465,
+    cumulativeWithdrawable: 104.3,
+    promotionTarget: '进阶（10,000U / 3x杠杆）',
   };
 }
 
 export function generateAccountState(): AccountState {
   return {
-    capital: 500,
-    equity: 524,
-    pnl: 24,
+    capital: 5000,
+    equity: 5240,
+    pnl: 240,
     pnlPct: 4.8,
     tradesUsed: 9,
     tradesMax: 40,
     rank: 285,
     promotionScore: 715,
     promotionThreshold: 700,
-    participationScore: 2800,
-    profitSharePct: 45,
-    withdrawable: 13.1,
+    participationScore: 28000,
+    profitSharePct: 20,
+    withdrawable: 48,
     stage: 1,
-    stageCapital: 500,
+    stageCapital: 5000,
     stageMaxLeverage: 1,
   };
 }
 
 export function generateMatchState(): MatchState {
-  const startTime = Date.now() - 18 * 3600 * 1000; // 18 hours ago
+  const startTime = Date.now() - 18 * 3600 * 1000;
   const endTime = startTime + 24 * 3600 * 1000;
   const elapsed = (Date.now() - startTime) / (endTime - startTime);
   const remainingSeconds = Math.max(0, (endTime - Date.now()) / 1000);
@@ -159,8 +160,7 @@ export function generateMatchState(): MatchState {
 }
 
 // ============================================================
-// Emotional Chat Message Generators
-// These simulate realistic emotional messages from other traders
+// Emotional Chat Message Generators (5000U scale)
 // ============================================================
 
 export const EMOTIONAL_CHAT_MESSAGES = {
@@ -170,7 +170,7 @@ export const EMOTIONAL_CHAT_MESSAGES = {
     '连赢{streak}笔了，今天手感太好了',
     '权重1.3x加成太爽了，+{pnl}U 直接起飞',
     '刚从#350冲到#260，一笔翻盘 🔥',
-    '积分已经4000了，50%分成到手 😎',
+    '积分已经40000了，25%分成到手 😎',
     '这波空头吃了{pnl}U，感谢CPI数据',
     '排名进前100了！可提现{withdraw}U',
   ],
@@ -208,7 +208,7 @@ export const EMOTIONAL_CHAT_MESSAGES = {
     '晋级线附近好紧张...还差{gap}%',
     '被{count}个人超越了，排名在跌',
     '权重还是0.4x，要不要继续拿？',
-    '积分才{score}，50%分成遥遥无期',
+    '积分才{score}，25%分成遥遥无期',
     '第3场了，累计才赚{total}U，压力好大',
     '降级的话本金直接砍半...',
   ],
@@ -226,5 +226,5 @@ export const SYSTEM_ALERTS = [
   '💰 当前全场平均可提现：{avgWithdraw}U',
   '⚡ {count}名选手正在连亏中（3笔+）',
   '📊 全场平均交易{avgTrades}笔，你已交易{yourTrades}笔',
-  '🎯 距离50%分成还需{scoreGap}积分',
+  '🎯 距离25%分成还需{scoreGap}积分',
 ];

@@ -1,26 +1,35 @@
+import { useState, useCallback } from 'react';
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import LoginPage from "./pages/LoginPage";
+import RulesPage from "./pages/RulesPage";
 import TradingPage from "./pages/TradingPage";
 
-function Router() {
-  return (
-    <Switch>
-      <Route path="/" component={TradingPage} />
-      <Route component={TradingPage} />
-    </Switch>
-  );
-}
+type AppScreen = 'login' | 'rules' | 'trading';
 
 function App() {
+  const [screen, setScreen] = useState<AppScreen>('login');
+  const [username, setUsername] = useState('');
+
+  const handleLogin = useCallback((name: string) => {
+    setUsername(name);
+    setScreen('rules');
+  }, []);
+
+  const handleEnterArena = useCallback(() => {
+    setScreen('trading');
+  }, []);
+
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster theme="dark" position="top-right" toastOptions={{ style: { background: '#1C2030', border: '1px solid rgba(255,255,255,0.1)', color: '#D1D4DC' } }} />
-          <Router />
+          {screen === 'login' && <LoginPage onLogin={handleLogin} />}
+          {screen === 'rules' && <RulesPage username={username} onEnterArena={handleEnterArena} />}
+          {screen === 'trading' && <TradingPage />}
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

@@ -1,5 +1,5 @@
 // ============================================================
-// Simulated Trading Engine
+// Simulated Trading Engine — 5000U Capital / 10%-25% Profit Share
 // Pure frontend mock trading with realistic competition mechanics
 // Supports TP/SL auto-close, hold duration weights, participation scoring
 // ============================================================
@@ -40,11 +40,12 @@ function getNextWeightThresholdFn(seconds: number): { nextWeight: number; second
   return null;
 }
 
+// 5000U model: 10%-25% profit sharing tiers
 function getProfitShareTier(score: number): number {
-  if (score >= 4000) return 50;
-  if (score >= 2500) return 45;
-  if (score >= 1000) return 40;
-  return 30;
+  if (score >= 40000) return 25;
+  if (score >= 25000) return 20;
+  if (score >= 10000) return 15;
+  return 10;
 }
 
 export function useTrading(currentPrice: number) {
@@ -53,16 +54,14 @@ export function useTrading(currentPrice: number) {
   const [account, setAccount] = useState<AccountState>(generateAccountState);
   const tradeCounterRef = useRef(account.tradesUsed);
 
-  // Keep refs in sync so callbacks don't need position/currentPrice as deps
   const positionRef = useRef<Position | null>(null);
   const priceRef = useRef(currentPrice);
   priceRef.current = currentPrice;
 
-  // Ref for the close function to avoid circular dependency
   const closePositionRef = useRef<(exitPrice?: number, reason?: 'manual' | 'sl' | 'tp') => CompletedTrade | null>(null);
 
   const openPosition = useCallback((direction: 'long' | 'short', sizeUsdt: number, tp?: number | null, sl?: number | null) => {
-    if (positionRef.current) return; // Already have a position
+    if (positionRef.current) return;
     setAccount(prev => {
       if (tradeCounterRef.current >= prev.tradesMax) return prev;
       if (sizeUsdt <= 0 || sizeUsdt > prev.equity) return prev;
@@ -124,14 +123,12 @@ export function useTrading(currentPrice: number) {
     setTrades(prev => [trade, ...prev]);
     setPosition(null);
 
-    // Update account
     setAccount(prev => {
       const newPnl = prev.pnl + trade.pnl;
       const newEquity = prev.capital + newPnl;
       const newParticipation = prev.participationScore + trade.participationScore;
       const newSharePct = getProfitShareTier(newParticipation);
       const newWithdrawable = newPnl > 0 ? newPnl * (newSharePct / 100) : 0;
-      // Simulate rank change
       const rankDelta = trade.pnl > 0 ? -Math.floor(Math.random() * 15) : Math.floor(Math.random() * 10);
       const newRank = Math.max(1, Math.min(1000, prev.rank + rankDelta));
       return {
@@ -150,10 +147,8 @@ export function useTrading(currentPrice: number) {
     return trade;
   }, []);
 
-  // Store closePosition in ref for use in updatePosition
   closePositionRef.current = closePosition;
 
-  // Set TP/SL on existing position
   const setTpSl = useCallback((tp: number | null, sl: number | null) => {
     const pos = positionRef.current;
     if (!pos) return;
@@ -166,7 +161,6 @@ export function useTrading(currentPrice: number) {
     setPosition(updated);
   }, []);
 
-  // Update unrealized PnL and check TP/SL triggers
   const updatePosition = useCallback(() => {
     const pos = positionRef.current;
     if (!pos) return;
@@ -211,7 +205,7 @@ export function useTrading(currentPrice: number) {
     };
     positionRef.current = updated;
     setPosition(updated);
-  }, []); // No deps — uses refs only
+  }, []);
 
   const getNextWeightThreshold = useCallback((seconds: number) => {
     return getNextWeightThresholdFn(seconds);
