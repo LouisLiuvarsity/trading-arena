@@ -73,23 +73,28 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
 
       {/* Main content area with side arrows */}
       <div className="flex-1 flex items-stretch overflow-hidden relative">
-        {/* Left arrow button */}
+        {/* Left arrow button — large & prominent */}
         <button
           onClick={handlePrev}
           disabled={currentSection === 0}
-          className={`w-16 shrink-0 flex items-center justify-center transition-all duration-300 group ${
+          className={`w-20 shrink-0 flex flex-col items-center justify-center gap-2 transition-all duration-300 group ${
             currentSection === 0
-              ? 'opacity-20 cursor-not-allowed'
-              : 'opacity-60 hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)] cursor-pointer'
+              ? 'opacity-15 cursor-not-allowed'
+              : 'opacity-70 hover:opacity-100 cursor-pointer'
           }`}
         >
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 border ${
             currentSection === 0
-              ? 'bg-[rgba(255,255,255,0.04)]'
-              : 'bg-[rgba(255,255,255,0.06)] group-hover:bg-[rgba(255,255,255,0.12)] group-hover:scale-110'
+              ? 'bg-[rgba(255,255,255,0.03)] border-[rgba(255,255,255,0.04)]'
+              : 'bg-[rgba(255,255,255,0.06)] border-[rgba(255,255,255,0.1)] group-hover:bg-[rgba(255,255,255,0.12)] group-hover:border-[rgba(255,255,255,0.2)] group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-white/5'
           }`}>
-            <ChevronLeft className="w-5 h-5 text-[#848E9C] group-hover:text-white transition-colors" />
+            <ChevronLeft className={`w-7 h-7 transition-colors ${
+              currentSection === 0 ? 'text-[#5E6673]' : 'text-[#848E9C] group-hover:text-white'
+            }`} />
           </div>
+          <span className={`text-[10px] font-medium tracking-wider uppercase transition-colors ${
+            currentSection === 0 ? 'text-[#5E6673]/50' : 'text-[#5E6673] group-hover:text-[#D1D4DC]'
+          }`}>Prev</span>
         </button>
 
         {/* Center content */}
@@ -553,25 +558,28 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
           </div>
         </div>
 
-        {/* Right arrow button */}
+        {/* Right arrow button — large & prominent */}
         <button
           onClick={handleNext}
           disabled={isReady}
-          className={`w-16 shrink-0 flex items-center justify-center transition-all duration-300 group ${
+          className={`w-20 shrink-0 flex flex-col items-center justify-center gap-2 transition-all duration-300 group ${
             isReady
-              ? 'opacity-20 cursor-not-allowed'
-              : 'opacity-60 hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)] cursor-pointer'
+              ? 'opacity-15 cursor-not-allowed'
+              : 'opacity-70 hover:opacity-100 cursor-pointer'
           }`}
         >
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 border ${
             isReady
-              ? 'bg-[rgba(255,255,255,0.04)]'
-              : 'bg-[rgba(255,255,255,0.06)] group-hover:bg-[#F0B90B]/20 group-hover:scale-110'
+              ? 'bg-[rgba(255,255,255,0.03)] border-[rgba(255,255,255,0.04)]'
+              : 'bg-[#F0B90B]/10 border-[#F0B90B]/30 group-hover:bg-[#F0B90B]/20 group-hover:border-[#F0B90B]/50 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-[#F0B90B]/10'
           }`}>
-            <ChevronRight className={`w-5 h-5 transition-colors ${
-              isReady ? 'text-[#848E9C]' : 'text-[#848E9C] group-hover:text-[#F0B90B]'
+            <ChevronRight className={`w-7 h-7 transition-colors ${
+              isReady ? 'text-[#5E6673]' : 'text-[#F0B90B]/70 group-hover:text-[#F0B90B]'
             }`} />
           </div>
+          <span className={`text-[10px] font-medium tracking-wider uppercase transition-colors ${
+            isReady ? 'text-[#5E6673]/50' : 'text-[#F0B90B]/50 group-hover:text-[#F0B90B]'
+          }`}>Next</span>
         </button>
       </div>
     </div>
