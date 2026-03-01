@@ -1,10 +1,8 @@
 // ============================================================
-// Binance Market Data Hooks
+// Binance Market Data Hooks (Performance Optimized)
 // Primary: WebSocket via data-stream.binance.vision (spot)
 // Fallback: REST polling via data-api.binance.vision
-// Note: fapi.binance.com and stream.binance.com are geo-blocked
-// in some regions. data-stream/data-api work globally.
-// HYPERUSDT on spot tracks the same underlying as the perp.
+// Key fix: Batched subscriptions to avoid excessive reconnections
 // ============================================================
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -15,21 +13,24 @@ const WS_BASE = 'wss://data-stream.binance.vision/stream?streams=';
 const SYMBOL = 'HYPERUSDT';
 const SYMBOL_LC = 'hyperusdt';
 
-// ─── WebSocket Manager ───────────────────────────────────────
-// Shared single WebSocket connection for all streams
+// ─── WebSocket Manager (Batched) ────────────────────────────
+// Collects all subscriptions, then connects once with all streams
 type StreamHandler = (data: any) => void;
 
 class BinanceWSManager {
   private ws: WebSocket | null = null;
   private handlers: Map<string, StreamHandler> = new Map();
   private reconnectTimer: number | null = null;
+  private batchTimer: number | null = null;
   private isConnected = false;
   private connectionAttempts = 0;
   private maxAttempts = 5;
+  private currentStreamsUrl = '';
 
   subscribe(stream: string, handler: StreamHandler) {
     this.handlers.set(stream, handler);
-    this.ensureConnection();
+    // Batch: wait 100ms for all subscriptions to register, then connect once
+    this.scheduleBatchConnect();
   }
 
   unsubscribe(stream: string) {
@@ -37,18 +38,26 @@ class BinanceWSManager {
     if (this.handlers.size === 0) {
       this.disconnect();
     }
+    // Don't reconnect on unsubscribe — streams still work, just handler removed
+  }
+
+  private scheduleBatchConnect() {
+    if (this.batchTimer) clearTimeout(this.batchTimer);
+    this.batchTimer = window.setTimeout(() => {
+      this.batchTimer = null;
+      const newUrl = this.getStreamsUrl();
+      // Only reconnect if streams actually changed
+      if (newUrl !== this.currentStreamsUrl) {
+        if (this.isConnected) {
+          this.disconnect();
+        }
+        this.connect();
+      }
+    }, 150);
   }
 
   private getStreamsUrl(): string {
     return WS_BASE + Array.from(this.handlers.keys()).join('/');
-  }
-
-  private ensureConnection() {
-    if (this.isConnected && this.ws?.readyState === WebSocket.OPEN) {
-      // Already connected — reconnect with updated streams
-      this.disconnect();
-    }
-    this.connect();
   }
 
   private connect() {
@@ -56,6 +65,8 @@ class BinanceWSManager {
     if (this.connectionAttempts >= this.maxAttempts) return;
 
     const url = this.getStreamsUrl();
+    this.currentStreamsUrl = url;
+
     try {
       this.ws = new WebSocket(url);
     } catch {
@@ -66,7 +77,7 @@ class BinanceWSManager {
     this.ws.onopen = () => {
       this.isConnected = true;
       this.connectionAttempts = 0;
-      console.log('[WS] Connected to data-stream.binance.vision');
+      console.log(`[WS] Connected (${this.handlers.size} streams)`);
     };
 
     this.ws.onmessage = (event) => {
@@ -79,9 +90,9 @@ class BinanceWSManager {
           if (handler) {
             handler(data);
           } else {
-            // Try partial match (e.g., "hyperusdt@kline_1m" matches handler for kline)
+            // Partial match for kline streams (e.g., stream might have extra info)
             this.handlers.forEach((h, key) => {
-              if (stream.startsWith(key.split('@')[0]) && stream.includes(key.split('@')[1] || '')) {
+              if (stream.includes(key) || key.includes(stream)) {
                 h(data);
               }
             });
@@ -96,6 +107,7 @@ class BinanceWSManager {
 
     this.ws.onclose = () => {
       this.isConnected = false;
+      this.currentStreamsUrl = '';
       this.scheduleReconnect();
     };
   }
@@ -112,10 +124,12 @@ class BinanceWSManager {
       this.ws = null;
     }
     this.isConnected = false;
+    this.currentStreamsUrl = '';
   }
 
   private scheduleReconnect() {
     if (this.reconnectTimer) return;
+    if (this.handlers.size === 0) return;
     this.connectionAttempts++;
     const delay = Math.min(1000 * Math.pow(2, this.connectionAttempts), 30000);
     this.reconnectTimer = window.setTimeout(() => {
@@ -137,7 +151,6 @@ export function useBinanceKline(timeframe: TimeframeKey = '1m') {
   const [klines, setKlines] = useState<KlineData[]>([]);
   const [loading, setLoading] = useState(true);
   const wsActiveRef = useRef(false);
-  const pollingRef = useRef<number | null>(null);
 
   // Fetch historical klines via REST
   const fetchKlines = useCallback(async () => {
@@ -163,6 +176,7 @@ export function useBinanceKline(timeframe: TimeframeKey = '1m') {
 
   // Initial fetch
   useEffect(() => {
+    setLoading(true);
     fetchKlines();
   }, [fetchKlines]);
 
@@ -202,14 +216,13 @@ export function useBinanceKline(timeframe: TimeframeKey = '1m') {
     };
   }, [timeframe]);
 
-  // Polling fallback (HYPERUSDT spot has low volume, kline WS updates can be slow)
+  // Polling fallback (only if WS not active)
   useEffect(() => {
     const interval = window.setInterval(() => {
       if (!wsActiveRef.current) {
         fetchKlines();
       }
     }, 5000);
-    pollingRef.current = interval;
     return () => window.clearInterval(interval);
   }, [fetchKlines]);
 
@@ -295,7 +308,7 @@ export function useBinanceTicker() {
       if (!wsActiveRef.current) {
         fetchTicker();
       }
-    }, 2000);
+    }, 3000);
     return () => window.clearInterval(interval);
   }, [fetchTicker]);
 
@@ -362,7 +375,7 @@ export function useBinanceDepth() {
       if (!wsActiveRef.current) {
         fetchDepth();
       }
-    }, 1500);
+    }, 2000);
     return () => window.clearInterval(interval);
   }, [fetchDepth]);
 
@@ -425,7 +438,7 @@ export function useBinanceAggTrades() {
       if (!wsActiveRef.current) {
         fetchTrades();
       }
-    }, 2000);
+    }, 3000);
     return () => window.clearInterval(interval);
   }, [fetchTrades]);
 

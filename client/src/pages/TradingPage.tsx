@@ -1,15 +1,15 @@
 // ============================================================
-// Trading Page — Core trading competition interface (v2 Layout)
+// Trading Page — Core trading competition interface (v3 Layout)
 // Design: Obsidian Exchange — Dark exchange + esports arena
-// Layout v2: 
+// Layout v3 (swapped):
 //   Top: StatusBar → NewsTicker
 //   Left: TickerBar + Chart + OrderBook
-//   Right: TradingPanel (top) + MiniLeaderboard (bottom, always visible)
-//   Bottom: Tabs (Trade History / Chat / Leaderboard Full / News)
+//   Right: Tabs (Chat / Trades / Leaderboard / News / Market)
+//   Bottom: TradingPanel (horizontal) + MiniLeaderboard (compact)
 //   Footer: SocialBar
 // ============================================================
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import CandlestickChart from '@/components/CandlestickChart';
@@ -37,6 +37,17 @@ import {
   generateMatchState,
 } from '@/lib/mockData';
 import type { TimeframeKey, ChatMessage } from '@/lib/types';
+
+// Memoized sub-components to prevent unnecessary re-renders
+const MemoizedCandlestickChart = memo(CandlestickChart);
+const MemoizedOrderBookPanel = memo(OrderBookPanel);
+const MemoizedMiniLeaderboard = memo(MiniLeaderboard);
+const MemoizedLeaderboard = memo(Leaderboard);
+const MemoizedNewsFeed = memo(NewsFeed);
+const MemoizedSocialBar = memo(SocialBar);
+const MemoizedRecentTrades = memo(RecentTrades);
+const MemoizedTickerBar = memo(TickerBar);
+const MemoizedTradeHistory = memo(TradeHistory);
 
 export default function TradingPage() {
   const [timeframe, setTimeframe] = useState<TimeframeKey>('1m');
@@ -116,11 +127,11 @@ export default function TradingPage() {
     }
   }, [rawClosePosition]);
 
-  // Update position PnL on a fixed interval
+  // Update position PnL on a fixed interval (throttled to 500ms for perf)
   useEffect(() => {
     const interval = setInterval(() => {
       updatePosition();
-    }, 200);
+    }, 500);
     return () => clearInterval(interval);
   }, [updatePosition]);
 
@@ -132,29 +143,16 @@ export default function TradingPage() {
   const [cycle] = useState(() => generateCycleState());
   const [match] = useState(() => generateMatchState());
 
-  // Simulate incoming chat messages
+  // Simulate incoming chat messages (reduced frequency for perf)
   useEffect(() => {
     const botMessages = [
-      '这波行情太刺激了！',
-      '有人看到那根大阳线了吗？',
-      '排名又掉了两位...',
-      '权重快到1.0x了，再忍忍',
-      '空头小心，支撑位很强',
-      '晋级线附近好紧张',
-      '刚平了一笔+1.5U',
-      '资金费率变了，注意',
-      '大家冲啊，最后几小时了！',
-      '这波假突破差点被骗',
-      '看这个量能，主力在吸筹',
-      '我已经晋级了！大家加油',
-      '这个价位做空风险太大了',
-      '持仓权重终于到1.0x了',
-      '还剩3笔交易机会，要谨慎',
-      '有人在聊天室带节奏吧？',
-      '别被新闻骗了，看K线',
-      '满仓梭哈了，祝我好运',
-      '刚被止损打了，心态崩了',
-      '稳住，还有时间翻盘',
+      '这波行情太刺激了！', '有人看到那根大阳线了吗？', '排名又掉了两位...',
+      '权重快到1.0x了，再忍忍', '空头小心，支撑位很强', '晋级线附近好紧张',
+      '刚平了一笔+1.5U', '资金费率变了，注意', '大家冲啊，最后几小时了！',
+      '这波假突破差点被骗', '看这个量能，主力在吸筹', '我已经晋级了！大家加油',
+      '这个价位做空风险太大了', '持仓权重终于到1.0x了', '还剩3笔交易机会，要谨慎',
+      '有人在聊天室带节奏吧？', '别被新闻骗了，看K线', '满仓梭哈了，祝我好运',
+      '刚被止损打了，心态崩了', '稳住，还有时间翻盘',
     ];
     const usernames = ['CryptoWhale', 'BearSlayer', 'MoonTrader', 'AlphaHunter', 'ScalpGod', 'ChartMaster', 'DeFiKing', 'SwingPro', 'BTCMaxi', 'DeltaNeutral', 'GammaSqueezer', 'VolumeKing'];
 
@@ -166,8 +164,8 @@ export default function TradingPage() {
         timestamp: Date.now(),
         type: 'user',
       };
-      setChatMessages(prev => [...prev.slice(-80), msg]);
-    }, 4000 + Math.random() * 8000);
+      setChatMessages(prev => [...prev.slice(-60), msg]);
+    }, 5000 + Math.random() * 10000);
 
     const alertInterval = setInterval(() => {
       const alerts = [
@@ -186,8 +184,8 @@ export default function TradingPage() {
         timestamp: Date.now(),
         type: Math.random() > 0.5 ? 'system' : 'alert',
       };
-      setChatMessages(prev => [...prev.slice(-80), alertMsg]);
-    }, 20000 + Math.random() * 15000);
+      setChatMessages(prev => [...prev.slice(-60), alertMsg]);
+    }, 25000 + Math.random() * 20000);
 
     return () => {
       clearInterval(interval);
@@ -206,23 +204,23 @@ export default function TradingPage() {
     setChatMessages(prev => [...prev, msg]);
   }, []);
 
-  // Bottom panel tab
-  const [bottomTab, setBottomTab] = useState<string>('chat');
+  // Right panel tab
+  const [rightTab, setRightTab] = useState<string>('chat');
 
-  const tabTriggerClass = "data-[state=active]:bg-transparent data-[state=active]:text-[#F0B90B] data-[state=active]:border-b-2 data-[state=active]:border-[#F0B90B] data-[state=active]:shadow-none rounded-none text-[11px] px-4 py-1.5 text-[#848E9C] hover:text-[#D1D4DC] transition-colors";
+  const tabTriggerClass = "data-[state=active]:bg-transparent data-[state=active]:text-[#F0B90B] data-[state=active]:border-b-2 data-[state=active]:border-[#F0B90B] data-[state=active]:shadow-none rounded-none text-[11px] px-3 py-1.5 text-[#848E9C] hover:text-[#D1D4DC] transition-colors";
 
   // Unread chat indicator
   const [unreadChat, setUnreadChat] = useState(0);
   const prevMsgCount = useRef(chatMessages.length);
   useEffect(() => {
-    if (bottomTab !== 'chat' && chatMessages.length > prevMsgCount.current) {
+    if (rightTab !== 'chat' && chatMessages.length > prevMsgCount.current) {
       setUnreadChat(prev => prev + (chatMessages.length - prevMsgCount.current));
     }
-    if (bottomTab === 'chat') {
+    if (rightTab === 'chat') {
       setUnreadChat(0);
     }
     prevMsgCount.current = chatMessages.length;
-  }, [chatMessages.length, bottomTab]);
+  }, [chatMessages.length, rightTab]);
 
   return (
     <div className="h-screen flex flex-col bg-[#0B0E11] overflow-hidden select-none">
@@ -235,18 +233,18 @@ export default function TradingPage() {
       {/* Competition Push Notifications (side-effect only) */}
       <CompetitionNotifications account={account} match={match} />
 
-      {/* Main content area */}
+      {/* Main content area: Left (chart+orderbook) + Right (tabs) */}
       <div className="flex-1 flex overflow-hidden">
-        {/* LEFT + CENTER: Chart area + OrderBook */}
-        <div className="flex-1 flex flex-col border-r border-[rgba(255,255,255,0.06)]">
+        {/* LEFT: Chart area + OrderBook */}
+        <div className="flex-1 flex flex-col">
           {/* Ticker info bar */}
-          <TickerBar ticker={ticker} priceDirection={priceDirection} />
+          <MemoizedTickerBar ticker={ticker} priceDirection={priceDirection} />
 
           {/* Chart + OrderBook side by side */}
           <div className="flex-1 flex overflow-hidden">
             {/* Chart area */}
             <div className="flex-1 flex flex-col">
-              <CandlestickChart
+              <MemoizedCandlestickChart
                 klines={klines}
                 loading={klinesLoading}
                 timeframe={timeframe}
@@ -256,90 +254,90 @@ export default function TradingPage() {
 
             {/* Order Book */}
             <div className="w-[200px] border-l border-[rgba(255,255,255,0.06)]">
-              <OrderBookPanel
+              <MemoizedOrderBookPanel
                 orderBook={orderBook}
                 lastPrice={currentPrice}
                 priceDirection={priceDirection}
               />
             </div>
           </div>
-
-          {/* Bottom Tabs: Trade History / Chat / Full Leaderboard / News */}
-          <div className="h-[200px] border-t border-[rgba(255,255,255,0.06)]">
-            <Tabs value={bottomTab} onValueChange={setBottomTab} className="flex flex-col h-full">
-              <TabsList className="bg-transparent border-b border-[rgba(255,255,255,0.06)] rounded-none h-7 px-1 gap-0 justify-start w-full shrink-0">
-                <TabsTrigger value="trades" className={tabTriggerClass}>
-                  Trades
-                  {completedTrades.length > 0 && (
-                    <span className="ml-1 text-[9px] text-[#848E9C]">({completedTrades.length})</span>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="chat" className={tabTriggerClass}>
-                  Chat
-                  {unreadChat > 0 && (
-                    <span className="ml-1 px-1.5 py-0.5 bg-[#F6465D] text-white text-[8px] rounded-full leading-none">
-                      {unreadChat > 99 ? '99+' : unreadChat}
-                    </span>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="leaderboard" className={tabTriggerClass}>
-                  Leaderboard
-                </TabsTrigger>
-                <TabsTrigger value="news" className={tabTriggerClass}>
-                  News
-                </TabsTrigger>
-                <TabsTrigger value="recent" className={tabTriggerClass}>
-                  Market
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="trades" className="flex-1 overflow-hidden mt-0">
-                <TradeHistory trades={completedTrades} />
-              </TabsContent>
-              <TabsContent value="chat" className="flex-1 overflow-hidden mt-0">
-                <ChatRoom messages={chatMessages} onSendMessage={handleSendMessage} />
-              </TabsContent>
-              <TabsContent value="leaderboard" className="flex-1 overflow-hidden mt-0">
-                <Leaderboard entries={leaderboard} myRank={account.rank} promotionLineRank={300} />
-              </TabsContent>
-              <TabsContent value="news" className="flex-1 overflow-hidden mt-0">
-                <NewsFeed news={news} />
-              </TabsContent>
-              <TabsContent value="recent" className="flex-1 overflow-hidden mt-0">
-                <RecentTrades trades={aggTrades} />
-              </TabsContent>
-            </Tabs>
-          </div>
         </div>
 
-        {/* RIGHT COLUMN: Trading Panel (top) + Mini Leaderboard (bottom, always visible) */}
-        <div className="w-[300px] flex flex-col">
-          {/* Trading Panel - scrollable if content overflows */}
-          <div className="overflow-y-auto border-b border-[rgba(255,255,255,0.06)]" style={{ maxHeight: '55%' }}>
-            <TradingPanel
-              account={account}
-              position={position}
-              currentPrice={currentPrice}
-              onOpenPosition={openPosition}
-              onClosePosition={closePosition}
-              getNextWeightThreshold={getNextWeightThreshold}
-              onSetTpSl={setTpSl}
-            />
-          </div>
+        {/* RIGHT: Tabs (Chat / Trades / Leaderboard / News / Market) */}
+        <div className="w-[320px] border-l border-[rgba(255,255,255,0.06)] flex flex-col">
+          <Tabs value={rightTab} onValueChange={setRightTab} className="flex flex-col h-full">
+            <TabsList className="bg-transparent border-b border-[rgba(255,255,255,0.06)] rounded-none h-7 px-1 gap-0 justify-start w-full shrink-0">
+              <TabsTrigger value="chat" className={tabTriggerClass}>
+                Chat
+                {unreadChat > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 bg-[#F6465D] text-white text-[8px] rounded-full leading-none">
+                    {unreadChat > 99 ? '99+' : unreadChat}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="trades" className={tabTriggerClass}>
+                Trades
+                {completedTrades.length > 0 && (
+                  <span className="ml-1 text-[9px] text-[#848E9C]">({completedTrades.length})</span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="leaderboard" className={tabTriggerClass}>
+                Rank
+              </TabsTrigger>
+              <TabsTrigger value="news" className={tabTriggerClass}>
+                News
+              </TabsTrigger>
+              <TabsTrigger value="recent" className={tabTriggerClass}>
+                Market
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Mini Leaderboard - always visible */}
-          <div className="flex-1 overflow-hidden">
-            <MiniLeaderboard
-              entries={leaderboard}
-              myRank={account.rank}
-              promotionLineRank={300}
-            />
-          </div>
+            <TabsContent value="chat" className="flex-1 overflow-hidden mt-0">
+              <ChatRoom messages={chatMessages} onSendMessage={handleSendMessage} />
+            </TabsContent>
+            <TabsContent value="trades" className="flex-1 overflow-hidden mt-0">
+              <MemoizedTradeHistory trades={completedTrades} />
+            </TabsContent>
+            <TabsContent value="leaderboard" className="flex-1 overflow-hidden mt-0">
+              <MemoizedLeaderboard entries={leaderboard} myRank={account.rank} promotionLineRank={300} />
+            </TabsContent>
+            <TabsContent value="news" className="flex-1 overflow-hidden mt-0">
+              <MemoizedNewsFeed news={news} />
+            </TabsContent>
+            <TabsContent value="recent" className="flex-1 overflow-hidden mt-0">
+              <MemoizedRecentTrades trades={aggTrades} />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
 
-      {/* Bottom: Social Information Bar */}
-      <SocialBar social={social} />
+      {/* Bottom: Trading Panel (horizontal) + Mini Leaderboard */}
+      <div className="h-[90px] flex border-t border-[rgba(255,255,255,0.06)]">
+        {/* Trading Panel — takes most of the width */}
+        <div className="flex-1 overflow-hidden">
+          <TradingPanel
+            account={account}
+            position={position}
+            currentPrice={currentPrice}
+            onOpenPosition={openPosition}
+            onClosePosition={closePosition}
+            getNextWeightThreshold={getNextWeightThreshold}
+            onSetTpSl={setTpSl}
+          />
+        </div>
+
+        {/* Mini Leaderboard — compact right strip */}
+        <div className="w-[200px] border-l border-[rgba(255,255,255,0.06)] overflow-hidden">
+          <MemoizedMiniLeaderboard
+            entries={leaderboard}
+            myRank={account.rank}
+            promotionLineRank={300}
+          />
+        </div>
+      </div>
+
+      {/* Footer: Social Information Bar */}
+      <MemoizedSocialBar social={social} />
     </div>
   );
 }
