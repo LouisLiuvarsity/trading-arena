@@ -2,9 +2,10 @@
 // Trading Page — Core trading competition interface
 // Design: Obsidian Exchange — Dark exchange + esports arena
 // Layout: Binance-style three-column with competition overlay
+// FIX: Replaced unstable useEffect deps with interval-based PnL update
 // ============================================================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import CandlestickChart from '@/components/CandlestickChart';
@@ -52,16 +53,20 @@ export default function TradingPage() {
     getNextWeightThreshold,
   } = useTrading(currentPrice);
 
+  // Keep a ref for currentPrice to use in toast without causing re-creation
+  const currentPriceRef = useRef(currentPrice);
+  currentPriceRef.current = currentPrice;
+
   // Wrap trading actions with toast notifications
   const openPosition = useCallback((direction: 'long' | 'short', size: number) => {
     rawOpenPosition(direction, size);
     const color = direction === 'long' ? '#0ECB81' : '#F6465D';
     const label = direction === 'long' ? 'LONG' : 'SHORT';
-    toast(`${label} ${size} USDT @ ${currentPrice.toFixed(4)}`, {
+    toast(`${label} ${size} USDT @ ${currentPriceRef.current.toFixed(4)}`, {
       description: `Position opened. Hold duration weight starts at 0.2x`,
       style: { background: '#1C2030', border: `1px solid ${color}`, color: '#D1D4DC' },
     });
-  }, [rawOpenPosition, currentPrice]);
+  }, [rawOpenPosition]);
 
   const closePosition = useCallback(() => {
     const trade = rawClosePosition();
@@ -78,12 +83,13 @@ export default function TradingPage() {
     }
   }, [rawClosePosition]);
 
-  // Update position PnL on price changes
+  // Update position PnL on a fixed interval (avoids infinite loop from deps)
   useEffect(() => {
-    if (position && currentPrice > 0) {
+    const interval = setInterval(() => {
       updatePosition();
-    }
-  }, [currentPrice, position, updatePosition]);
+    }, 200); // Update 5 times per second for smooth PnL display
+    return () => clearInterval(interval);
+  }, [updatePosition]);
 
   // Mock data (stable references)
   const [leaderboard] = useState(() => generateLeaderboard(285));

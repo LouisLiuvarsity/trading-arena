@@ -1,6 +1,7 @@
 // ============================================================
 // Simulated Trading Engine
 // Pure frontend mock trading with realistic competition mechanics
+// FIX: Use refs to break the setState→useEffect→setState loop
 // ============================================================
 
 import { useState, useCallback, useRef } from 'react';
@@ -23,7 +24,7 @@ function getHoldWeight(seconds: number): number {
   return 1.3;
 }
 
-function getNextWeightThreshold(seconds: number): { nextWeight: number; secondsNeeded: number } | null {
+function getNextWeightThresholdFn(seconds: number): { nextWeight: number; secondsNeeded: number } | null {
   for (const hw of HOLD_WEIGHTS) {
     if (seconds < hw.maxSeconds) {
       const idx = HOLD_WEIGHTS.indexOf(hw);
@@ -49,50 +50,59 @@ function getProfitShareTier(score: number): number {
 export function useTrading(currentPrice: number) {
   const [position, setPosition] = useState<Position | null>(null);
   const [trades, setTrades] = useState<CompletedTrade[]>([]);
-  const [account, setAccount] = useState<AccountState>(generateAccountState());
+  const [account, setAccount] = useState<AccountState>(generateAccountState);
   const tradeCounterRef = useRef(account.tradesUsed);
 
-  const openPosition = useCallback((direction: 'long' | 'short', sizeUsdt: number) => {
-    if (position) return; // Already have a position
-    if (tradeCounterRef.current >= account.tradesMax) return;
-    if (sizeUsdt <= 0 || sizeUsdt > account.equity) return;
+  // Keep refs in sync so callbacks don't need position/currentPrice as deps
+  const positionRef = useRef<Position | null>(null);
+  const priceRef = useRef(currentPrice);
+  priceRef.current = currentPrice;
 
-    tradeCounterRef.current += 1;
-    const newPosition: Position = {
-      direction,
-      size: sizeUsdt,
-      entryPrice: currentPrice,
-      openTime: Date.now(),
-      unrealizedPnl: 0,
-      unrealizedPnlPct: 0,
-      holdDurationWeight: 0.2,
-      participationScore: 0,
-      tradeNumber: tradeCounterRef.current,
-    };
-    setPosition(newPosition);
-    setAccount(prev => ({
-      ...prev,
-      tradesUsed: tradeCounterRef.current,
-    }));
-  }, [position, currentPrice, account.equity, account.tradesMax]);
+  const openPosition = useCallback((direction: 'long' | 'short', sizeUsdt: number) => {
+    if (positionRef.current) return; // Already have a position
+    setAccount(prev => {
+      if (tradeCounterRef.current >= prev.tradesMax) return prev;
+      if (sizeUsdt <= 0 || sizeUsdt > prev.equity) return prev;
+
+      tradeCounterRef.current += 1;
+      const newPosition: Position = {
+        direction,
+        size: sizeUsdt,
+        entryPrice: priceRef.current,
+        openTime: Date.now(),
+        unrealizedPnl: 0,
+        unrealizedPnlPct: 0,
+        holdDurationWeight: 0.2,
+        participationScore: 0,
+        tradeNumber: tradeCounterRef.current,
+      };
+      positionRef.current = newPosition;
+      setPosition(newPosition);
+      return {
+        ...prev,
+        tradesUsed: tradeCounterRef.current,
+      };
+    });
+  }, []);
 
   const closePosition = useCallback((exitPrice?: number) => {
-    if (!position) return null;
+    const pos = positionRef.current;
+    if (!pos) return null;
 
-    const price = exitPrice || currentPrice;
-    const holdSeconds = (Date.now() - position.openTime) / 1000;
+    const price = exitPrice || priceRef.current;
+    const holdSeconds = (Date.now() - pos.openTime) / 1000;
     const weight = getHoldWeight(holdSeconds);
-    const direction = position.direction === 'long' ? 1 : -1;
-    const pnl = direction * (price - position.entryPrice) / position.entryPrice * position.size;
-    const pnlPct = direction * (price - position.entryPrice) / position.entryPrice * 100;
+    const direction = pos.direction === 'long' ? 1 : -1;
+    const pnl = direction * (price - pos.entryPrice) / pos.entryPrice * pos.size;
+    const pnlPct = direction * (price - pos.entryPrice) / pos.entryPrice * 100;
     const weightedPnl = pnl * weight;
-    const participationScore = position.size * weight;
+    const participationScore = pos.size * weight;
 
     const trade: CompletedTrade = {
       id: `trade-${Date.now()}`,
-      direction: position.direction,
-      size: position.size,
-      entryPrice: position.entryPrice,
+      direction: pos.direction,
+      size: pos.size,
+      entryPrice: pos.entryPrice,
       exitPrice: price,
       pnl: Math.round(pnl * 100) / 100,
       pnlPct: Math.round(pnlPct * 100) / 100,
@@ -101,10 +111,11 @@ export function useTrading(currentPrice: number) {
       holdDurationWeight: weight,
       participationScore: Math.round(participationScore),
       closeReason: 'manual',
-      openTime: position.openTime,
+      openTime: pos.openTime,
       closeTime: Date.now(),
     };
 
+    positionRef.current = null;
     setTrades(prev => [trade, ...prev]);
     setPosition(null);
 
@@ -132,26 +143,36 @@ export function useTrading(currentPrice: number) {
     });
 
     return trade;
-  }, [position, currentPrice]);
+  }, []);
 
-  // Update unrealized PnL
+  // Update unrealized PnL — uses refs, so it's stable and won't cause loops
   const updatePosition = useCallback(() => {
-    if (!position) return;
-    const holdSeconds = (Date.now() - position.openTime) / 1000;
-    const weight = getHoldWeight(holdSeconds);
-    const direction = position.direction === 'long' ? 1 : -1;
-    const pnl = direction * (currentPrice - position.entryPrice) / position.entryPrice * position.size;
-    const pnlPct = direction * (currentPrice - position.entryPrice) / position.entryPrice * 100;
-    const participationScore = position.size * weight;
+    const pos = positionRef.current;
+    if (!pos) return;
+    const price = priceRef.current;
+    if (price <= 0) return;
 
-    setPosition(prev => prev ? {
-      ...prev,
+    const holdSeconds = (Date.now() - pos.openTime) / 1000;
+    const weight = getHoldWeight(holdSeconds);
+    const dir = pos.direction === 'long' ? 1 : -1;
+    const pnl = dir * (price - pos.entryPrice) / pos.entryPrice * pos.size;
+    const pnlPct = dir * (price - pos.entryPrice) / pos.entryPrice * 100;
+    const participationScore = pos.size * weight;
+
+    const updated: Position = {
+      ...pos,
       unrealizedPnl: Math.round(pnl * 100) / 100,
       unrealizedPnlPct: Math.round(pnlPct * 100) / 100,
       holdDurationWeight: weight,
       participationScore: Math.round(participationScore),
-    } : null);
-  }, [position, currentPrice]);
+    };
+    positionRef.current = updated;
+    setPosition(updated);
+  }, []); // No deps — uses refs only
+
+  const getNextWeightThreshold = useCallback((seconds: number) => {
+    return getNextWeightThresholdFn(seconds);
+  }, []);
 
   return {
     position,
