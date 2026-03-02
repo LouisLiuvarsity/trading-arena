@@ -5,6 +5,7 @@
 // ============================================================
 
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { Bot } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { LeaderboardEntry } from '@/lib/types';
 
@@ -197,16 +198,23 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
                 <div className={`flex items-center px-2 py-[3px] text-[11px] font-mono rounded transition-all duration-300 ${
                   isMe
                     ? 'bg-[#F0B90B]/10 border border-[#F0B90B]/30'
-                    : change && change !== 0
-                      ? change > 0 ? 'bg-[#0ECB81]/5' : 'bg-[#F6465D]/5'
-                      : 'hover:bg-white/3'
+                    : entry.isBot
+                      ? 'bg-[#8B5CF6]/5 border border-[#8B5CF6]/10'
+                      : change && change !== 0
+                        ? change > 0 ? 'bg-[#0ECB81]/5' : 'bg-[#F6465D]/5'
+                        : 'hover:bg-white/3'
                 }`}>
                   <span className={`w-10 ${
                     entry.rank <= 3 ? 'text-[#F0B90B] font-bold' : 'text-[#848E9C]'
                   }`}>
                     {entry.rank <= 3 ? ['🥇', '🥈', '🥉'][entry.rank - 1] : entry.rank}
                   </span>
-                  <span className={`flex-1 truncate ${isMe ? 'text-[#F0B90B] font-semibold' : 'text-[#D1D4DC]'}`}>
+                  <span className={`flex-1 truncate flex items-center gap-1 ${isMe ? 'text-[#F0B90B] font-semibold' : entry.isBot ? 'text-[#A78BFA]' : 'text-[#D1D4DC]'}`}>
+                    {entry.isBot && (
+                      <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded bg-[#8B5CF6]/20 border border-[#8B5CF6]/40 shrink-0" title="Quant Bot">
+                        <Bot className="w-2.5 h-2.5 text-[#A78BFA]" />
+                      </span>
+                    )}
                     {entry.username}
                   </span>
                   <span className="w-12 text-right text-[10px]">

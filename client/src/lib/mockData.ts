@@ -12,6 +12,8 @@ import type {
   CycleState,
   AccountState,
   MatchState,
+  QuantBotStats,
+  AllTimeLeaderboardEntry,
 } from './types';
 
 const USERNAMES = [
@@ -28,20 +30,23 @@ const USERNAMES = [
 // 5000U capital: pnl range is roughly -500U to +500U per match
 export function generateLeaderboard(myRank: number = 285): LeaderboardEntry[] {
   const entries: LeaderboardEntry[] = [];
+  const botRank = 42; // Bot is a strong competitor
   for (let i = 1; i <= 1000; i++) {
-    const pnlPct = 12 - (i / 1000) * 18 + (Math.random() - 0.5) * 2;
+    const isBot = i === botRank;
+    const pnlPct = isBot ? 6.8 : 12 - (i / 1000) * 18 + (Math.random() - 0.5) * 2;
     const pnl = pnlPct * 50; // 5000U base → pnl in absolute terms
     const profitSharePct = pnlPct > 0 ? (i <= 100 ? 20 : i <= 300 ? 15 : i <= 500 ? 10 : 5) : 5;
     const withdrawable = pnl > 0 ? pnl * (profitSharePct / 100) : 0;
     entries.push({
       rank: i,
-      username: i === myRank ? 'You' : USERNAMES[Math.floor(Math.random() * USERNAMES.length)] + (i < 100 ? '' : i.toString().slice(-2)),
+      username: isBot ? 'AlphaEngine v3' : i === myRank ? 'You' : USERNAMES[Math.floor(Math.random() * USERNAMES.length)] + (i < 100 ? '' : i.toString().slice(-2)),
       pnlPct: Math.round(pnlPct * 100) / 100,
       pnl: Math.round(pnl * 100) / 100,
       profitSharePct,
       withdrawable: Math.round(withdrawable * 100) / 100,
       promotionScore: 1000 - i,
       isYou: i === myRank,
+      isBot,
     });
   }
   return entries;
@@ -213,6 +218,105 @@ export const EMOTIONAL_CHAT_MESSAGES = {
     '降级的话本金直接砍半...',
   ],
 };
+
+// ============================================================
+// Quant Bot Mock Data
+// ============================================================
+
+export function generateQuantBotStats(): QuantBotStats {
+  const now = Date.now();
+  const equityCurve: Array<{ time: number; equity: number }> = [];
+  let equity = 5000;
+  // Generate 24h of equity data (every 15 min = 96 points)
+  for (let i = 0; i < 96; i++) {
+    const time = now - (96 - i) * 15 * 60 * 1000;
+    const change = (Math.random() - 0.42) * 30; // slight upward bias
+    equity = Math.max(4500, equity + change);
+    equityCurve.push({ time, equity: Math.round(equity * 100) / 100 });
+  }
+  const finalEquity = equityCurve[equityCurve.length - 1].equity;
+
+  return {
+    name: 'AlphaEngine v3',
+    totalReturn: Math.round((finalEquity - 5000) * 100) / 100,
+    totalReturnPct: Math.round((finalEquity - 5000) / 50) / 100,
+    winRate: 62.5,
+    totalTrades: 24,
+    maxDrawdown: -3.2,
+    sharpeRatio: 1.85,
+    avgHoldDuration: '42m',
+    currentPosition: {
+      direction: 'long',
+      size: 2500,
+      entryPrice: 142.35,
+      unrealizedPnl: 38.5,
+      unrealizedPnlPct: 1.54,
+    },
+    recentTrades: [
+      { id: 'bt-1', direction: 'long', entryPrice: 141.20, exitPrice: 143.80, pnl: 45.8, pnlPct: 1.84, holdDuration: '1h 12m', timestamp: now - 3600000 },
+      { id: 'bt-2', direction: 'short', entryPrice: 144.50, exitPrice: 143.10, pnl: 24.2, pnlPct: 0.97, holdDuration: '38m', timestamp: now - 7200000 },
+      { id: 'bt-3', direction: 'long', entryPrice: 140.80, exitPrice: 141.60, pnl: 14.2, pnlPct: 0.57, holdDuration: '25m', timestamp: now - 10800000 },
+      { id: 'bt-4', direction: 'short', entryPrice: 142.00, exitPrice: 142.90, pnl: -15.8, pnlPct: -0.63, holdDuration: '18m', timestamp: now - 14400000 },
+      { id: 'bt-5', direction: 'long', entryPrice: 139.50, exitPrice: 141.20, pnl: 30.4, pnlPct: 1.22, holdDuration: '55m', timestamp: now - 18000000 },
+      { id: 'bt-6', direction: 'long', entryPrice: 138.90, exitPrice: 139.80, pnl: 16.2, pnlPct: 0.65, holdDuration: '32m', timestamp: now - 21600000 },
+    ],
+    equityCurve,
+    vsHumans: {
+      botReturnPct: Math.round((finalEquity - 5000) / 50) / 100,
+      avgHumanReturnPct: 1.8,
+      topHumanReturnPct: 8.5,
+      botWinRate: 62.5,
+      avgHumanWinRate: 41.2,
+      botMaxDrawdown: -3.2,
+      avgHumanMaxDrawdown: -6.8,
+      botSharpe: 1.85,
+      avgHumanSharpe: 0.62,
+    },
+  };
+}
+
+// ============================================================
+// Historical All-Time Leaderboard
+// ============================================================
+
+const ALL_TIME_NAMES = [
+  'CryptoWhale', 'AlphaHunter', 'ScalpGod', 'SwingPro', 'ChartMaster',
+  'DiamondHands', 'MoonTrader', 'OrderFlow', 'SmartMoney', 'TrendRider',
+  'BreakoutKing', 'DeFiKing', 'LiquidityPro', 'FibTrader', 'VolumeSpike',
+  'MomentumPlay', 'MeanRevert', 'GapFiller', 'NewsTrader', 'BasisTrade',
+  'SpreadKing', 'DeltaNeutral', 'GammaScalp', 'ThetaGang', 'IronCondor',
+  'PerpSwap', 'SpotFutures', 'CrossMargin', 'LeverageKing', 'VolCrusher',
+];
+
+const TIERS = ['Diamond', 'Gold', 'Silver', 'Bronze'];
+
+export function generateAllTimeLeaderboard(): AllTimeLeaderboardEntry[] {
+  const entries: AllTimeLeaderboardEntry[] = [];
+
+  // Insert bot at rank ~8 (strong but not #1)
+  for (let i = 1; i <= 50; i++) {
+    const isBot = i === 8;
+    const matches = isBot ? 45 : 10 + Math.floor(Math.random() * 80);
+    const avgPnl = isBot ? 4.2 : (12 - i * 0.35 + (Math.random() - 0.5) * 2);
+    const totalPnl = avgPnl * matches * 50;
+    const winRate = isBot ? 62.5 : Math.max(30, 65 - i * 0.5 + (Math.random() - 0.5) * 10);
+    const tier = i <= 5 ? 'Diamond' : i <= 15 ? 'Gold' : i <= 30 ? 'Silver' : 'Bronze';
+
+    entries.push({
+      rank: i,
+      username: isBot ? 'AlphaEngine v3' : ALL_TIME_NAMES[(i - 1) % ALL_TIME_NAMES.length] + (i > 30 ? i.toString() : ''),
+      totalMatches: matches,
+      totalPnl: Math.round(totalPnl),
+      totalPnlPct: Math.round(avgPnl * matches * 100) / 100,
+      avgPnlPct: Math.round(avgPnl * 100) / 100,
+      winRate: Math.round(winRate * 10) / 10,
+      bestMatch: Math.round((avgPnl * 2.5 + Math.random() * 3) * 100) / 100,
+      currentTier: tier,
+      isBot,
+    });
+  }
+  return entries;
+}
 
 export const SYSTEM_ALERTS = [
   '📊 晋级线 #300 当前收益率：+{pnl}%',

@@ -125,6 +125,62 @@ export interface LeaderboardEntry {
   withdrawable: number;
   promotionScore: number;
   isYou?: boolean;
+  isBot?: boolean;
+}
+
+// Quant Bot Performance Data
+export interface QuantBotStats {
+  name: string;
+  totalReturn: number;
+  totalReturnPct: number;
+  winRate: number;
+  totalTrades: number;
+  maxDrawdown: number;
+  sharpeRatio: number;
+  avgHoldDuration: string;
+  currentPosition: {
+    direction: 'long' | 'short' | 'flat';
+    size: number;
+    entryPrice: number;
+    unrealizedPnl: number;
+    unrealizedPnlPct: number;
+  } | null;
+  recentTrades: Array<{
+    id: string;
+    direction: 'long' | 'short';
+    entryPrice: number;
+    exitPrice: number;
+    pnl: number;
+    pnlPct: number;
+    holdDuration: string;
+    timestamp: number;
+  }>;
+  equityCurve: Array<{ time: number; equity: number }>;
+  vsHumans: {
+    botReturnPct: number;
+    avgHumanReturnPct: number;
+    topHumanReturnPct: number;
+    botWinRate: number;
+    avgHumanWinRate: number;
+    botMaxDrawdown: number;
+    avgHumanMaxDrawdown: number;
+    botSharpe: number;
+    avgHumanSharpe: number;
+  };
+}
+
+// Historical All-Time Leaderboard
+export interface AllTimeLeaderboardEntry {
+  rank: number;
+  username: string;
+  totalMatches: number;
+  totalPnl: number;
+  totalPnlPct: number;
+  avgPnlPct: number;
+  winRate: number;
+  bestMatch: number;
+  currentTier: string;
+  isBot?: boolean;
 }
 
 export interface ChatMessage {
