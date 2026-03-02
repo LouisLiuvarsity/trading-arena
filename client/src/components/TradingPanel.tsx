@@ -192,8 +192,8 @@ function TradingPanel({
             )}
           </div>
           <div className="text-center">
-            <div className="text-[9px] text-[#848E9C]">Score</div>
-            <div className="font-mono text-[#D1D4DC] text-xs">+{position.participationScore}</div>
+            <div className="text-[9px] text-[#848E9C]">Weight</div>
+            <div className="font-mono text-[#D1D4DC] text-xs">{position.holdDurationWeight}x</div>
           </div>
         </div>
 
@@ -386,7 +386,7 @@ function TradingPanel({
 
       {/* Section 5: Stage info */}
       <div className="flex items-center px-2 text-[9px] text-[#848E9C] shrink-0">
-        {account.tier} • {account.tierLeverage}x • No Liq
+        {account.rankTier.toUpperCase()} • {account.tierLeverage}x • No Liq
       </div>
     </div>
   );

@@ -1,13 +1,14 @@
 // ============================================================
-// Simulated Trading Engine — v4.0
+// Simulated Trading Engine — v5.0
 // 5000U Capital / Fixed Prize Pool (500 USDT per regular match)
 // Points-based grand final qualification
-// Participation score tiers: Bronze/Silver/Gold/Diamond
+// Min 5 trades/match for prize eligibility
+// Rank tiers by cumulative season points (LoL-style)
 // ============================================================
 
 import { useState, useCallback, useRef } from 'react';
 import type { Position, CompletedTrade, AccountState } from '@/lib/types';
-import { HOLD_DURATION_WEIGHTS, REGULAR_PRIZE_TABLE, MATCH_POINTS_TABLE, PARTICIPATION_TIERS } from '@/lib/types';
+import { HOLD_DURATION_WEIGHTS, REGULAR_PRIZE_TABLE, MATCH_POINTS_TABLE, MIN_TRADES_FOR_PRIZE, getRankTier } from '@/lib/types';
 import { generateAccountState } from '@/lib/mockData';
 
 function getHoldWeight(seconds: number): number {
@@ -31,17 +32,6 @@ function getNextWeightThresholdFn(seconds: number): { nextWeight: number; second
     }
   }
   return null;
-}
-
-function getParticipationTier(score: number): 'bronze' | 'silver' | 'gold' | 'diamond' {
-  for (const tier of [...PARTICIPATION_TIERS].reverse()) {
-    if (score >= tier.min) return tier.tier;
-  }
-  return 'bronze';
-}
-
-function isPrizeEligible(tier: 'bronze' | 'silver' | 'gold' | 'diamond'): boolean {
-  return tier !== 'bronze';
 }
 
 function getPrizeForRank(rank: number): number {
@@ -85,7 +75,6 @@ export function useTrading(currentPrice: number) {
         unrealizedPnl: 0,
         unrealizedPnlPct: 0,
         holdDurationWeight: 0.2,
-        participationScore: 0,
         tradeNumber: tradeCounterRef.current,
         takeProfit: tp ?? null,
         stopLoss: sl ?? null,
@@ -95,6 +84,8 @@ export function useTrading(currentPrice: number) {
       return {
         ...prev,
         tradesUsed: tradeCounterRef.current,
+        // Update prize eligibility based on trade count
+        prizeEligible: tradeCounterRef.current >= MIN_TRADES_FOR_PRIZE,
       };
     });
   }, []);
@@ -110,7 +101,6 @@ export function useTrading(currentPrice: number) {
     const pnl = direction * (price - pos.entryPrice) / pos.entryPrice * pos.size;
     const pnlPct = direction * (price - pos.entryPrice) / pos.entryPrice * 100;
     const weightedPnl = pnl * weight;
-    const participationScore = pos.size * weight;
 
     const trade: CompletedTrade = {
       id: `trade-${Date.now()}`,
@@ -123,7 +113,6 @@ export function useTrading(currentPrice: number) {
       weightedPnl: Math.round(weightedPnl * 100) / 100,
       holdDuration: holdSeconds,
       holdDurationWeight: weight,
-      participationScore: Math.round(participationScore),
       closeReason: reason || 'manual',
       openTime: pos.openTime,
       closeTime: Date.now(),
@@ -137,11 +126,9 @@ export function useTrading(currentPrice: number) {
       const newPnl = prev.pnl + trade.pnl;
       const newEquity = prev.capital + newPnl;
       const newWeightedPnl = prev.weightedPnl + trade.weightedPnl;
-      const newParticipation = prev.participationScore + trade.participationScore;
-      const newTier = getParticipationTier(newParticipation);
-      const eligible = isPrizeEligible(newTier);
       const rankDelta = trade.pnl > 0 ? -Math.floor(Math.random() * 15) : Math.floor(Math.random() * 10);
       const newRank = Math.max(1, Math.min(1000, prev.rank + rankDelta));
+      const eligible = prev.tradesUsed >= MIN_TRADES_FOR_PRIZE;
       const newPrize = eligible ? getPrizeForRank(newRank) : 0;
       const newPoints = getPointsForRank(newRank);
       return {
@@ -150,8 +137,6 @@ export function useTrading(currentPrice: number) {
         pnl: Math.round(newPnl * 100) / 100,
         pnlPct: Math.round((newPnl / prev.capital) * 10000) / 100,
         weightedPnl: Math.round(newWeightedPnl * 100) / 100,
-        participationScore: Math.round(newParticipation),
-        participationTier: newTier,
         prizeEligible: eligible,
         rank: newRank,
         matchPoints: newPoints,
@@ -209,14 +194,12 @@ export function useTrading(currentPrice: number) {
     const dir = pos.direction === 'long' ? 1 : -1;
     const pnl = dir * (price - pos.entryPrice) / pos.entryPrice * pos.size;
     const pnlPct = dir * (price - pos.entryPrice) / pos.entryPrice * 100;
-    const participationScore = pos.size * weight;
 
     const updated: Position = {
       ...pos,
       unrealizedPnl: Math.round(pnl * 100) / 100,
       unrealizedPnlPct: Math.round(pnlPct * 100) / 100,
       holdDurationWeight: weight,
-      participationScore: Math.round(participationScore),
     };
     positionRef.current = updated;
     setPosition(updated);

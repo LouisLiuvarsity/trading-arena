@@ -6,6 +6,7 @@
 // ============================================================
 
 import { memo, useState, useEffect } from 'react';
+import { RANK_TIERS } from '@/lib/types';
 import type { SocialData, AccountState, MatchState } from '@/lib/types';
 
 interface Props {
@@ -158,35 +159,29 @@ function MarketStats({ social, account, match }: Props) {
         </div>
       </div>
 
-      {/* Participation Tier - Prize Eligibility */}
+      {/* Rank Tier & Prize Eligibility */}
       <div className="px-3 py-2.5">
-        <div className="text-[10px] text-[#848E9C] mb-1.5">🏅 参与分等级 (奖金资格)</div>
+        <div className="text-[10px] text-[#848E9C] mb-1.5">🏅 段位 & 奖金资格</div>
         <div className="space-y-1">
-          {[
-            { tier: 'Bronze', range: '0 - 4,999', eligible: false, color: '#CD7F32', active: account.participationTier === 'bronze' },
-            { tier: 'Silver', range: '5,000 - 14,999', eligible: true, color: '#C0C0C0', active: account.participationTier === 'silver' },
-            { tier: 'Gold', range: '15,000 - 29,999', eligible: true, color: '#F0B90B', active: account.participationTier === 'gold' },
-            { tier: 'Diamond', range: '30,000+', eligible: true, color: '#B9F2FF', active: account.participationTier === 'diamond' },
-          ].map((t, i) => (
-            <div key={i} className={`flex items-center justify-between px-2 py-1 rounded text-[9px] font-mono ${
-              t.active 
-                ? 'border text-white' 
-                : 'text-[#848E9C]'
-            }`} style={t.active ? { borderColor: `${t.color}60`, background: `${t.color}15` } : {}}>
-              <span className="flex items-center gap-1.5">
-                <span style={{ color: t.active ? t.color : undefined }}>{t.tier}</span>
-                <span className="text-[#5E6673]">{t.range}</span>
-              </span>
-              <span className={t.eligible ? 'text-[#0ECB81]' : 'text-[#F6465D]'}>
-                {t.eligible ? '✓ 有资格' : '✗ 无资格'}
-              </span>
-            </div>
-          ))}
+          {RANK_TIERS.map((t, i) => {
+            const isActive = account.rankTier === t.tier;
+            return (
+              <div key={i} className={`flex items-center justify-between px-2 py-1 rounded text-[9px] font-mono ${
+                isActive ? 'border text-white' : 'text-[#848E9C]'
+              }`} style={isActive ? { borderColor: `${t.color}60`, background: `${t.color}15` } : {}}>
+                <span className="flex items-center gap-1.5">
+                  <span>{t.icon}</span>
+                  <span style={{ color: isActive ? t.color : undefined }}>{t.label}</span>
+                  <span className="text-[#5E6673]">{t.leverage}x</span>
+                </span>
+                <span className="text-[#5E6673]">{t.minPoints}{t.maxPoints === Infinity ? '+' : `-${t.maxPoints}`}</span>
+              </div>
+            );
+          })}
         </div>
         <div className="mt-1.5 text-[9px] text-[#848E9C]">
-          当前参与分: <span className="text-[#D1D4DC] font-mono">{account.participationScore.toLocaleString()}</span>
-          <span className="ml-1" style={{ color: account.prizeEligible ? '#0ECB81' : '#F6465D' }}>
-            {account.prizeEligible ? '✓ 有奖金资格' : '✗ 需达到 Silver (5000+)'}
+          奖金资格: <span style={{ color: account.prizeEligible ? '#0ECB81' : '#F6465D' }}>
+            {account.prizeEligible ? `✓ 已完成 ${account.tradesUsed} 笔交易` : `✗ 需至少 5 笔交易 (当前 ${account.tradesUsed})`}
           </span>
         </div>
       </div>

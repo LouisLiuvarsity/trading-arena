@@ -1,11 +1,11 @@
 // ============================================================
-// Quick Rules Guide — v4.0 Simplified onboarding
-// Core rules: 5000U, 40 trades, hold weight, fixed prize pool,
-// points system, participation tier, last 30min close-only
+// Quick Rules Guide — v5.0 Simplified onboarding
+// Core rules: 5000U, 40 trades, min 5 trades for eligibility,
+// hold weight, fixed prize pool, points → rank tiers, decay
 // ============================================================
 
 import { useState } from 'react';
-import { Shield, Activity, Clock, DollarSign, Star, Medal, ChevronRight, Zap, AlertTriangle } from 'lucide-react';
+import { Shield, Activity, Clock, DollarSign, Star, Trophy, ChevronRight, Zap, AlertTriangle } from 'lucide-react';
 
 interface RulesPageProps {
   username: string;
@@ -51,7 +51,7 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
               {
                 icon: Shield,
                 title: '5,000 USDT 模拟资金',
-                desc: '所有段位相同本金，晋级解锁更高杠杆 (1x/2x/3x)',
+                desc: '所有段位相同本金，高段位解锁更高杠杆（1x → 1.2x → 1.5x → 2x → 2.5x → 3x）',
                 accent: '#F0B90B',
               },
               {
@@ -59,6 +59,12 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
                 title: '最多 40 笔交易 · 24 小时',
                 desc: '鼓励深思熟虑的决策，而非频繁交易',
                 accent: '#3B82F6',
+              },
+              {
+                icon: Trophy,
+                title: '至少 5 笔交易 = 奖金资格',
+                desc: '每场比赛完成 5 笔以上交易才有资格获得奖金和积分',
+                accent: '#F6465D',
               },
               {
                 icon: Clock,
@@ -69,20 +75,14 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
               {
                 icon: DollarSign,
                 title: '固定奖金池 500 USDT/场',
-                desc: '冠军 55U，前 100 名均有奖金（需 Silver 以上参与分）',
+                desc: '冠军 55U，前 100 名均有奖金（需完成 5 笔交易）',
                 accent: '#0ECB81',
               },
               {
                 icon: Star,
-                title: '积分制 → 月末总决赛',
-                desc: '每场按排名获积分（冠军100分），累计前500名进总决赛',
+                title: '积分制 → 段位 → 月末总决赛',
+                desc: '每场按排名获积分（冠军100分），累计积分决定段位，每月 ×0.8 衰减',
                 accent: '#F59E0B',
-              },
-              {
-                icon: Medal,
-                title: '参与分门槛',
-                desc: 'Bronze（<5000分）= 无奖金资格，交易越多参与分越高',
-                accent: '#F6465D',
               },
             ].map((rule, i) => (
               <div key={i} className="flex items-start gap-3">

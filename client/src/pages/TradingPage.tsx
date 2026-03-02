@@ -81,7 +81,7 @@ export default function TradingPage() {
         const isProfitable = lastTrade.pnl >= 0;
         const reasonLabel = lastTrade.closeReason === 'tp' ? '🎯 Take Profit' : '🛑 Stop Loss';
         toast(`${reasonLabel} — ${isProfitable ? '+' : ''}${lastTrade.pnl.toFixed(2)} USDT`, {
-          description: `Auto-closed at ${lastTrade.exitPrice.toFixed(2)} | Weight: ${lastTrade.holdDurationWeight}x | Score: +${lastTrade.participationScore}`,
+          description: `Auto-closed at ${lastTrade.exitPrice.toFixed(2)} | Weight: ${lastTrade.holdDurationWeight}x | Weighted PnL: ${lastTrade.weightedPnl >= 0 ? '+' : ''}${lastTrade.weightedPnl.toFixed(2)}`,
           style: {
             background: '#1C2030',
             border: `1px solid ${lastTrade.closeReason === 'tp' ? '#0ECB81' : '#F6465D'}`,
@@ -113,7 +113,7 @@ export default function TradingPage() {
     if (trade && trade.closeReason === 'manual') {
       const isProfitable = trade.pnl >= 0;
       toast(`Closed ${trade.direction.toUpperCase()} — ${isProfitable ? '+' : ''}${trade.pnl.toFixed(2)} USDT`, {
-        description: `Weight: ${trade.holdDurationWeight}x | Weighted PnL: ${trade.weightedPnl >= 0 ? '+' : ''}${trade.weightedPnl.toFixed(2)} | Score: +${trade.participationScore}`,
+        description: `Weight: ${trade.holdDurationWeight}x | Weighted PnL: ${trade.weightedPnl >= 0 ? '+' : ''}${trade.weightedPnl.toFixed(2)}`,
         style: {
           background: '#1C2030',
           border: `1px solid ${isProfitable ? '#0ECB81' : '#F6465D'}`,

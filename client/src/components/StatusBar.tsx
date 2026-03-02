@@ -49,12 +49,14 @@ export default function StatusBar({ account, match, season }: Props) {
 
   // Tier badge colors
   const tierColors: Record<string, string> = {
+    iron: '#5E6673',
     bronze: '#CD7F32',
     silver: '#C0C0C0',
     gold: '#F0B90B',
+    platinum: '#00D4AA',
     diamond: '#B9F2FF',
   };
-  const tierColor = tierColors[account.participationTier] || '#848E9C';
+  const tierColor = tierColors[account.rankTier] || '#848E9C';
 
   return (
     <div className={`${getBarBg()} border-b border-[rgba(255,255,255,0.08)] transition-colors duration-1000`}>
@@ -79,7 +81,7 @@ export default function StatusBar({ account, match, season }: Props) {
             )}
           </span>
           <span className="text-[#848E9C]">
-            段位 <span className="font-mono text-[#F0B90B] font-semibold capitalize">{account.tier}</span>
+            段位 <span className="font-mono font-semibold capitalize" style={{ color: tierColor }}>{account.rankTier}</span>
             <span className="text-[#5E6673] ml-1">{account.tierLeverage}x</span>
           </span>
         </div>
@@ -111,12 +113,11 @@ export default function StatusBar({ account, match, season }: Props) {
             <span className="font-mono font-semibold text-[#F0B90B]">+{account.matchPoints}</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-[10px] text-[#848E9C]">Score</span>
-            <span className="font-mono" style={{ color: tierColor }}>
-              {account.participationScore.toLocaleString()}
-            </span>
-            {!account.prizeEligible && (
-              <span className="text-[8px] text-[#F6465D] ml-0.5">无资格</span>
+            <span className="text-[10px] text-[#848E9C]">Eligible</span>
+            {account.prizeEligible ? (
+              <span className="text-[#0ECB81] font-semibold text-[10px]">✓</span>
+            ) : (
+              <span className="text-[#F6465D] text-[10px]">✗ 需{5}笔</span>
             )}
           </div>
           <div className="flex items-center gap-1">

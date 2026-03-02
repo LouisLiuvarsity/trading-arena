@@ -22,8 +22,9 @@ import {
   GRAND_FINAL_PRIZE_TABLE,
   MATCH_POINTS_TABLE,
   HOLD_DURATION_WEIGHTS,
-  PARTICIPATION_TIERS,
-  PROMOTION_TIERS,
+  RANK_TIERS,
+  MIN_TRADES_FOR_PRIZE,
+  POINTS_DECAY_FACTOR,
 } from '@/lib/types';
 import type { AllTimeLeaderboardEntry, QuantBotStats } from '@/lib/types';
 
@@ -74,19 +75,18 @@ function BotBadge({ size = 'sm' }: { size?: 'sm' | 'md' }) {
   );
 }
 
-// ─── Participation Tier Badge ─────────────────────────────────
+// ─── Rank Tier Badge (LoL-style) ─────────────────────────────
 function TierBadge({ tier }: { tier: string }) {
-  const colors: Record<string, { bg: string; text: string; label: string }> = {
-    bronze: { bg: 'bg-[#CD7F32]/15', text: 'text-[#CD7F32]', label: 'Bronze' },
-    silver: { bg: 'bg-[#C0C0C0]/15', text: 'text-[#C0C0C0]', label: 'Silver' },
-    gold: { bg: 'bg-[#F0B90B]/15', text: 'text-[#F0B90B]', label: 'Gold' },
-    diamond: { bg: 'bg-[#B9F2FF]/15', text: 'text-[#B9F2FF]', label: 'Diamond' },
-    starter: { bg: 'bg-white/10', text: 'text-white/60', label: 'Starter' },
-    intermediate: { bg: 'bg-[#3B82F6]/15', text: 'text-[#3B82F6]', label: 'Inter.' },
-    advanced: { bg: 'bg-[#F0B90B]/15', text: 'text-[#F0B90B]', label: 'Adv.' },
-  };
-  const c = colors[tier] || colors.bronze;
-  return <span className={`${c.bg} ${c.text} text-[9px] px-1.5 py-0.5 rounded font-semibold`}>{c.label}</span>;
+  const found = RANK_TIERS.find(t => t.tier === tier);
+  if (!found) return <span className="text-[9px] text-[#5E6673]">{tier}</span>;
+  return (
+    <span
+      className="text-[9px] px-1.5 py-0.5 rounded font-semibold"
+      style={{ background: `${found.color}15`, color: found.color }}
+    >
+      {found.icon} {found.labelEn}
+    </span>
+  );
 }
 
 // ─── Equity Chart (SVG) ───────────────────────────────────────
@@ -278,7 +278,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
               {
                 icon: Shield,
                 title: '5,000U 模拟资金',
-                desc: '所有段位本金相同，无爆仓风险。晋级解锁更高杠杆 (1x/2x/3x)，更快拉开收益差距。',
+                desc: '所有段位本金相同，无爆仓风险。晋级解锁更高杠杆 (1x→3x)，更快拉开收益差距。',
                 accent: '#F0B90B',
               },
               {
@@ -307,8 +307,8 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
               },
               {
                 icon: Medal,
-                title: '参与分门槛',
-                desc: '参与分 = 交易金额 × 持仓权重。Bronze（<5000）无奖金资格，Silver 以上才能领奖。',
+                title: '最低 5 笔交易',
+                desc: `每场比赛至少完成 ${MIN_TRADES_FOR_PRIZE} 笔交易才有奖金资格。简单明了，确保每位选手认真参与。`,
                 accent: '#F6465D',
               },
             ].map((rule, i) => (
@@ -364,30 +364,25 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             </div>
           </motion.div>
 
-          {/* Participation tiers */}
+          {/* Eligibility + Rank Tiers */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="bg-[#1C2030]/40 border border-white/5 rounded-2xl p-6 max-w-2xl mx-auto"
           >
-            <h3 className="text-white text-sm font-semibold mb-4 text-center">参与分等级 · 奖金资格门槛</h3>
-            <div className="grid grid-cols-4 gap-3">
-              {[
-                { tier: 'Bronze', score: '0 - 4,999', eligible: false, color: '#CD7F32', icon: '🥉' },
-                { tier: 'Silver', score: '5,000+', eligible: true, color: '#C0C0C0', icon: '🥈' },
-                { tier: 'Gold', score: '15,000+', eligible: true, color: '#F0B90B', icon: '🥇' },
-                { tier: 'Diamond', score: '30,000+', eligible: true, color: '#B9F2FF', icon: '💎' },
-              ].map((t, i) => (
-                <div key={i} className={`text-center bg-[#0B0E11]/60 rounded-xl p-3 border ${t.eligible ? 'border-white/10' : 'border-[#F6465D]/20'}`}>
+            <h3 className="text-white text-sm font-semibold mb-2 text-center">奖金资格 & 段位体系</h3>
+            <p className="text-[10px] text-[#848E9C] text-center mb-4">
+              每场至少完成 {MIN_TRADES_FOR_PRIZE} 笔交易即可获得奖金资格 · 累计赛季积分决定段位 · 每月积分 ×{POINTS_DECAY_FACTOR} 衰减
+            </p>
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+              {RANK_TIERS.map((t, i) => (
+                <div key={i} className="text-center bg-[#0B0E11]/60 rounded-xl p-3 border border-white/5 hover:border-white/10 transition-all">
                   <div className="text-xl mb-1">{t.icon}</div>
-                  <div className="text-xs font-bold mb-0.5" style={{ color: t.color }}>{t.tier}</div>
-                  <div className="text-[9px] text-[#5E6673] mb-1.5">{t.score}</div>
-                  <div className={`text-[9px] font-semibold px-2 py-0.5 rounded-full inline-block ${
-                    t.eligible ? 'bg-[#0ECB81]/15 text-[#0ECB81]' : 'bg-[#F6465D]/15 text-[#F6465D]'
-                  }`}>
-                    {t.eligible ? '✓ 有奖金资格' : '✗ 无奖金资格'}
-                  </div>
+                  <div className="text-xs font-bold mb-0.5" style={{ color: t.color }}>{t.label}</div>
+                  <div className="text-[9px] text-[#5E6673] mb-1">{t.minPoints}{t.maxPoints === Infinity ? '+' : `-${t.maxPoints}`} 分</div>
+                  <div className="text-[10px] font-mono font-bold" style={{ color: t.color }}>{t.leverage}x</div>
+                  <div className="text-[8px] text-[#5E6673] mt-0.5">杠杆</div>
                 </div>
               ))}
             </div>
@@ -494,7 +489,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                 </div>
               </motion.div>
 
-              {/* Promotion tiers */}
+              {/* Rank Tiers - Points driven */}
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 whileInView={{ opacity: 1, x: 0 }}
@@ -506,32 +501,20 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                   段位晋级体系
                 </h3>
                 <p className="text-[10px] text-[#848E9C] mb-3 leading-relaxed">
-                  所有段位本金相同（5,000 USDT），高段位解锁更高杠杆，能更快拉开收益差距。段位可晋级也可降级。
+                  段位由累计赛季积分决定。所有段位本金相同（5,000 USDT），高段位解锁更高杠杆。每月积分 ×{POINTS_DECAY_FACTOR} 衰减，不参赛会自然降级。
                 </p>
                 <div className="space-y-2">
-                  {PROMOTION_TIERS.map((tier, i) => (
+                  {RANK_TIERS.map((tier, i) => (
                     <div key={i} className="bg-[#0B0E11]/60 rounded-lg px-4 py-3 border border-white/[0.04]">
-                      <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <TierBadge tier={tier.tier} />
+                          <span className="text-lg">{tier.icon}</span>
+                          <span className="text-xs font-bold" style={{ color: tier.color }}>{tier.label} {tier.labelEn}</span>
                           <span className="text-white text-xs font-bold">{tier.leverage}x 杠杆</span>
-                          <span className="text-[#5E6673] text-[10px]">· 5,000 USDT 本金</span>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-4 text-[9px]">
-                        {tier.promote !== '—' && (
-                          <span className="text-[#0ECB81] flex items-center gap-1">
-                            <span>▲</span> {tier.promote}
-                          </span>
-                        )}
-                        {tier.demote !== '—' && (
-                          <span className="text-[#F6465D] flex items-center gap-1">
-                            <span>▼</span> {tier.demote}
-                          </span>
-                        )}
-                        {tier.promote === '—' && (
-                          <span className="text-[#5E6673]">{(tier as any).condition || '最高段位'}</span>
-                        )}
+                        <span className="text-[10px] text-[#5E6673] font-mono">
+                          {tier.minPoints}{tier.maxPoints === Infinity ? '+' : `–${tier.maxPoints}`} 分
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -605,7 +588,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                         {entry.username}
                       </span>
                       {entry.isYou && <span className="text-[8px] bg-[#F0B90B]/20 text-[#F0B90B] px-1.5 py-0.5 rounded font-semibold">YOU</span>}
-                      {entry.participationTier === 'bronze' && <span className="text-[8px] text-[#F6465D]/60">无资格</span>}
+                      {!entry.prizeEligible && <span className="text-[8px] text-[#F6465D]/60">未达5笔</span>}
                     </span>
                     <span className={`text-right ${entry.pnlPct >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
                       {entry.pnlPct >= 0 ? '+' : ''}{entry.pnlPct.toFixed(2)}%
@@ -669,7 +652,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                     <span className="text-right text-[#848E9C]">{entry.matchesPlayed}</span>
                     <span className="text-right text-[#D1D4DC]">{entry.winRate}%</span>
                     <span className="text-right">
-                      <TierBadge tier={entry.tier} />
+                      <TierBadge tier={entry.rankTier} />
                     </span>
                     <span className="text-right">
                       {entry.grandFinalQualified ? (

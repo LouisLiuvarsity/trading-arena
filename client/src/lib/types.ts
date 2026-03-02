@@ -1,7 +1,8 @@
 // ============================================================
-// Trading Arena Types — v4.0
+// Trading Arena Types — v5.0
 // 24h Crypto Trading Competition Platform
 // Monthly: 15 Regular Matches + 1 Grand Final
+// Rank tiers by cumulative season points (LoL-style)
 // ============================================================
 
 export interface KlineData {
@@ -46,7 +47,6 @@ export interface Position {
   unrealizedPnl: number;
   unrealizedPnlPct: number;
   holdDurationWeight: number;
-  participationScore: number;
   tradeNumber: number;
   takeProfit: number | null;
   stopLoss: number | null;
@@ -63,13 +63,12 @@ export interface CompletedTrade {
   weightedPnl: number;
   holdDuration: number;
   holdDurationWeight: number;
-  participationScore: number;
   closeReason: 'manual' | 'sl' | 'tp' | 'time_limit' | 'match_end';
   openTime: number;
   closeTime: number;
 }
 
-// v4.0: Match types
+// v5.0: Match types
 export type MatchType = 'regular' | 'grand_final';
 
 export interface MatchState {
@@ -88,35 +87,58 @@ export interface MatchState {
   monthLabel: string; // e.g. "2026年3月"
 }
 
+// v5.0: LoL-style rank tiers driven by cumulative season points
+export type RankTier = 'iron' | 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
+
+export const RANK_TIERS = [
+  { tier: 'iron' as const, minPoints: 0, maxPoints: 99, label: '黑铁', labelEn: 'Iron', leverage: 1, color: '#5E6673', icon: '⚙️' },
+  { tier: 'bronze' as const, minPoints: 100, maxPoints: 299, label: '青铜', labelEn: 'Bronze', leverage: 1.2, color: '#CD7F32', icon: '🥉' },
+  { tier: 'silver' as const, minPoints: 300, maxPoints: 599, label: '白银', labelEn: 'Silver', leverage: 1.5, color: '#C0C0C0', icon: '🥈' },
+  { tier: 'gold' as const, minPoints: 600, maxPoints: 999, label: '黄金', labelEn: 'Gold', leverage: 2, color: '#F0B90B', icon: '🥇' },
+  { tier: 'platinum' as const, minPoints: 1000, maxPoints: 1499, label: '铂金', labelEn: 'Platinum', leverage: 2.5, color: '#00D4AA', icon: '💠' },
+  { tier: 'diamond' as const, minPoints: 1500, maxPoints: Infinity, label: '钻石', labelEn: 'Diamond', leverage: 3, color: '#B9F2FF', icon: '💎' },
+] as const;
+
+// Helper: get rank tier from cumulative points
+export function getRankTier(seasonPoints: number) {
+  for (let i = RANK_TIERS.length - 1; i >= 0; i--) {
+    if (seasonPoints >= RANK_TIERS[i].minPoints) return RANK_TIERS[i];
+  }
+  return RANK_TIERS[0];
+}
+
+// v5.0: Min trades per match for prize eligibility
+export const MIN_TRADES_FOR_PRIZE = 5;
+
+// v5.0: Monthly points decay factor
+export const POINTS_DECAY_FACTOR = 0.8;
+
 export interface AccountState {
-  capital: number; // 5000 for all tiers, leverage differs (1x/2x/3x)
+  capital: number; // 5000 for all tiers
   equity: number;
   pnl: number;
   pnlPct: number;
-  weightedPnl: number; // v4.0: main ranking metric
+  weightedPnl: number; // main ranking metric
   tradesUsed: number;
   tradesMax: number; // 40
   rank: number;
-  // v4.0: Points system
+  // Points system
   matchPoints: number; // points earned this match
   seasonPoints: number; // cumulative points across all matches this month
   grandFinalQualified: boolean;
   grandFinalLine: number; // estimated qualification line
-  // Participation score
-  participationScore: number;
-  participationTier: 'bronze' | 'silver' | 'gold' | 'diamond';
-  prizeEligible: boolean; // false if bronze
-  // Promotion system
-  tier: 'starter' | 'intermediate' | 'advanced';
-  tierCapital: number;
-  tierLeverage: number; // 1x, 2x, 3x
+  // v5.0: Prize eligibility by min trades (replaces participation score)
+  prizeEligible: boolean; // true if tradesUsed >= MIN_TRADES_FOR_PRIZE
+  // v5.0: Rank tier (LoL-style, driven by seasonPoints)
+  rankTier: RankTier;
+  tierLeverage: number; // 1x, 1.2x, 1.5x, 2x, 2.5x, 3x
   // Prize info
   prizeAmount: number; // estimated prize based on current rank
   directionConsistency: number; // 0-1, >0.7 gets 1.05x bonus
   directionBonus: boolean;
 }
 
-// v4.0: Season/Monthly tracking
+// v5.0: Season/Monthly tracking
 export interface SeasonState {
   seasonId: string;
   month: string; // "2026-03"
@@ -132,11 +154,13 @@ export interface SeasonState {
     pnlPct?: number;
     pointsEarned?: number;
     prizeWon?: number;
-    participationTier?: string;
   }>;
   totalPoints: number;
   grandFinalQualified: boolean;
   grandFinalRank?: number;
+  // v5.0: Points before decay (last month)
+  lastMonthPointsBeforeDecay?: number;
+  lastMonthPointsAfterDecay?: number;
 }
 
 export interface LeaderboardEntry {
@@ -146,13 +170,14 @@ export interface LeaderboardEntry {
   pnl: number;
   weightedPnl: number;
   matchPoints: number; // points earned this match
-  participationTier: 'bronze' | 'silver' | 'gold' | 'diamond';
+  prizeEligible: boolean; // true if >= 5 trades
   prizeAmount: number;
+  rankTier: RankTier; // LoL-style tier
   isYou?: boolean;
   isBot?: boolean;
 }
 
-// v4.0: Overall leaderboard sorted by cumulative points
+// v5.0: Overall leaderboard sorted by cumulative points
 export interface AllTimeLeaderboardEntry {
   rank: number;
   username: string;
@@ -163,8 +188,7 @@ export interface AllTimeLeaderboardEntry {
   avgPnlPct: number;
   winRate: number;
   bestMatchRank: number;
-  participationTier: 'bronze' | 'silver' | 'gold' | 'diamond';
-  tier: 'starter' | 'intermediate' | 'advanced';
+  rankTier: RankTier;
   grandFinalQualified: boolean;
   isBot?: boolean;
 }
@@ -210,7 +234,7 @@ export interface QuantBotStats {
   };
 }
 
-// v4.0: Prize distribution tables
+// v5.0: Prize distribution tables
 export const REGULAR_PRIZE_TABLE = [
   { rankMin: 1, rankMax: 1, prize: 55 },
   { rankMin: 2, rankMax: 2, prize: 35 },
@@ -233,7 +257,7 @@ export const GRAND_FINAL_PRIZE_TABLE = [
   { rankMin: 51, rankMax: 100, prize: 11 },
 ] as const;
 
-// v4.0: Points table per regular match
+// v5.0: Points table per regular match
 export const MATCH_POINTS_TABLE = [
   { rankMin: 1, rankMax: 1, points: 100 },
   { rankMin: 2, rankMax: 3, points: 70 },
@@ -244,7 +268,7 @@ export const MATCH_POINTS_TABLE = [
   { rankMin: 301, rankMax: 1000, points: 0 },
 ] as const;
 
-// v4.0: Hold duration weights
+// v5.0: Hold duration weights
 export const HOLD_DURATION_WEIGHTS = [
   { minSeconds: 0, maxSeconds: 60, weight: 0.2, label: '< 1 min' },
   { minSeconds: 60, maxSeconds: 180, weight: 0.4, label: '1-3 min' },
@@ -252,21 +276,6 @@ export const HOLD_DURATION_WEIGHTS = [
   { minSeconds: 600, maxSeconds: 1800, weight: 1.0, label: '10-30 min' },
   { minSeconds: 1800, maxSeconds: 7200, weight: 1.15, label: '30min-2h' },
   { minSeconds: 7200, maxSeconds: Infinity, weight: 1.3, label: '2-4h+' },
-] as const;
-
-// v4.0: Participation tiers
-export const PARTICIPATION_TIERS = [
-  { tier: 'bronze' as const, min: 0, max: 4999, label: 'Bronze', eligible: false },
-  { tier: 'silver' as const, min: 5000, max: 14999, label: 'Silver', eligible: true },
-  { tier: 'gold' as const, min: 15000, max: 29999, label: 'Gold', eligible: true },
-  { tier: 'diamond' as const, min: 30000, max: Infinity, label: 'Diamond', eligible: true },
-] as const;
-
-// v4.0: Promotion tiers — same capital (5,000U) for all, leverage is the differentiator
-export const PROMOTION_TIERS = [
-  { tier: 'starter' as const, capital: 5000, leverage: 1, label: 'Starter', condition: '默认段位', promote: '月均排名前 20% 晋级', demote: '—' },
-  { tier: 'intermediate' as const, capital: 5000, leverage: 2, label: 'Intermediate', condition: '月均排名前 20%', promote: '连续 2 月前 10% 晋级', demote: '月均排名后 30% 降级' },
-  { tier: 'advanced' as const, capital: 5000, leverage: 3, label: 'Advanced', condition: '连续 2 月前 10%', promote: '—', demote: '月均排名后 20% 降级' },
 ] as const;
 
 export interface ChatMessage {

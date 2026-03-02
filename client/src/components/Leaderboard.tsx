@@ -104,7 +104,8 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
     pnl: 0,
     weightedPnl: 0,
     matchPoints: 0,
-    participationTier: 'bronze',
+    prizeEligible: false,
+    rankTier: 'iron' as const,
     prizeAmount: 0,
   };
 
@@ -231,8 +232,8 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
                       </span>
                     )}
                     {entry.username}
-                    {entry.participationTier === 'bronze' && (
-                      <span className="text-[7px] text-[#F6465D]/60 ml-0.5">无资格</span>
+                    {!entry.prizeEligible && (
+                      <span className="text-[7px] text-[#F6465D]/60 ml-0.5">未达5笔</span>
                     )}
                   </span>
                   <span className="w-10 text-right text-[10px]">

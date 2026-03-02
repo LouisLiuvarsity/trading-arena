@@ -34,7 +34,7 @@ const NOTIFICATIONS: ScheduledNotification[] = [
     id: 'quarter',
     getMessage: (a) => ({
       title: `📊 比赛已过 1/4！`,
-      description: `排名 #${a.rank} | 收益 ${a.pnl >= 0 ? '+' : ''}${a.pnl.toFixed(1)} USDT | 积分 +${a.matchPoints} | 参与分 ${a.participationScore.toLocaleString()}`,
+      description: `排名 #${a.rank} | 收益 ${a.pnl >= 0 ? '+' : ''}${a.pnl.toFixed(1)} USDT | 积分 +${a.matchPoints} | 交易 ${a.tradesUsed}/${a.tradesMax}`,
       urgency: 'info',
     }),
   },
@@ -43,7 +43,7 @@ const NOTIFICATIONS: ScheduledNotification[] = [
     id: 'half',
     getMessage: (a) => ({
       title: `📈 半程报告 — 预计奖金 ${a.prizeAmount}U`,
-      description: `排名 #${a.rank} | 积分 +${a.matchPoints} | 参与分 ${a.participationScore.toLocaleString()} (${a.participationTier}) | ${a.prizeEligible ? '✓有奖金资格' : '✗需Silver+才有奖金资格'}`,
+      description: `排名 #${a.rank} | 积分 +${a.matchPoints} | ${a.prizeEligible ? '✓有奖金资格' : `✗需至少5笔交易 (当前${a.tradesUsed})`}`,
       urgency: 'info',
     }),
   },
@@ -61,7 +61,7 @@ const NOTIFICATIONS: ScheduledNotification[] = [
     id: 'last4h',
     getMessage: (a) => ({
       title: `🔥 最后4小时！倒计时变色中...`,
-      description: `排名 #${a.rank} | 参与分 ${a.participationScore.toLocaleString()} | 预计奖金 ${a.prizeAmount}U | 积分 +${a.matchPoints}`,
+      description: `排名 #${a.rank} | 预计奖金 ${a.prizeAmount}U | 积分 +${a.matchPoints} | 交易 ${a.tradesUsed}/${a.tradesMax}`,
       urgency: 'warning',
     }),
   },
@@ -155,10 +155,9 @@ export default function CompetitionNotifications({ account, match, social }: Pro
           border: '#F0B90B',
         });
       }
-      if (account.participationScore < 25000) {
-        const gap = 40000 - account.participationScore;
+      if (!account.prizeEligible) {
         messages.push({
-          msg: `🎯 参与分 ${account.participationScore.toLocaleString()} | 当前等级: ${account.participationTier} | 需5000+才有奖金资格`,
+          msg: `🎯 还需 ${5 - account.tradesUsed} 笔交易才有奖金资格（当前 ${account.tradesUsed}/5）`,
           border: '#F0B90B',
         });
       }

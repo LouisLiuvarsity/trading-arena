@@ -1,7 +1,8 @@
 // ============================================================
-// Mock Data for Trading Arena v4.0
+// Mock Data for Trading Arena v5.0
 // Fixed Prize Pool: 500 USDT/regular, 2500 USDT/grand final
-// Points-based qualification, participation score tiers
+// Rank tiers by cumulative season points (LoL-style)
+// Min 5 trades/match for prize eligibility
 // ============================================================
 
 import type {
@@ -14,8 +15,9 @@ import type {
   MatchState,
   QuantBotStats,
   AllTimeLeaderboardEntry,
+  RankTier,
 } from './types';
-import { REGULAR_PRIZE_TABLE, MATCH_POINTS_TABLE } from './types';
+import { REGULAR_PRIZE_TABLE, MATCH_POINTS_TABLE, getRankTier, MIN_TRADES_FOR_PRIZE } from './types';
 
 const USERNAMES = [
   'CryptoWhale', 'SatoshiFan', 'MoonTrader', 'DiamondHands', 'BearSlayer',
@@ -42,13 +44,6 @@ function getPointsForRank(rank: number): number {
   return 0;
 }
 
-function getParticipationTier(score: number): 'bronze' | 'silver' | 'gold' | 'diamond' {
-  if (score >= 30000) return 'diamond';
-  if (score >= 15000) return 'gold';
-  if (score >= 5000) return 'silver';
-  return 'bronze';
-}
-
 // Per-match leaderboard: sorted by weighted PnL% (收益率)
 export function generateLeaderboard(myRank: number = 285): LeaderboardEntry[] {
   const entries: LeaderboardEntry[] = [];
@@ -57,11 +52,15 @@ export function generateLeaderboard(myRank: number = 285): LeaderboardEntry[] {
     const isBot = i === botRank;
     const pnlPct = isBot ? 6.8 : 12 - (i / 1000) * 18 + (Math.random() - 0.5) * 2;
     const pnl = pnlPct * 50; // 5000U base
-    const weightedPnl = pnl * (isBot ? 1.15 : (0.7 + Math.random() * 0.6)); // weighted by hold time
+    const weightedPnl = pnl * (isBot ? 1.15 : (0.7 + Math.random() * 0.6));
     const prize = getPrizeForRank(i);
     const points = getPointsForRank(i);
-    const partScore = isBot ? 35000 : 2000 + Math.random() * 40000;
-    const tier = getParticipationTier(partScore);
+    // Most players have >= 5 trades, some don't
+    const hasEnoughTrades = isBot ? true : (i <= 800 ? Math.random() > 0.05 : Math.random() > 0.3);
+    // Season points determine rank tier
+    const seasonPts = isBot ? 520 : Math.max(0, 800 - i * 0.8 + (Math.random() - 0.5) * 100);
+    const tierInfo = getRankTier(seasonPts);
+
     entries.push({
       rank: i,
       username: isBot ? 'AlphaEngine v3' : i === myRank ? 'You' : USERNAMES[Math.floor(Math.random() * USERNAMES.length)] + (i < 100 ? '' : i.toString().slice(-2)),
@@ -69,8 +68,9 @@ export function generateLeaderboard(myRank: number = 285): LeaderboardEntry[] {
       pnl: Math.round(pnl * 100) / 100,
       weightedPnl: Math.round(weightedPnl * 100) / 100,
       matchPoints: points,
-      participationTier: tier,
-      prizeAmount: tier === 'bronze' ? 0 : prize, // Bronze = no prize
+      prizeEligible: hasEnoughTrades,
+      prizeAmount: hasEnoughTrades ? prize : 0,
+      rankTier: tierInfo.tier,
       isYou: i === myRank,
       isBot,
     });
@@ -137,7 +137,7 @@ export function generateSocialData(): SocialData {
   };
 }
 
-// v4.0: Season state replaces CycleState
+// v5.0: Season state
 export function generateSeasonState(): SeasonState {
   return {
     seasonId: 'season-2026-03',
@@ -146,11 +146,11 @@ export function generateSeasonState(): SeasonState {
     matchesTotal: 15,
     grandFinalScheduled: true,
     matches: [
-      { matchNumber: 1, matchType: 'regular', status: 'completed', rank: 87, weightedPnl: 312, pnlPct: 6.2, pointsEarned: 50, prizeWon: 10, participationTier: 'Gold' },
-      { matchNumber: 2, matchType: 'regular', status: 'completed', rank: 156, weightedPnl: 185, pnlPct: 3.7, pointsEarned: 30, prizeWon: 0, participationTier: 'Silver' },
-      { matchNumber: 3, matchType: 'regular', status: 'completed', rank: 42, weightedPnl: 428, pnlPct: 8.6, pointsEarned: 50, prizeWon: 4, participationTier: 'Diamond' },
-      { matchNumber: 4, matchType: 'regular', status: 'completed', rank: 215, weightedPnl: 98, pnlPct: 2.0, pointsEarned: 15, prizeWon: 0, participationTier: 'Silver' },
-      { matchNumber: 5, matchType: 'regular', status: 'active', rank: 285, weightedPnl: 240, pnlPct: 4.8, pointsEarned: 15, prizeWon: 0, participationTier: 'Gold' },
+      { matchNumber: 1, matchType: 'regular', status: 'completed', rank: 87, weightedPnl: 312, pnlPct: 6.2, pointsEarned: 50, prizeWon: 10 },
+      { matchNumber: 2, matchType: 'regular', status: 'completed', rank: 156, weightedPnl: 185, pnlPct: 3.7, pointsEarned: 30, prizeWon: 0 },
+      { matchNumber: 3, matchType: 'regular', status: 'completed', rank: 42, weightedPnl: 428, pnlPct: 8.6, pointsEarned: 50, prizeWon: 4 },
+      { matchNumber: 4, matchType: 'regular', status: 'completed', rank: 215, weightedPnl: 98, pnlPct: 2.0, pointsEarned: 15, prizeWon: 0 },
+      { matchNumber: 5, matchType: 'regular', status: 'active', rank: 285, weightedPnl: 240, pnlPct: 4.8, pointsEarned: 15, prizeWon: 0 },
       { matchNumber: 6, matchType: 'regular', status: 'pending' },
       { matchNumber: 7, matchType: 'regular', status: 'pending' },
       { matchNumber: 8, matchType: 'regular', status: 'pending' },
@@ -165,10 +165,14 @@ export function generateSeasonState(): SeasonState {
     totalPoints: 160,
     grandFinalQualified: false,
     grandFinalRank: undefined,
+    lastMonthPointsBeforeDecay: 200,
+    lastMonthPointsAfterDecay: 160,
   };
 }
 
 export function generateAccountState(): AccountState {
+  const seasonPoints = 160;
+  const tierInfo = getRankTier(seasonPoints);
   return {
     capital: 5000,
     equity: 5240,
@@ -179,15 +183,12 @@ export function generateAccountState(): AccountState {
     tradesMax: 40,
     rank: 285,
     matchPoints: 15,
-    seasonPoints: 160,
+    seasonPoints,
     grandFinalQualified: false,
     grandFinalLine: 200,
-    participationScore: 28000,
-    participationTier: 'gold',
-    prizeEligible: true,
-    tier: 'starter',
-    tierCapital: 5000,
-    tierLeverage: 1,
+    prizeEligible: true, // 9 trades >= 5 min
+    rankTier: tierInfo.tier,
+    tierLeverage: tierInfo.leverage,
     prizeAmount: 0, // rank 285 = no prize
     directionConsistency: 0.72,
     directionBonus: true,
@@ -227,10 +228,10 @@ export const EMOTIONAL_CHAT_MESSAGES = {
     '连赢{streak}笔了，今天手感太好了',
     '权重1.3x加成太爽了，+{pnl}U 直接起飞',
     '刚从#150冲到#60，一笔翻盘 🔥',
-    '参与分已经30000了，Diamond tier 😎',
     '这波空头吃了{pnl}U，感谢CPI数据',
     '排名进前50了！奖金4U到手',
     '这场拿了50积分，总决赛稳了',
+    '段位快升到白银了，1.5x杠杆 💪',
   ],
   panic: [
     '连亏{streak}笔了...还有救吗',
@@ -238,7 +239,7 @@ export const EMOTIONAL_CHAT_MESSAGES = {
     '止损被打了，-{pnl}U 心态崩了',
     '刚被假突破骗了，又亏了一笔',
     '只剩{trades}笔交易机会了，好慌',
-    '参与分还不到5000，Bronze没奖金资格...',
+    '才交易了3笔，还差2笔才有奖金资格...',
     '积分才{score}，总决赛没戏了',
     '满仓反向了，-{pnl}U 想退赛了',
   ],
@@ -264,8 +265,8 @@ export const EMOTIONAL_CHAT_MESSAGES = {
   pressure: [
     '奖金线附近好紧张...还差{gap}%',
     '被{count}个人超越了，排名在跌',
-    '权重还是0.4x，要不要继续拿？',
-    '参与分才{score}，还在Bronze区...',
+    '前100的门槛又提高了',
+    '才交易了{trades}笔，还差几笔才有奖金资格',
     '这个月打了5场了，总积分才{total}，总决赛悬',
     '最后30分钟只能平仓了，紧张',
   ],
@@ -345,15 +346,13 @@ export function generateAllTimeLeaderboard(): AllTimeLeaderboardEntry[] {
   for (let i = 1; i <= 50; i++) {
     const isBot = i === 8;
     const matchesPlayed = isBot ? 12 : 3 + Math.floor(Math.random() * 12);
-    // Points decrease with rank
     const basePoints = isBot ? 520 : Math.max(0, 750 - i * 15 + (Math.random() - 0.5) * 40);
     const avgPoints = basePoints / matchesPlayed;
     const avgPnlPct = isBot ? 4.2 : (10 - i * 0.3 + (Math.random() - 0.5) * 2);
     const totalWeightedPnl = avgPnlPct * matchesPlayed * 50;
     const winRate = isBot ? 62.5 : Math.max(30, 65 - i * 0.5 + (Math.random() - 0.5) * 10);
     const bestRank = isBot ? 3 : Math.max(1, Math.floor(i * 0.6 + Math.random() * 10));
-    const partTier = i <= 5 ? 'diamond' as const : i <= 15 ? 'gold' as const : i <= 30 ? 'silver' as const : 'bronze' as const;
-    const promoTier = i <= 3 ? 'advanced' as const : i <= 12 ? 'intermediate' as const : 'starter' as const;
+    const tierInfo = getRankTier(basePoints);
 
     entries.push({
       rank: i,
@@ -365,9 +364,8 @@ export function generateAllTimeLeaderboard(): AllTimeLeaderboardEntry[] {
       avgPnlPct: Math.round(avgPnlPct * 100) / 100,
       winRate: Math.round(winRate * 10) / 10,
       bestMatchRank: bestRank,
-      participationTier: partTier,
-      tier: promoTier,
-      grandFinalQualified: i <= 35, // top ~500 out of many qualify
+      rankTier: tierInfo.tier,
+      grandFinalQualified: i <= 35,
       isBot,
     });
   }
@@ -389,4 +387,5 @@ export const SYSTEM_ALERTS = [
   '🎯 本场积分：前1名100分，前10名50分',
   '⚠️ 最后30分钟禁止开新仓！',
   '🏅 你的赛季总积分：{points}，距总决赛线还差{gap}分',
+  '📋 每场至少完成5笔交易才有奖金资格！',
 ];
