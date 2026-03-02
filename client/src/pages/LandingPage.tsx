@@ -1,5 +1,5 @@
 // ============================================================
-// Landing Page — v4.0 Public Homepage for VARSITY Trading
+// Landing Page — v4.0 Public Homepage for Varsity Tech
 // Fixed Prize Pool / Points-based Grand Final / Participation Tiers
 // Sections: Hero, Rules, Prize, Leaderboard, Quant Bot, CTA
 // ============================================================
@@ -168,7 +168,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
               <Trophy className="w-4 h-4 text-[#F0B90B]" />
             </div>
             <span className="text-sm font-bold tracking-wider" style={{ fontFamily: "'DM Mono', monospace" }}>
-              VARSITY  Trading
+              Varsity Tech
             </span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-xs text-[#848E9C]">
@@ -831,7 +831,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
         <div className="max-w-5xl mx-auto flex items-center justify-between text-[10px] text-[#5E6673]">
           <div className="flex items-center gap-2">
             <Trophy className="w-3 h-3 text-[#F0B90B]" />
-            <span>VARSITY Trading © 2026</span>
+            <span>Varsity Tech © 2026</span>
           </div>
           <div>
             模拟交易 · 无真实资金风险

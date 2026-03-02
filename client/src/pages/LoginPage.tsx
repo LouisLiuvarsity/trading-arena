@@ -1,5 +1,5 @@
 // ============================================================
-// Login Page — VARSITY Trading Entry Point
+// Login Page — Varsity Tech Entry Point
 // Design: Obsidian Exchange — Dark, cinematic, competitive
 // ============================================================
 
@@ -50,7 +50,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             <Trophy className="w-8 h-8 text-[#F0B90B]" />
           </div>
           <h1 className="text-3xl font-bold text-white tracking-tight" style={{ fontFamily: "'DM Mono', monospace" }}>
-            VARSITY Trading
+            Varsity Tech
           </h1>
           <p className="text-[#848E9C] text-sm mt-2">
             24H Crypto Trading Competition
