@@ -386,7 +386,7 @@ function TradingPanel({
 
       {/* Section 5: Stage info */}
       <div className="flex items-center px-2 text-[9px] text-[#848E9C] shrink-0">
-        Stage {account.stage} • {account.stageMaxLeverage}x • No Liq
+        {account.tier} • {account.tierLeverage}x • No Liq
       </div>
     </div>
   );

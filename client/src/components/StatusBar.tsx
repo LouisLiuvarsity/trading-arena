@@ -1,16 +1,15 @@
 // ============================================================
-// Competition Status Bar — Top bar with all key metrics
-// Design: Gradient background that shifts warm as match progresses
-// Compact layout with clear visual hierarchy
+// Competition Status Bar — v4.0 Top bar with all key metrics
+// Monthly: 15 regular + 1 grand final, points system, fixed prize
 // ============================================================
 
 import { useState, useEffect } from 'react';
-import type { AccountState, MatchState, CycleState } from '@/lib/types';
+import type { AccountState, MatchState, SeasonState } from '@/lib/types';
 
 interface Props {
   account: AccountState;
   match: MatchState;
-  cycle: CycleState;
+  season: SeasonState;
 }
 
 function formatCountdown(seconds: number): string {
@@ -20,7 +19,7 @@ function formatCountdown(seconds: number): string {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
-export default function StatusBar({ account, match, cycle }: Props) {
+export default function StatusBar({ account, match, season }: Props) {
   const [remainingSeconds, setRemainingSeconds] = useState(match.remainingSeconds);
   const [elapsed, setElapsed] = useState(match.elapsed);
 
@@ -46,8 +45,16 @@ export default function StatusBar({ account, match, cycle }: Props) {
     return 'bg-[#0B0E11]';
   };
 
-  const promotionOk = account.promotionScore >= account.promotionThreshold;
   const pnlPositive = account.pnl >= 0;
+
+  // Tier badge colors
+  const tierColors: Record<string, string> = {
+    bronze: '#CD7F32',
+    silver: '#C0C0C0',
+    gold: '#F0B90B',
+    diamond: '#B9F2FF',
+  };
+  const tierColor = tierColors[account.participationTier] || '#848E9C';
 
   return (
     <div className={`${getBarBg()} border-b border-[rgba(255,255,255,0.08)] transition-colors duration-1000`}>
@@ -64,11 +71,20 @@ export default function StatusBar({ account, match, cycle }: Props) {
             <span className="font-display font-bold text-[#F0B90B] text-xs">ARENA</span>
           </div>
           <div className="h-3.5 w-px bg-white/10" />
-          <span className="text-[#848E9C]">Match <span className="font-mono text-[#D1D4DC] font-semibold">{match.matchNumber}/3</span></span>
-          <span className="text-[#848E9C]">Stage <span className="font-mono text-[#F0B90B] font-semibold">{account.stage}</span></span>
+          <span className="text-[#848E9C]">
+            {match.matchType === 'grand_final' ? (
+              <span className="text-[#F0B90B] font-semibold">总决赛</span>
+            ) : (
+              <>第 <span className="font-mono text-[#D1D4DC] font-semibold">{match.matchNumber}</span>/15 场</>
+            )}
+          </span>
+          <span className="text-[#848E9C]">
+            段位 <span className="font-mono text-[#F0B90B] font-semibold capitalize">{account.tier}</span>
+            <span className="text-[#5E6673] ml-1">{account.tierLeverage}x</span>
+          </span>
         </div>
 
-        {/* Center: Key metrics in compact format */}
+        {/* Center: Key metrics */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1">
             <span className="text-[10px] text-[#848E9C]">Equity</span>
@@ -85,22 +101,23 @@ export default function StatusBar({ account, match, cycle }: Props) {
             <span className="font-mono font-semibold text-[#D1D4DC]">#{account.rank}</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-[10px] text-[#848E9C]">Promotion</span>
-            <span className={`font-mono font-semibold ${promotionOk ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
-              {account.promotionScore} {promotionOk ? '✓' : ''}
+            <span className="text-[10px] text-[#848E9C]">Prize</span>
+            <span className={`font-mono font-semibold ${account.prizeAmount > 0 ? 'text-[#F0B90B]' : 'text-[#5E6673]'}`}>
+              {account.prizeAmount > 0 ? `${account.prizeAmount}U` : '—'}
             </span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-[10px] text-[#848E9C]">Share</span>
-            <span className="font-mono font-semibold text-[#F0B90B]">{account.profitSharePct}%</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="text-[10px] text-[#848E9C]">Withdrawable</span>
-            <span className="font-mono font-semibold text-[#0ECB81]">{account.withdrawable.toFixed(1)}U</span>
+            <span className="text-[10px] text-[#848E9C]">Points</span>
+            <span className="font-mono font-semibold text-[#F0B90B]">+{account.matchPoints}</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="text-[10px] text-[#848E9C]">Score</span>
-            <span className="font-mono text-[#D1D4DC]">{account.participationScore.toLocaleString()}/40,000</span>
+            <span className="font-mono" style={{ color: tierColor }}>
+              {account.participationScore.toLocaleString()}
+            </span>
+            {!account.prizeEligible && (
+              <span className="text-[8px] text-[#F6465D] ml-0.5">无资格</span>
+            )}
           </div>
           <div className="flex items-center gap-1">
             <span className="text-[10px] text-[#848E9C]">Trades</span>
@@ -110,6 +127,11 @@ export default function StatusBar({ account, match, cycle }: Props) {
 
         {/* Right: Countdown timer */}
         <div className="flex items-center gap-2 shrink-0">
+          {match.isCloseOnly && (
+            <span className="text-[9px] bg-[#F6465D]/20 text-[#F6465D] px-1.5 py-0.5 rounded font-semibold animate-pulse">
+              平仓模式
+            </span>
+          )}
           <div className="w-16 h-1 bg-white/10 rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-1000"
@@ -130,34 +152,36 @@ export default function StatusBar({ account, match, cycle }: Props) {
         </div>
       </div>
 
-      {/* Cycle progress mini bar */}
+      {/* Season progress mini bar */}
       <div className="flex items-center gap-2 px-3 py-0.5 border-t border-[rgba(255,255,255,0.04)] text-[10px]">
-        <span className="text-[#848E9C]">Cycle:</span>
-        {cycle.matches.map((m, i) => (
-          <div key={i} className="flex items-center gap-1">
+        <span className="text-[#848E9C]">{match.monthLabel}:</span>
+        {season.matches.slice(0, 8).map((m, i: number) => (
+          <div key={i} className="flex items-center gap-0.5">
             <span className={`w-1.5 h-1.5 rounded-full ${
               m.status === 'completed' ? 'bg-[#0ECB81]' :
               m.status === 'active' ? 'bg-[#F0B90B] animate-pulse' :
               'bg-[#848E9C]/30'
             }`} />
-            <span className={m.status === 'active' ? 'text-[#F0B90B]' : 'text-[#848E9C]'}>
-              G{m.matchNumber}
-              {m.pnl !== undefined && (
-                <span className={m.pnl >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}>
-                  {' '}{m.pnl >= 0 ? '+' : ''}{m.pnl.toFixed(1)}U
-                </span>
-              )}
+            <span className={`text-[9px] ${m.status === 'active' ? 'text-[#F0B90B]' : 'text-[#5E6673]'}`}>
+              {m.matchNumber}
             </span>
           </div>
         ))}
+        {season.matches.length > 8 && <span className="text-[#5E6673]">...</span>}
         <div className="h-2.5 w-px bg-white/10" />
-        <span className="text-[#848E9C]">Avg Score: <span className={`font-mono ${cycle.avgPromotionScore >= 700 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>{cycle.avgPromotionScore}</span></span>
+        <span className="text-[#848E9C]">
+          赛季积分: <span className="font-mono text-[#F0B90B] font-semibold">{season.totalPoints}</span>
+        </span>
         <div className="h-2.5 w-px bg-white/10" />
-        <span className="text-[#848E9C]">Cumulative PnL: <span className={`font-mono ${cycle.cumulativePnl >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>{cycle.cumulativePnl >= 0 ? '+' : ''}{cycle.cumulativePnl.toFixed(1)}U</span></span>
+        <span className="text-[#848E9C]">
+          已赛: <span className="font-mono text-[#D1D4DC]">{season.matchesPlayed}/15</span>
+        </span>
         <div className="h-2.5 w-px bg-white/10" />
-        <span className="text-[#848E9C]">Est. Withdraw(20%): <span className="font-mono text-[#0ECB81]">{cycle.cumulativePnl > 0 ? (cycle.cumulativePnl * 0.2).toFixed(1) : '0.0'}U</span></span>
+        <span className={season.grandFinalQualified ? 'text-[#0ECB81]' : 'text-[#848E9C]'}>
+          总决赛: {season.grandFinalQualified ? '✓ 已晋级' : '未晋级'}
+        </span>
         <div className="h-2.5 w-px bg-white/10" />
-        <span className="text-[#F0B90B] text-[9px]">3场集中结算</span>
+        <span className="text-[#F0B90B] text-[9px]">奖金池 {match.prizePool}U</span>
       </div>
     </div>
   );

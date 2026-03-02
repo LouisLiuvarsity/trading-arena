@@ -34,7 +34,7 @@ const NOTIFICATIONS: ScheduledNotification[] = [
     id: 'quarter',
     getMessage: (a) => ({
       title: `📊 比赛已过 1/4！`,
-      description: `排名 #${a.rank} | 收益 ${a.pnl >= 0 ? '+' : ''}${a.pnl.toFixed(1)} USDT | 晋级分 ${a.promotionScore} | 参与度 ${a.participationScore}`,
+      description: `排名 #${a.rank} | 收益 ${a.pnl >= 0 ? '+' : ''}${a.pnl.toFixed(1)} USDT | 积分 +${a.matchPoints} | 参与分 ${a.participationScore.toLocaleString()}`,
       urgency: 'info',
     }),
   },
@@ -42,8 +42,8 @@ const NOTIFICATIONS: ScheduledNotification[] = [
     triggerElapsedPct: 0.5,
     id: 'half',
     getMessage: (a) => ({
-      title: `📈 半程报告 — 预计可提现 ${a.withdrawable.toFixed(1)} USDT`,
-      description: `排名 #${a.rank} | 晋级分 ${a.promotionScore}${a.promotionScore >= 700 ? ' ✓达标' : ` (需≥700, 差${700 - a.promotionScore})`} | 再交易 ${Math.max(0, Math.ceil((40000 - a.participationScore) / 3000))} 笔可升至20%分成`,
+      title: `📈 半程报告 — 预计奖金 ${a.prizeAmount}U`,
+      description: `排名 #${a.rank} | 积分 +${a.matchPoints} | 参与分 ${a.participationScore.toLocaleString()} (${a.participationTier}) | ${a.prizeEligible ? '✓有奖金资格' : '✗需Silver+才有奖金资格'}`,
       urgency: 'info',
     }),
   },
@@ -52,7 +52,7 @@ const NOTIFICATIONS: ScheduledNotification[] = [
     id: 'last6h',
     getMessage: (a) => ({
       title: `⚡ 最后6小时！`,
-      description: `排名 #${a.rank} | 晋级分 ${a.promotionScore} | 累计可提现 ${a.withdrawable.toFixed(1)} USDT | ${a.tradesMax - a.tradesUsed} 笔交易机会剩余`,
+      description: `排名 #${a.rank} | 预计奖金 ${a.prizeAmount}U | 积分 +${a.matchPoints} | ${a.tradesMax - a.tradesUsed} 笔交易机会剩余`,
       urgency: 'warning',
     }),
   },
@@ -61,7 +61,7 @@ const NOTIFICATIONS: ScheduledNotification[] = [
     id: 'last4h',
     getMessage: (a) => ({
       title: `🔥 最后4小时！倒计时变色中...`,
-      description: `排名 #${a.rank} | 晋级分 ${a.promotionScore} | 可提现 ${a.withdrawable.toFixed(1)} USDT | 分成 ${a.profitSharePct}%`,
+      description: `排名 #${a.rank} | 参与分 ${a.participationScore.toLocaleString()} | 预计奖金 ${a.prizeAmount}U | 积分 +${a.matchPoints}`,
       urgency: 'warning',
     }),
   },
@@ -70,7 +70,7 @@ const NOTIFICATIONS: ScheduledNotification[] = [
     id: 'last2h',
     getMessage: (a) => ({
       title: `🚨 最终结算倒计时！结果将在 02:00:00 后锁定`,
-      description: `排名 #${a.rank} | 晋级分 ${a.promotionScore} | 可提现 ${a.withdrawable.toFixed(1)} USDT`,
+      description: `排名 #${a.rank} | 预计奖金 ${a.prizeAmount}U | 积分 +${a.matchPoints}`,
       urgency: 'critical',
     }),
   },
@@ -79,7 +79,7 @@ const NOTIFICATIONS: ScheduledNotification[] = [
     id: 'last1h',
     getMessage: (a) => ({
       title: `⏰ 最后1小时！最终冲刺！`,
-      description: `排名 #${a.rank} | 晋级分 ${a.promotionScore} | 每5分钟更新排名`,
+      description: `排名 #${a.rank} | 积分 +${a.matchPoints} | 每5分钟更新排名`,
       urgency: 'critical',
     }),
   },
@@ -158,13 +158,13 @@ export default function CompetitionNotifications({ account, match, social }: Pro
       if (account.participationScore < 25000) {
         const gap = 40000 - account.participationScore;
         messages.push({
-          msg: `🎯 距20%分成还需 ${gap.toLocaleString()} 积分 | 当前分成 ${account.profitSharePct}%`,
+          msg: `🎯 参与分 ${account.participationScore.toLocaleString()} | 当前等级: ${account.participationTier} | 需5000+才有奖金资格`,
           border: '#F0B90B',
         });
       }
-      if (elapsed > 0.7 && account.withdrawable > 50) {
+      if (elapsed > 0.7 && account.prizeAmount > 0) {
         messages.push({
-          msg: `💰 当前可提现 ${account.withdrawable.toFixed(1)} USDT — 保住利润还是冲击更高排名？`,
+          msg: `💰 当前预计奖金 ${account.prizeAmount} USDT — 保住排名还是冲击更高？`,
           border: '#F0B90B',
         });
       }

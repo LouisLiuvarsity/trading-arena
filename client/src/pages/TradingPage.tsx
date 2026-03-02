@@ -31,7 +31,7 @@ import {
   generateChatMessages,
   generateNewsItems,
   generateSocialData,
-  generateCycleState,
+  generateSeasonState,
   generateMatchState,
 } from '@/lib/mockData';
 import type { TimeframeKey, ChatMessage } from '@/lib/types';
@@ -136,7 +136,7 @@ export default function TradingPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => generateChatMessages());
   const [news] = useState(() => generateNewsItems());
   const [social] = useState(() => generateSocialData());
-  const [cycle] = useState(() => generateCycleState());
+  const [season] = useState(() => generateSeasonState());
   const [match] = useState(() => generateMatchState());
 
   // Enhanced emotional chat simulation — brag, panic, fomo, analysis, pressure
@@ -268,7 +268,7 @@ export default function TradingPage() {
   return (
     <div className="h-screen flex flex-col bg-[#0B0E11] overflow-hidden select-none">
       {/* Top: Competition Status Bar */}
-      <StatusBar account={account} match={match} cycle={cycle} />
+      <StatusBar account={account} match={match} season={season} />
 
       {/* News Ticker Tape */}
       <NewsTicker news={news} />

@@ -1,24 +1,31 @@
 // ============================================================
-// Landing Page — Public Homepage for Trading Arena
-// Sections: Hero, Rules, Current Match Leaderboard,
-//           All-Time Leaderboard, Quant Bot Showcase, CTA
+// Landing Page — v4.0 Public Homepage for Trading Arena
+// Fixed Prize Pool / Points-based Grand Final / Participation Tiers
+// Sections: Hero, Rules, Prize, Leaderboard, Quant Bot, CTA
 // ============================================================
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
 import {
   Trophy, Zap, Clock, TrendingUp, Bot, ChevronRight,
   ArrowUpRight, ArrowDownRight, Target, BarChart3,
-  Shield, Users, Timer, Percent, Activity, Award,
-  ChevronDown, ExternalLink,
+  Shield, Users, Timer, Activity, Award,
+  ChevronDown, DollarSign, Star, Medal, Swords,
 } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   generateLeaderboard,
   generateAllTimeLeaderboard,
   generateQuantBotStats,
 } from '@/lib/mockData';
-import type { LeaderboardEntry, AllTimeLeaderboardEntry, QuantBotStats } from '@/lib/types';
+import {
+  REGULAR_PRIZE_TABLE,
+  GRAND_FINAL_PRIZE_TABLE,
+  MATCH_POINTS_TABLE,
+  HOLD_DURATION_WEIGHTS,
+  PARTICIPATION_TIERS,
+  PROMOTION_TIERS,
+} from '@/lib/types';
+import type { AllTimeLeaderboardEntry, QuantBotStats } from '@/lib/types';
 
 interface LandingPageProps {
   onEnterArena: () => void;
@@ -59,12 +66,27 @@ function SectionTitle({ icon: Icon, title, subtitle }: { icon: any; title: strin
 
 // ─── Bot Badge ────────────────────────────────────────────────
 function BotBadge({ size = 'sm' }: { size?: 'sm' | 'md' }) {
-  const s = size === 'sm' ? 'w-3.5 h-3.5 text-[8px]' : 'w-5 h-5 text-[10px]';
+  const s = size === 'sm' ? 'w-3.5 h-3.5' : 'w-5 h-5';
   return (
     <span className={`inline-flex items-center justify-center ${s} rounded bg-[#8B5CF6]/20 border border-[#8B5CF6]/40 text-[#A78BFA] font-bold shrink-0`} title="Quant Bot">
       <Bot className={size === 'sm' ? 'w-2.5 h-2.5' : 'w-3.5 h-3.5'} />
     </span>
   );
+}
+
+// ─── Participation Tier Badge ─────────────────────────────────
+function TierBadge({ tier }: { tier: string }) {
+  const colors: Record<string, { bg: string; text: string; label: string }> = {
+    bronze: { bg: 'bg-[#CD7F32]/15', text: 'text-[#CD7F32]', label: 'Bronze' },
+    silver: { bg: 'bg-[#C0C0C0]/15', text: 'text-[#C0C0C0]', label: 'Silver' },
+    gold: { bg: 'bg-[#F0B90B]/15', text: 'text-[#F0B90B]', label: 'Gold' },
+    diamond: { bg: 'bg-[#B9F2FF]/15', text: 'text-[#B9F2FF]', label: 'Diamond' },
+    starter: { bg: 'bg-white/10', text: 'text-white/60', label: 'Starter' },
+    intermediate: { bg: 'bg-[#3B82F6]/15', text: 'text-[#3B82F6]', label: 'Inter.' },
+    advanced: { bg: 'bg-[#F0B90B]/15', text: 'text-[#F0B90B]', label: 'Adv.' },
+  };
+  const c = colors[tier] || colors.bronze;
+  return <span className={`${c.bg} ${c.text} text-[9px] px-1.5 py-0.5 rounded font-semibold`}>{c.label}</span>;
 }
 
 // ─── Equity Chart (SVG) ───────────────────────────────────────
@@ -103,7 +125,6 @@ function EquityChart({ data }: { data: Array<{ time: number; equity: number }> }
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
-      {/* Grid lines */}
       {[0, 0.25, 0.5, 0.75, 1].map(pct => {
         const y = padding.top + pct * (height - padding.top - padding.bottom);
         const val = maxY - pct * (maxY - minY);
@@ -116,14 +137,12 @@ function EquityChart({ data }: { data: Array<{ time: number; equity: number }> }
           </g>
         );
       })}
-      {/* 5000 baseline */}
       {(() => {
         const baseY = padding.top + (1 - (5000 - minY) / (maxY - minY)) * (height - padding.top - padding.bottom);
         return <line x1={padding.left} y1={baseY} x2={width - padding.right} y2={baseY} stroke="#F0B90B" strokeOpacity="0.3" strokeDasharray="4 4" />;
       })()}
       <path d={areaPath} fill="url(#equityGrad)" />
       <path d={path} fill="none" stroke={color} strokeWidth="2" />
-      {/* Current point */}
       {points.length > 0 && (
         <circle cx={points[points.length - 1].x} cy={points[points.length - 1].y} r="4" fill={color} stroke="#0B0E11" strokeWidth="2" />
       )}
@@ -137,6 +156,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
   const [allTimeLeaderboard] = useState(() => generateAllTimeLeaderboard());
   const [botStats] = useState(() => generateQuantBotStats());
   const [activeLeaderboard, setActiveLeaderboard] = useState<'current' | 'alltime'>('current');
+  const [activePrize, setActivePrize] = useState<'regular' | 'grand'>('regular');
 
   return (
     <div className="min-h-screen bg-[#0B0E11] text-white overflow-x-hidden">
@@ -153,6 +173,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
           </div>
           <div className="hidden md:flex items-center gap-6 text-xs text-[#848E9C]">
             <a href="#rules" className="hover:text-white transition-colors">规则</a>
+            <a href="#prizes" className="hover:text-white transition-colors">奖金</a>
             <a href="#leaderboard" className="hover:text-white transition-colors">排行榜</a>
             <a href="#bot" className="hover:text-white transition-colors">量化程序</a>
           </div>
@@ -167,7 +188,6 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
 
       {/* ─── Hero Section ────────────────────────────────── */}
       <section className="relative pt-14 min-h-[85vh] flex items-center justify-center overflow-hidden">
-        {/* Background effects */}
         <div className="absolute inset-0 opacity-[0.03]"
           style={{
             backgroundImage: `linear-gradient(rgba(240,185,11,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(240,185,11,0.3) 1px, transparent 1px)`,
@@ -184,10 +204,9 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            {/* Live badge */}
             <div className="inline-flex items-center gap-2 bg-[#0ECB81]/10 border border-[#0ECB81]/20 rounded-full px-4 py-1.5 mb-6">
               <div className="w-2 h-2 rounded-full bg-[#0ECB81] animate-pulse" />
-              <span className="text-[#0ECB81] text-xs font-medium">第 2 场比赛进行中 — 847/1000 人已加入</span>
+              <span className="text-[#0ECB81] text-xs font-medium">第 5 场比赛进行中 — 847/1000 人已加入</span>
             </div>
 
             <h1 className="text-4xl md:text-6xl font-bold mb-4 leading-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -196,9 +215,9 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
               <span className="text-[#F0B90B]">交易竞技场</span>
             </h1>
             <p className="text-[#848E9C] text-base md:text-lg mb-8 max-w-xl mx-auto leading-relaxed">
-              5,000 USDT 模拟资金，实时 SOL 行情，与千人同台竞技。
+              每月 15 场常规赛 + 总决赛，固定奖金池 500 USDT/场。
               <br />
-              <span className="text-white/70">量化程序同场对决，你能赢过 AI 吗？</span>
+              <span className="text-white/70">积分制晋级总决赛，量化程序同场对决。</span>
             </p>
 
             <div className="flex items-center justify-center gap-4 mb-10">
@@ -218,7 +237,6 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             </div>
           </motion.div>
 
-          {/* Stats row */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -226,10 +244,10 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-lg mx-auto"
           >
             {[
-              { value: '5,000', label: 'USDT 本金', icon: Shield, color: '#F0B90B' },
-              { value: '1,000', label: '参赛选手', icon: Users, color: '#D1D4DC' },
-              { value: '24H', label: '比赛时长', icon: Timer, color: '#D1D4DC' },
-              { value: '20%', label: '最高分成', icon: Percent, color: '#0ECB81' },
+              { value: '5,000', label: 'USDT 本金', color: '#F0B90B' },
+              { value: '500', label: 'USDT 奖金/场', color: '#0ECB81' },
+              { value: '15+1', label: '月赛+总决赛', color: '#D1D4DC' },
+              { value: '24H', label: '比赛时长', color: '#D1D4DC' },
             ].map((stat, i) => (
               <div key={i} className="bg-[#1C2030]/50 border border-white/5 rounded-xl p-3 text-center">
                 <div className="text-lg font-bold font-mono" style={{ color: stat.color }}>{stat.value}</div>
@@ -238,7 +256,6 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             ))}
           </motion.div>
 
-          {/* Scroll hint */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -255,31 +272,44 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
         <div className="max-w-5xl mx-auto">
           <SectionTitle icon={Target} title="比赛规则" subtitle="简单透明的规则，让每个人都能快速上手" />
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Core rules - 6 cards */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
             {[
               {
                 icon: Shield,
-                title: '5,000U 本金',
-                desc: '每位选手获得 5,000 USDT 模拟资金，无杠杆、无爆仓风险。盈亏完全取决于你的交易能力。',
+                title: '5,000U 模拟资金',
+                desc: '每位选手获得 5,000 USDT 模拟资金，无爆仓风险。Starter 阶段 1x 杠杆，晋级后可获 2x/3x。',
                 accent: '#F0B90B',
               },
               {
                 icon: Activity,
                 title: '最多 40 笔交易',
-                desc: '每场比赛限制 40 笔交易，鼓励深思熟虑的决策而非频繁交易。每一笔都要慎重。',
+                desc: '每场比赛限制 40 笔交易，鼓励深思熟虑的决策。最后 30 分钟禁止开新仓，只能平仓。',
                 accent: '#3B82F6',
               },
               {
                 icon: Clock,
                 title: '持仓时间权重',
-                desc: '持仓越久权重越高（0.2x→1.3x）。30秒内平仓只算 20% 收益，30分钟以上算 100%。',
+                desc: '持仓越久权重越高（0.2x→1.3x）。快进快出只算 20%，鼓励有理由的持仓。',
                 accent: '#8B5CF6',
               },
               {
-                icon: TrendingUp,
-                title: '5%-20% 分成',
-                desc: '根据参与积分解锁更高分成比例。积分 = 交易金额 × 持仓权重，越活跃分成越高。',
+                icon: DollarSign,
+                title: '固定奖金池',
+                desc: '每场常规赛 500 USDT，总决赛 2,500 USDT。冠军独享 55U（常规）/ 300U（总决赛）。',
                 accent: '#0ECB81',
+              },
+              {
+                icon: Star,
+                title: '积分制总决赛',
+                desc: '每场比赛按排名获得积分（冠军100分），月末累计积分前500名进入总决赛争夺大奖。',
+                accent: '#F59E0B',
+              },
+              {
+                icon: Medal,
+                title: '参与分门槛',
+                desc: '参与分 = 交易金额 × 持仓权重。Bronze（<5000）无奖金资格，Silver 以上才能领奖。',
+                accent: '#F6465D',
               },
             ].map((rule, i) => (
               <motion.div
@@ -287,8 +317,8 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="bg-[#1C2030]/60 border border-white/5 rounded-2xl p-5 hover:border-white/10 transition-all group"
+                transition={{ delay: i * 0.08 }}
+                className="bg-[#1C2030]/60 border border-white/5 rounded-2xl p-5 hover:border-white/10 transition-all"
               >
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
@@ -307,56 +337,57 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="mt-8 bg-[#1C2030]/40 border border-white/5 rounded-2xl p-6 max-w-2xl mx-auto"
+            className="bg-[#1C2030]/40 border border-white/5 rounded-2xl p-6 max-w-2xl mx-auto mb-4"
           >
             <h3 className="text-white text-sm font-semibold mb-4 text-center">持仓时间权重表</h3>
             <div className="grid grid-cols-6 gap-2">
-              {[
-                { time: '<1分', weight: '0.2x', pct: 15 },
-                { time: '1-3分', weight: '0.4x', pct: 30 },
-                { time: '3-10分', weight: '0.7x', pct: 54 },
-                { time: '10-30分', weight: '1.0x', pct: 77 },
-                { time: '30分-2h', weight: '1.15x', pct: 88 },
-                { time: '2h+', weight: '1.3x', pct: 100 },
-              ].map((item, i) => (
-                <div key={i} className="text-center">
-                  <div className="h-16 bg-[#0B0E11] rounded-lg relative overflow-hidden mb-1.5">
-                    <div
-                      className="absolute bottom-0 left-0 right-0 rounded-b-lg transition-all"
-                      style={{
-                        height: `${item.pct}%`,
-                        background: `linear-gradient(to top, #F0B90B${Math.round(item.pct * 0.6).toString(16).padStart(2, '0')}, transparent)`,
-                      }}
-                    />
-                    <span className="absolute inset-0 flex items-center justify-center text-white text-xs font-bold font-mono">
-                      {item.weight}
-                    </span>
+              {HOLD_DURATION_WEIGHTS.map((hw, i) => {
+                const pct = Math.round((hw.weight / 1.3) * 100);
+                return (
+                  <div key={i} className="text-center">
+                    <div className="h-16 bg-[#0B0E11] rounded-lg relative overflow-hidden mb-1.5">
+                      <div
+                        className="absolute bottom-0 left-0 right-0 rounded-b-lg transition-all"
+                        style={{
+                          height: `${pct}%`,
+                          background: `linear-gradient(to top, #F0B90B${Math.round(pct * 0.6).toString(16).padStart(2, '0')}, transparent)`,
+                        }}
+                      />
+                      <span className="absolute inset-0 flex items-center justify-center text-white text-xs font-bold font-mono">
+                        {hw.weight}x
+                      </span>
+                    </div>
+                    <span className="text-[9px] text-[#5E6673]">{hw.label}</span>
                   </div>
-                  <span className="text-[9px] text-[#5E6673]">{item.time}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </motion.div>
 
-          {/* Profit sharing tiers */}
+          {/* Participation tiers */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="mt-4 bg-[#1C2030]/40 border border-white/5 rounded-2xl p-6 max-w-2xl mx-auto"
+            className="bg-[#1C2030]/40 border border-white/5 rounded-2xl p-6 max-w-2xl mx-auto"
           >
-            <h3 className="text-white text-sm font-semibold mb-4 text-center">分成比例阶梯</h3>
+            <h3 className="text-white text-sm font-semibold mb-4 text-center">参与分等级 · 奖金资格门槛</h3>
             <div className="grid grid-cols-4 gap-3">
               {[
-                { tier: 'Bronze', score: '0-9,999', share: '5%', color: '#CD7F32' },
-                { tier: 'Silver', score: '10,000+', share: '10%', color: '#C0C0C0' },
-                { tier: 'Gold', score: '25,000+', share: '15%', color: '#F0B90B' },
-                { tier: 'Diamond', score: '40,000+', share: '20%', color: '#B9F2FF' },
+                { tier: 'Bronze', score: '0 - 4,999', eligible: false, color: '#CD7F32', icon: '🥉' },
+                { tier: 'Silver', score: '5,000+', eligible: true, color: '#C0C0C0', icon: '🥈' },
+                { tier: 'Gold', score: '15,000+', eligible: true, color: '#F0B90B', icon: '🥇' },
+                { tier: 'Diamond', score: '30,000+', eligible: true, color: '#B9F2FF', icon: '💎' },
               ].map((t, i) => (
-                <div key={i} className="text-center bg-[#0B0E11]/60 rounded-xl p-3 border border-white/5">
-                  <div className="text-lg font-bold font-mono mb-1" style={{ color: t.color }}>{t.share}</div>
-                  <div className="text-[10px] text-white/70 font-medium mb-0.5">{t.tier}</div>
-                  <div className="text-[9px] text-[#5E6673]">{t.score}</div>
+                <div key={i} className={`text-center bg-[#0B0E11]/60 rounded-xl p-3 border ${t.eligible ? 'border-white/10' : 'border-[#F6465D]/20'}`}>
+                  <div className="text-xl mb-1">{t.icon}</div>
+                  <div className="text-xs font-bold mb-0.5" style={{ color: t.color }}>{t.tier}</div>
+                  <div className="text-[9px] text-[#5E6673] mb-1.5">{t.score}</div>
+                  <div className={`text-[9px] font-semibold px-2 py-0.5 rounded-full inline-block ${
+                    t.eligible ? 'bg-[#0ECB81]/15 text-[#0ECB81]' : 'bg-[#F6465D]/15 text-[#F6465D]'
+                  }`}>
+                    {t.eligible ? '✓ 有奖金资格' : '✗ 无奖金资格'}
+                  </div>
                 </div>
               ))}
             </div>
@@ -364,64 +395,185 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
         </div>
       </Section>
 
-      {/* ─── Leaderboard Section ─────────────────────────── */}
-      <Section id="leaderboard" className="py-20 px-4 bg-[#0D1117]">
+      {/* ─── Prize Section ───────────────────────────────── */}
+      <Section id="prizes" className="py-20 px-4 bg-[#0D1117]">
         <div className="max-w-5xl mx-auto">
-          <SectionTitle icon={Award} title="排行榜" subtitle="实时竞技排名与历史天梯总榜" />
+          <SectionTitle icon={DollarSign} title="奖金分配" subtitle="固定奖金池，排名越高奖金越多" />
 
           {/* Tab switcher */}
           <div className="flex items-center justify-center gap-2 mb-6">
             <button
-              onClick={() => setActiveLeaderboard('current')}
+              onClick={() => setActivePrize('regular')}
               className={`px-5 py-2 rounded-lg text-xs font-semibold transition-all ${
-                activeLeaderboard === 'current'
-                  ? 'bg-[#F0B90B] text-[#0B0E11]'
-                  : 'bg-white/5 text-[#848E9C] hover:text-white'
+                activePrize === 'regular' ? 'bg-[#F0B90B] text-[#0B0E11]' : 'bg-white/5 text-[#848E9C] hover:text-white'
               }`}
             >
-              当前比赛
+              常规赛 · 500 USDT
+            </button>
+            <button
+              onClick={() => setActivePrize('grand')}
+              className={`px-5 py-2 rounded-lg text-xs font-semibold transition-all ${
+                activePrize === 'grand' ? 'bg-[#F0B90B] text-[#0B0E11]' : 'bg-white/5 text-[#848E9C] hover:text-white'
+              }`}
+            >
+              总决赛 · 2,500 USDT
+            </button>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Prize table */}
+            <motion.div
+              key={activePrize}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="bg-[#1C2030]/60 border border-white/5 rounded-2xl overflow-hidden"
+            >
+              <div className="px-5 py-3 border-b border-white/5">
+                <span className="text-white text-sm font-semibold">
+                  {activePrize === 'regular' ? '常规赛奖金表' : '总决赛奖金表'}
+                </span>
+                <span className="text-[#F0B90B] text-xs ml-2 font-mono">
+                  {activePrize === 'regular' ? '500 USDT' : '2,500 USDT'}
+                </span>
+              </div>
+              <div className="grid grid-cols-[60px_1fr_80px_80px] px-5 py-2 text-[10px] text-[#5E6673] uppercase tracking-wider border-b border-white/5">
+                <span>排名</span>
+                <span>人数</span>
+                <span className="text-right">单人奖金</span>
+                <span className="text-right">小计</span>
+              </div>
+              {(activePrize === 'regular' ? REGULAR_PRIZE_TABLE : GRAND_FINAL_PRIZE_TABLE).map((tier, i) => (
+                <div key={i} className="grid grid-cols-[60px_1fr_80px_80px] px-5 py-2.5 text-xs font-mono border-b border-white/[0.03] hover:bg-white/[0.02]">
+                  <span className={i < 3 ? 'text-[#F0B90B] font-bold' : 'text-[#848E9C]'}>
+                    {tier.rankMin === tier.rankMax ? `#${tier.rankMin}` : `#${tier.rankMin}-${tier.rankMax}`}
+                  </span>
+                  <span className="text-[#848E9C]">{tier.rankMax - tier.rankMin + 1} 人</span>
+                  <span className="text-right text-[#0ECB81] font-semibold">{tier.prize} U</span>
+                  <span className="text-right text-[#D1D4DC]">{tier.prize * (tier.rankMax - tier.rankMin + 1)} U</span>
+                </div>
+              ))}
+              <div className="px-5 py-3 border-t border-white/5 flex justify-between text-xs">
+                <span className="text-[#848E9C]">前 100 名均有奖金</span>
+                <span className="text-[#F0B90B] font-bold font-mono">
+                  共 {activePrize === 'regular' ? '500' : '2,500'} USDT
+                </span>
+              </div>
+            </motion.div>
+
+            {/* Points table + Promotion */}
+            <div className="space-y-4">
+              {/* Points table */}
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                className="bg-[#1C2030]/60 border border-white/5 rounded-2xl overflow-hidden"
+              >
+                <div className="px-5 py-3 border-b border-white/5">
+                  <span className="text-white text-sm font-semibold">积分规则</span>
+                  <span className="text-[#848E9C] text-xs ml-2">每场常规赛按排名获得积分</span>
+                </div>
+                <div className="grid grid-cols-[80px_1fr_80px] px-5 py-2 text-[10px] text-[#5E6673] uppercase tracking-wider border-b border-white/5">
+                  <span>排名</span>
+                  <span>人数</span>
+                  <span className="text-right">积分</span>
+                </div>
+                {MATCH_POINTS_TABLE.map((tier, i) => (
+                  <div key={i} className="grid grid-cols-[80px_1fr_80px] px-5 py-2 text-xs font-mono border-b border-white/[0.03]">
+                    <span className={tier.points >= 50 ? 'text-[#F0B90B]' : 'text-[#848E9C]'}>
+                      {tier.rankMin === tier.rankMax ? `#${tier.rankMin}` : `#${tier.rankMin}-${tier.rankMax}`}
+                    </span>
+                    <span className="text-[#848E9C]">{tier.rankMax - tier.rankMin + 1} 人</span>
+                    <span className={`text-right font-semibold ${tier.points > 0 ? 'text-[#F0B90B]' : 'text-[#5E6673]'}`}>
+                      {tier.points > 0 ? `+${tier.points}` : '0'}
+                    </span>
+                  </div>
+                ))}
+                <div className="px-5 py-2.5 text-[10px] text-[#848E9C] border-t border-white/5">
+                  月末累计积分前 500 名进入总决赛
+                </div>
+              </motion.div>
+
+              {/* Promotion tiers */}
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                className="bg-[#1C2030]/60 border border-white/5 rounded-2xl p-5"
+              >
+                <h3 className="text-white text-sm font-semibold mb-3 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-[#F0B90B]" />
+                  段位晋级体系
+                </h3>
+                <div className="space-y-2">
+                  {PROMOTION_TIERS.map((tier, i) => (
+                    <div key={i} className="flex items-center justify-between bg-[#0B0E11]/60 rounded-lg px-4 py-2.5">
+                      <div className="flex items-center gap-3">
+                        <TierBadge tier={tier.tier} />
+                        <span className="text-white text-xs font-semibold">{tier.capital.toLocaleString()} USDT</span>
+                        <span className="text-[#848E9C] text-[10px]">{tier.leverage}x 杠杆</span>
+                      </div>
+                      <span className="text-[10px] text-[#5E6673]">{tier.condition}</span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      {/* ─── Leaderboard Section ─────────────────────────── */}
+      <Section id="leaderboard" className="py-20 px-4">
+        <div className="max-w-5xl mx-auto">
+          <SectionTitle icon={Award} title="排行榜" subtitle="单场按加权收益率排名，总榜按累计积分排名" />
+
+          <div className="flex items-center justify-center gap-2 mb-6">
+            <button
+              onClick={() => setActiveLeaderboard('current')}
+              className={`px-5 py-2 rounded-lg text-xs font-semibold transition-all ${
+                activeLeaderboard === 'current' ? 'bg-[#F0B90B] text-[#0B0E11]' : 'bg-white/5 text-[#848E9C] hover:text-white'
+              }`}
+            >
+              当前比赛 · 收益率
             </button>
             <button
               onClick={() => setActiveLeaderboard('alltime')}
               className={`px-5 py-2 rounded-lg text-xs font-semibold transition-all ${
-                activeLeaderboard === 'alltime'
-                  ? 'bg-[#F0B90B] text-[#0B0E11]'
-                  : 'bg-white/5 text-[#848E9C] hover:text-white'
+                activeLeaderboard === 'alltime' ? 'bg-[#F0B90B] text-[#0B0E11]' : 'bg-white/5 text-[#848E9C] hover:text-white'
               }`}
             >
-              历史天梯
+              赛季总榜 · 积分
             </button>
           </div>
 
-          {/* Current Match Leaderboard */}
+          {/* Current Match Leaderboard - sorted by PnL% */}
           {activeLeaderboard === 'current' && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="bg-[#1C2030]/60 border border-white/5 rounded-2xl overflow-hidden"
             >
-              {/* Header */}
               <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-white text-sm font-semibold">第 2 场 · SOLUSDT</span>
+                  <span className="text-white text-sm font-semibold">第 5 场 · SOLUSDT</span>
                   <span className="text-[9px] bg-[#0ECB81]/20 text-[#0ECB81] px-2 py-0.5 rounded-full font-medium">LIVE</span>
                 </div>
-                <span className="text-[#848E9C] text-xs">1,000 名选手</span>
+                <span className="text-[#848E9C] text-xs">奖金池 500 USDT · 847 名选手</span>
               </div>
-              {/* Column headers */}
-              <div className="grid grid-cols-[50px_1fr_80px_80px_60px] px-5 py-2 text-[10px] text-[#5E6673] uppercase tracking-wider border-b border-white/5">
+              <div className="grid grid-cols-[50px_1fr_80px_80px_60px_60px] px-5 py-2 text-[10px] text-[#5E6673] uppercase tracking-wider border-b border-white/5">
                 <span>#</span>
                 <span>选手</span>
-                <span className="text-right">收益率</span>
+                <span className="text-right">加权收益</span>
                 <span className="text-right">盈亏</span>
-                <span className="text-right">分成</span>
+                <span className="text-right">奖金</span>
+                <span className="text-right">积分</span>
               </div>
-              {/* Entries */}
               <div className="max-h-[400px] overflow-y-auto">
                 {leaderboard.slice(0, 50).map((entry) => (
                   <div
                     key={entry.rank}
-                    className={`grid grid-cols-[50px_1fr_80px_80px_60px] px-5 py-2 text-xs font-mono border-b border-white/[0.02] hover:bg-white/[0.02] transition-colors ${
+                    className={`grid grid-cols-[50px_1fr_80px_80px_60px_60px] px-5 py-2 text-xs font-mono border-b border-white/[0.02] hover:bg-white/[0.02] transition-colors ${
                       entry.isYou ? 'bg-[#F0B90B]/5 border-l-2 border-l-[#F0B90B]' : ''
                     } ${entry.isBot ? 'bg-[#8B5CF6]/5' : ''}`}
                   >
@@ -434,6 +586,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                         {entry.username}
                       </span>
                       {entry.isYou && <span className="text-[8px] bg-[#F0B90B]/20 text-[#F0B90B] px-1.5 py-0.5 rounded font-semibold">YOU</span>}
+                      {entry.participationTier === 'bronze' && <span className="text-[8px] text-[#F6465D]/60">无资格</span>}
                     </span>
                     <span className={`text-right ${entry.pnlPct >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
                       {entry.pnlPct >= 0 ? '+' : ''}{entry.pnlPct.toFixed(2)}%
@@ -441,7 +594,12 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                     <span className={`text-right ${entry.pnl >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
                       {entry.pnl >= 0 ? '+' : ''}{entry.pnl.toFixed(1)}U
                     </span>
-                    <span className="text-right text-[#848E9C]">{entry.profitSharePct}%</span>
+                    <span className={`text-right ${entry.prizeAmount > 0 ? 'text-[#F0B90B] font-semibold' : 'text-[#5E6673]'}`}>
+                      {entry.prizeAmount > 0 ? `${entry.prizeAmount}U` : '—'}
+                    </span>
+                    <span className={`text-right ${entry.matchPoints > 0 ? 'text-[#F0B90B]' : 'text-[#5E6673]'}`}>
+                      {entry.matchPoints > 0 ? `+${entry.matchPoints}` : '0'}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -451,7 +609,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             </motion.div>
           )}
 
-          {/* All-Time Leaderboard */}
+          {/* All-Time Leaderboard - sorted by cumulative points */}
           {activeLeaderboard === 'alltime' && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -459,23 +617,23 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
               className="bg-[#1C2030]/60 border border-white/5 rounded-2xl overflow-hidden"
             >
               <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
-                <span className="text-white text-sm font-semibold">历史天梯总榜</span>
-                <span className="text-[#848E9C] text-xs">累计所有赛季</span>
+                <span className="text-white text-sm font-semibold">2026年3月 · 赛季总榜</span>
+                <span className="text-[#848E9C] text-xs">按累计积分排名 · 前500名进总决赛</span>
               </div>
-              <div className="grid grid-cols-[50px_1fr_70px_80px_70px_60px_70px] px-5 py-2 text-[10px] text-[#5E6673] uppercase tracking-wider border-b border-white/5">
+              <div className="grid grid-cols-[50px_1fr_70px_60px_70px_60px_70px] px-5 py-2 text-[10px] text-[#5E6673] uppercase tracking-wider border-b border-white/5">
                 <span>#</span>
                 <span>选手</span>
+                <span className="text-right">积分</span>
                 <span className="text-right">场次</span>
-                <span className="text-right">总盈亏</span>
                 <span className="text-right">胜率</span>
                 <span className="text-right">段位</span>
-                <span className="text-right">最佳</span>
+                <span className="text-right">总决赛</span>
               </div>
               <div className="max-h-[400px] overflow-y-auto">
                 {allTimeLeaderboard.map((entry) => (
                   <div
                     key={entry.rank}
-                    className={`grid grid-cols-[50px_1fr_70px_80px_70px_60px_70px] px-5 py-2 text-xs font-mono border-b border-white/[0.02] hover:bg-white/[0.02] transition-colors ${
+                    className={`grid grid-cols-[50px_1fr_70px_60px_70px_60px_70px] px-5 py-2 text-xs font-mono border-b border-white/[0.02] hover:bg-white/[0.02] transition-colors ${
                       entry.isBot ? 'bg-[#8B5CF6]/5' : ''
                     }`}
                   >
@@ -488,17 +646,19 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                         {entry.username}
                       </span>
                     </span>
-                    <span className="text-right text-[#848E9C]">{entry.totalMatches}</span>
-                    <span className={`text-right ${entry.totalPnl >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
-                      {entry.totalPnl >= 0 ? '+' : ''}{entry.totalPnl.toLocaleString()}U
-                    </span>
+                    <span className="text-right text-[#F0B90B] font-bold">{entry.seasonPoints}</span>
+                    <span className="text-right text-[#848E9C]">{entry.matchesPlayed}</span>
                     <span className="text-right text-[#D1D4DC]">{entry.winRate}%</span>
-                    <span className="text-right" style={{
-                      color: entry.currentTier === 'Diamond' ? '#B9F2FF' : entry.currentTier === 'Gold' ? '#F0B90B' : entry.currentTier === 'Silver' ? '#C0C0C0' : '#CD7F32'
-                    }}>
-                      {entry.currentTier === 'Diamond' ? '💎' : entry.currentTier === 'Gold' ? '🥇' : entry.currentTier === 'Silver' ? '🥈' : '🥉'}
+                    <span className="text-right">
+                      <TierBadge tier={entry.tier} />
                     </span>
-                    <span className="text-right text-[#0ECB81]">+{entry.bestMatch}%</span>
+                    <span className="text-right">
+                      {entry.grandFinalQualified ? (
+                        <span className="text-[9px] bg-[#0ECB81]/15 text-[#0ECB81] px-1.5 py-0.5 rounded font-semibold">已晋级</span>
+                      ) : (
+                        <span className="text-[9px] text-[#5E6673]">—</span>
+                      )}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -508,11 +668,10 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
       </Section>
 
       {/* ─── Quant Bot Showcase ───────────────────────────── */}
-      <Section id="bot" className="py-20 px-4">
+      <Section id="bot" className="py-20 px-4 bg-[#0D1117]">
         <div className="max-w-5xl mx-auto">
           <SectionTitle icon={Bot} title="量化程序对决" subtitle="官方量化策略 AlphaEngine v3 同场竞技，实时公开所有交易数据" />
 
-          {/* Bot overview cards */}
           <div className="grid md:grid-cols-4 gap-4 mb-8">
             {[
               { label: '当前收益', value: `${botStats.totalReturn >= 0 ? '+' : ''}${botStats.totalReturn.toFixed(1)}U`, sub: `${botStats.totalReturnPct >= 0 ? '+' : ''}${botStats.totalReturnPct.toFixed(2)}%`, color: botStats.totalReturn >= 0 ? '#0ECB81' : '#F6465D' },
@@ -562,9 +721,8 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             <EquityChart data={botStats.equityCurve} />
           </motion.div>
 
-          {/* Bot vs Humans comparison + Recent trades */}
+          {/* Bot vs Humans + Recent trades */}
           <div className="grid md:grid-cols-2 gap-4">
-            {/* vs Humans */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -607,7 +765,6 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
               </div>
             </motion.div>
 
-            {/* Recent trades */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -646,7 +803,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
       </Section>
 
       {/* ─── CTA Section ─────────────────────────────────── */}
-      <Section className="py-20 px-4 bg-[#0D1117]">
+      <Section className="py-20 px-4">
         <div className="max-w-2xl mx-auto text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#F0B90B]/20 to-[#F0B90B]/5 border border-[#F0B90B]/20 mb-6">
             <Zap className="w-8 h-8 text-[#F0B90B]" />
@@ -655,7 +812,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             准备好挑战了吗？
           </h2>
           <p className="text-[#848E9C] text-sm mb-8 max-w-md mx-auto">
-            免费参赛，零风险。与千名交易者和量化程序同台竞技，证明你的交易实力。
+            免费参赛，零风险。每月 15 场常规赛 + 总决赛，与千名交易者和量化程序同台竞技。
           </p>
           <button
             onClick={onEnterArena}

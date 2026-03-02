@@ -1,10 +1,11 @@
 // ============================================================
-// Quick Rules Guide — Simplified single-card onboarding
-// Shows only 4 core rules before entering the arena
+// Quick Rules Guide — v4.0 Simplified onboarding
+// Core rules: 5000U, 40 trades, hold weight, fixed prize pool,
+// points system, participation tier, last 30min close-only
 // ============================================================
 
 import { useState } from 'react';
-import { Shield, Activity, Clock, TrendingUp, ChevronRight, Zap } from 'lucide-react';
+import { Shield, Activity, Clock, DollarSign, Star, Medal, ChevronRight, Zap, AlertTriangle } from 'lucide-react';
 
 interface RulesPageProps {
   username: string;
@@ -30,7 +31,7 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
 
       <div className="relative z-10 w-full max-w-lg mx-4">
         {/* Header */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-5">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-[#F0B90B]/20 to-[#F0B90B]/5 border border-[#F0B90B]/20 mb-3">
             <Zap className="w-6 h-6 text-[#F0B90B]" />
           </div>
@@ -44,47 +45,67 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
 
         {/* Rules card */}
         <div className="bg-[#1C2030]/80 backdrop-blur-sm border border-[rgba(255,255,255,0.06)] rounded-2xl overflow-hidden">
-          {/* 4 core rules */}
-          <div className="p-5 space-y-4">
+          {/* Core rules */}
+          <div className="p-5 space-y-3.5">
             {[
               {
                 icon: Shield,
-                title: '5,000 USDT 本金',
-                desc: '无杠杆、无爆仓，盈亏取决于交易能力',
+                title: '5,000 USDT 模拟资金',
+                desc: '无爆仓风险，Starter 阶段 1x 杠杆',
                 accent: '#F0B90B',
               },
               {
                 icon: Activity,
-                title: '最多 40 笔交易',
-                desc: '每笔都要慎重，鼓励深思熟虑的决策',
+                title: '最多 40 笔交易 · 24 小时',
+                desc: '鼓励深思熟虑的决策，而非频繁交易',
                 accent: '#3B82F6',
               },
               {
                 icon: Clock,
-                title: '持仓时间影响权重',
-                desc: '<1分钟仅算 0.2x，≥30分钟算 1.0x 全额收益',
+                title: '持仓时间影响收益权重',
+                desc: '<1分钟仅算 0.2x，≥30分钟算 1.0x，最高 1.3x',
                 accent: '#8B5CF6',
               },
               {
-                icon: TrendingUp,
-                title: '5%-20% 利润分成',
-                desc: '参与积分越高，分成比例越高（最高20%）',
+                icon: DollarSign,
+                title: '固定奖金池 500 USDT/场',
+                desc: '冠军 55U，前 100 名均有奖金（需 Silver 以上参与分）',
                 accent: '#0ECB81',
+              },
+              {
+                icon: Star,
+                title: '积分制 → 月末总决赛',
+                desc: '每场按排名获积分（冠军100分），累计前500名进总决赛',
+                accent: '#F59E0B',
+              },
+              {
+                icon: Medal,
+                title: '参与分门槛',
+                desc: 'Bronze（<5000分）= 无奖金资格，交易越多参与分越高',
+                accent: '#F6465D',
               },
             ].map((rule, i) => (
               <div key={i} className="flex items-start gap-3">
                 <div
-                  className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
                   style={{ background: `${rule.accent}15`, border: `1px solid ${rule.accent}30` }}
                 >
                   <rule.icon className="w-4 h-4" style={{ color: rule.accent }} />
                 </div>
                 <div>
                   <div className="text-white text-sm font-semibold">{rule.title}</div>
-                  <div className="text-[#848E9C] text-xs mt-0.5">{rule.desc}</div>
+                  <div className="text-[#848E9C] text-[11px] mt-0.5">{rule.desc}</div>
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Important notice */}
+          <div className="mx-5 mb-4 bg-[#F6465D]/5 border border-[#F6465D]/15 rounded-lg px-3 py-2 flex items-start gap-2">
+            <AlertTriangle className="w-3.5 h-3.5 text-[#F6465D] shrink-0 mt-0.5" />
+            <span className="text-[#F6465D]/80 text-[10px] leading-relaxed">
+              最后 30 分钟禁止开新仓，只能平仓。比赛结束后 48 小时审核期，通过后发放奖金。
+            </span>
           </div>
 
           {/* Divider */}

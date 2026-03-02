@@ -158,35 +158,36 @@ function MarketStats({ social, account, match }: Props) {
         </div>
       </div>
 
-      {/* Profit Sharing Tiers */}
+      {/* Participation Tier - Prize Eligibility */}
       <div className="px-3 py-2.5">
-        <div className="text-[10px] text-[#848E9C] mb-1.5">💰 分成阶梯 (参与度积分)</div>
+        <div className="text-[10px] text-[#848E9C] mb-1.5">🏅 参与分等级 (奖金资格)</div>
         <div className="space-y-1">
           {[
-            { threshold: '< 10,000', pct: '5%', active: account.participationScore < 10000 },
-            { threshold: '10,000 - 25,000', pct: '10%', active: account.participationScore >= 10000 && account.participationScore < 25000 },
-            { threshold: '25,000 - 40,000', pct: '15%', active: account.participationScore >= 25000 && account.participationScore < 40000 },
-            { threshold: '≥ 40,000', pct: '20%', active: account.participationScore >= 40000 },
-          ].map((tier, i) => (
+            { tier: 'Bronze', range: '0 - 4,999', eligible: false, color: '#CD7F32', active: account.participationTier === 'bronze' },
+            { tier: 'Silver', range: '5,000 - 14,999', eligible: true, color: '#C0C0C0', active: account.participationTier === 'silver' },
+            { tier: 'Gold', range: '15,000 - 29,999', eligible: true, color: '#F0B90B', active: account.participationTier === 'gold' },
+            { tier: 'Diamond', range: '30,000+', eligible: true, color: '#B9F2FF', active: account.participationTier === 'diamond' },
+          ].map((t, i) => (
             <div key={i} className={`flex items-center justify-between px-2 py-1 rounded text-[9px] font-mono ${
-              tier.active 
-                ? 'bg-[#F0B90B]/10 border border-[#F0B90B]/30 text-[#F0B90B]' 
+              t.active 
+                ? 'border text-white' 
                 : 'text-[#848E9C]'
-            }`}>
-              <span>{tier.threshold}</span>
-              <span className={tier.active ? 'font-bold' : ''}>{tier.pct}</span>
+            }`} style={t.active ? { borderColor: `${t.color}60`, background: `${t.color}15` } : {}}>
+              <span className="flex items-center gap-1.5">
+                <span style={{ color: t.active ? t.color : undefined }}>{t.tier}</span>
+                <span className="text-[#5E6673]">{t.range}</span>
+              </span>
+              <span className={t.eligible ? 'text-[#0ECB81]' : 'text-[#F6465D]'}>
+                {t.eligible ? '✓ 有资格' : '✗ 无资格'}
+              </span>
             </div>
           ))}
         </div>
         <div className="mt-1.5 text-[9px] text-[#848E9C]">
-          当前积分: <span className="text-[#D1D4DC] font-mono">{account.participationScore.toLocaleString()}</span>
-          {account.participationScore < 40000 && (
-            <span className="text-[#F0B90B]"> · 距下一档: {(
-              account.participationScore < 10000 ? 10000 - account.participationScore :
-              account.participationScore < 25000 ? 25000 - account.participationScore :
-              40000 - account.participationScore
-            ).toLocaleString()}</span>
-          )}
+          当前参与分: <span className="text-[#D1D4DC] font-mono">{account.participationScore.toLocaleString()}</span>
+          <span className="ml-1" style={{ color: account.prizeEligible ? '#0ECB81' : '#F6465D' }}>
+            {account.prizeEligible ? '✓ 有奖金资格' : '✗ 需达到 Silver (5000+)'}
+          </span>
         </div>
       </div>
     </div>

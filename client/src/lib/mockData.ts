@@ -1,7 +1,7 @@
 // ============================================================
-// Mock Data for Trading Arena Demo
-// Capital: 5000 USDT / No leverage / 5%-20% profit sharing
-// Enhanced with emotional pressure elements
+// Mock Data for Trading Arena v4.0
+// Fixed Prize Pool: 500 USDT/regular, 2500 USDT/grand final
+// Points-based qualification, participation score tiers
 // ============================================================
 
 import type {
@@ -9,12 +9,13 @@ import type {
   ChatMessage,
   NewsItem,
   SocialData,
-  CycleState,
+  SeasonState,
   AccountState,
   MatchState,
   QuantBotStats,
   AllTimeLeaderboardEntry,
 } from './types';
+import { REGULAR_PRIZE_TABLE, MATCH_POINTS_TABLE } from './types';
 
 const USERNAMES = [
   'CryptoWhale', 'SatoshiFan', 'MoonTrader', 'DiamondHands', 'BearSlayer',
@@ -27,24 +28,49 @@ const USERNAMES = [
   'PerpSwap', 'SpotFutures', 'CrossMargin', 'IsolatedPro', 'LeverageKing',
 ];
 
-// 5000U capital: pnl range is roughly -500U to +500U per match
+function getPrizeForRank(rank: number): number {
+  for (const tier of REGULAR_PRIZE_TABLE) {
+    if (rank >= tier.rankMin && rank <= tier.rankMax) return tier.prize;
+  }
+  return 0;
+}
+
+function getPointsForRank(rank: number): number {
+  for (const tier of MATCH_POINTS_TABLE) {
+    if (rank >= tier.rankMin && rank <= tier.rankMax) return tier.points;
+  }
+  return 0;
+}
+
+function getParticipationTier(score: number): 'bronze' | 'silver' | 'gold' | 'diamond' {
+  if (score >= 30000) return 'diamond';
+  if (score >= 15000) return 'gold';
+  if (score >= 5000) return 'silver';
+  return 'bronze';
+}
+
+// Per-match leaderboard: sorted by weighted PnL% (收益率)
 export function generateLeaderboard(myRank: number = 285): LeaderboardEntry[] {
   const entries: LeaderboardEntry[] = [];
-  const botRank = 42; // Bot is a strong competitor
+  const botRank = 42;
   for (let i = 1; i <= 1000; i++) {
     const isBot = i === botRank;
     const pnlPct = isBot ? 6.8 : 12 - (i / 1000) * 18 + (Math.random() - 0.5) * 2;
-    const pnl = pnlPct * 50; // 5000U base → pnl in absolute terms
-    const profitSharePct = pnlPct > 0 ? (i <= 100 ? 20 : i <= 300 ? 15 : i <= 500 ? 10 : 5) : 5;
-    const withdrawable = pnl > 0 ? pnl * (profitSharePct / 100) : 0;
+    const pnl = pnlPct * 50; // 5000U base
+    const weightedPnl = pnl * (isBot ? 1.15 : (0.7 + Math.random() * 0.6)); // weighted by hold time
+    const prize = getPrizeForRank(i);
+    const points = getPointsForRank(i);
+    const partScore = isBot ? 35000 : 2000 + Math.random() * 40000;
+    const tier = getParticipationTier(partScore);
     entries.push({
       rank: i,
       username: isBot ? 'AlphaEngine v3' : i === myRank ? 'You' : USERNAMES[Math.floor(Math.random() * USERNAMES.length)] + (i < 100 ? '' : i.toString().slice(-2)),
       pnlPct: Math.round(pnlPct * 100) / 100,
       pnl: Math.round(pnl * 100) / 100,
-      profitSharePct,
-      withdrawable: Math.round(withdrawable * 100) / 100,
-      promotionScore: 1000 - i,
+      weightedPnl: Math.round(weightedPnl * 100) / 100,
+      matchPoints: points,
+      participationTier: tier,
+      prizeAmount: tier === 'bronze' ? 0 : prize, // Bronze = no prize
       isYou: i === myRank,
       isBot,
     });
@@ -58,17 +84,17 @@ export function generateChatMessages(): ChatMessage[] {
     { id: '2', username: 'System', message: '🏆 比赛已进行 18 小时，最后 6 小时冲刺！', timestamp: Date.now() - 3200000, type: 'system' },
     { id: '3', username: 'BearSlayer', message: '空头小心了，支撑位很强', timestamp: Date.now() - 2800000, type: 'user' },
     { id: '4', username: 'AlphaHunter', message: '这波量能不够，假突破概率大', timestamp: Date.now() - 2400000, type: 'user' },
-    { id: '5', username: 'MoonTrader', message: '晋级线附近好紧张...还差0.3%', timestamp: Date.now() - 2000000, type: 'panic' },
-    { id: '6', username: 'System', message: '📊 当前晋级线 #300 收益率：+1.5%', timestamp: Date.now() - 1800000, type: 'alert' },
+    { id: '5', username: 'MoonTrader', message: '奖金线附近好紧张...还差0.3%', timestamp: Date.now() - 2000000, type: 'panic' },
+    { id: '6', username: 'System', message: '📊 当前奖金线 #100 收益率：+5.2%', timestamp: Date.now() - 1800000, type: 'alert' },
     { id: '7', username: 'ScalpGod', message: '连亏3笔了，冷静一下', timestamp: Date.now() - 1500000, type: 'panic' },
     { id: '8', username: 'ChartMaster', message: '4h级别看空，但1h还在多头趋势', timestamp: Date.now() - 1200000, type: 'user' },
     { id: '9', username: 'DiamondHands', message: '拿住！权重马上升到1.0x了', timestamp: Date.now() - 900000, type: 'user' },
     { id: '10', username: 'DeFiKing', message: '资金费率转负了，空头要付费', timestamp: Date.now() - 600000, type: 'user' },
-    { id: '11', username: 'System', message: '⚡ 晋级线附近竞争激烈！#290-#310 有 47 人', timestamp: Date.now() - 300000, type: 'alert' },
-    { id: '12', username: 'SwingPro', message: '刚平了一笔+85U！排名直接从#320跳到#278 🚀', timestamp: Date.now() - 120000, type: 'brag' },
+    { id: '11', username: 'System', message: '⚡ 奖金区竞争激烈！#90-#110 有 32 人', timestamp: Date.now() - 300000, type: 'alert' },
+    { id: '12', username: 'SwingPro', message: '刚平了一笔+85U！排名直接从#120跳到#78 🚀', timestamp: Date.now() - 120000, type: 'brag' },
     { id: '13', username: 'BTCMaxi', message: '大家注意CPI数据快出了', timestamp: Date.now() - 60000, type: 'user' },
     { id: '14', username: 'OrderFlow', message: '订单簿上方有大卖单，小心', timestamp: Date.now() - 30000, type: 'user' },
-    { id: '15', username: 'GammaScalp', message: '满仓做多+123U！直接晋级线以上了 💰💰', timestamp: Date.now() - 15000, type: 'brag' },
+    { id: '15', username: 'GammaScalp', message: '满仓做多+123U！直接冲进前100了 💰💰', timestamp: Date.now() - 15000, type: 'brag' },
   ];
   return messages;
 }
@@ -98,8 +124,8 @@ export function generateSocialData(): SocialData {
     avgTradesPerPerson: 12.4,
     medianTradesPerPerson: 11,
     activeTradersPct: 47,
-    nearPromotionCount: 47,
-    nearPromotionRange: '#290-#310',
+    nearPromotionCount: 32,
+    nearPromotionRange: '#90-#110',
     nearPromotionDelta: +5,
     consecutiveLossLeader: 7,
     tradersOnLosingStreak: 89,
@@ -111,18 +137,34 @@ export function generateSocialData(): SocialData {
   };
 }
 
-export function generateCycleState(): CycleState {
+// v4.0: Season state replaces CycleState
+export function generateSeasonState(): SeasonState {
   return {
-    cycleId: 'cycle-001',
+    seasonId: 'season-2026-03',
+    month: '2026-03',
+    matchesPlayed: 5,
+    matchesTotal: 15,
+    grandFinalScheduled: true,
     matches: [
-      { matchNumber: 1, status: 'completed', rank: 187, promotionScore: 813, pnl: 225, profitSharePct: 15, withdrawable: 33.8 },
-      { matchNumber: 2, status: 'active', rank: 285, promotionScore: 715, pnl: 240, profitSharePct: 10, withdrawable: 24 },
-      { matchNumber: 3, status: 'pending' },
+      { matchNumber: 1, matchType: 'regular', status: 'completed', rank: 87, weightedPnl: 312, pnlPct: 6.2, pointsEarned: 50, prizeWon: 10, participationTier: 'Gold' },
+      { matchNumber: 2, matchType: 'regular', status: 'completed', rank: 156, weightedPnl: 185, pnlPct: 3.7, pointsEarned: 30, prizeWon: 0, participationTier: 'Silver' },
+      { matchNumber: 3, matchType: 'regular', status: 'completed', rank: 42, weightedPnl: 428, pnlPct: 8.6, pointsEarned: 50, prizeWon: 4, participationTier: 'Diamond' },
+      { matchNumber: 4, matchType: 'regular', status: 'completed', rank: 215, weightedPnl: 98, pnlPct: 2.0, pointsEarned: 15, prizeWon: 0, participationTier: 'Silver' },
+      { matchNumber: 5, matchType: 'regular', status: 'active', rank: 285, weightedPnl: 240, pnlPct: 4.8, pointsEarned: 15, prizeWon: 0, participationTier: 'Gold' },
+      { matchNumber: 6, matchType: 'regular', status: 'pending' },
+      { matchNumber: 7, matchType: 'regular', status: 'pending' },
+      { matchNumber: 8, matchType: 'regular', status: 'pending' },
+      { matchNumber: 9, matchType: 'regular', status: 'pending' },
+      { matchNumber: 10, matchType: 'regular', status: 'pending' },
+      { matchNumber: 11, matchType: 'regular', status: 'pending' },
+      { matchNumber: 12, matchType: 'regular', status: 'pending' },
+      { matchNumber: 13, matchType: 'regular', status: 'pending' },
+      { matchNumber: 14, matchType: 'regular', status: 'pending' },
+      { matchNumber: 15, matchType: 'regular', status: 'pending' },
     ],
-    avgPromotionScore: 764,
-    cumulativePnl: 465,
-    cumulativeWithdrawable: 104.3,
-    promotionTarget: '进阶（10,000U / 无杠杆）',
+    totalPoints: 160,
+    grandFinalQualified: false,
+    grandFinalRank: undefined,
   };
 }
 
@@ -132,17 +174,23 @@ export function generateAccountState(): AccountState {
     equity: 5240,
     pnl: 240,
     pnlPct: 4.8,
+    weightedPnl: 198,
     tradesUsed: 9,
     tradesMax: 40,
     rank: 285,
-    promotionScore: 715,
-    promotionThreshold: 700,
+    matchPoints: 15,
+    seasonPoints: 160,
+    grandFinalQualified: false,
+    grandFinalLine: 200,
     participationScore: 28000,
-    profitSharePct: 10,
-    withdrawable: 48,
-    stage: 1,
-    stageCapital: 5000,
-    stageMaxLeverage: 1,
+    participationTier: 'gold',
+    prizeEligible: true,
+    tier: 'starter',
+    tierCapital: 5000,
+    tierLeverage: 1,
+    prizeAmount: 0, // rank 285 = no prize
+    directionConsistency: 0.72,
+    directionBonus: true,
   };
 }
 
@@ -152,15 +200,19 @@ export function generateMatchState(): MatchState {
   const elapsed = (Date.now() - startTime) / (endTime - startTime);
   const remainingSeconds = Math.max(0, (endTime - Date.now()) / 1000);
   return {
-    matchId: 'match-002',
-    matchNumber: 2,
-    totalMatches: 3,
+    matchId: 'match-005',
+    matchNumber: 5,
+    matchType: 'regular',
+    totalRegularMatches: 15,
     startTime,
     endTime,
     elapsed: Math.min(elapsed, 1),
     remainingSeconds,
     symbol: 'SOLUSDT',
-    participantCount: 1000,
+    participantCount: 847,
+    prizePool: 500,
+    isCloseOnly: remainingSeconds < 1800,
+    monthLabel: '2026年3月',
   };
 }
 
@@ -171,24 +223,24 @@ export function generateMatchState(): MatchState {
 export const EMOTIONAL_CHAT_MESSAGES = {
   brag: [
     '刚平仓+{pnl}U！排名直接跳了{ranks}名 🚀',
-    '满仓做多赚了{pnl}U！晋级稳了 💰',
+    '满仓做多赚了{pnl}U！前100稳了 💰',
     '连赢{streak}笔了，今天手感太好了',
     '权重1.3x加成太爽了，+{pnl}U 直接起飞',
-    '刚从#350冲到#260，一笔翻盘 🔥',
-    '积分已经40000了，20%分成到手 😎',
+    '刚从#150冲到#60，一笔翻盘 🔥',
+    '参与分已经30000了，Diamond tier 😎',
     '这波空头吃了{pnl}U，感谢CPI数据',
-    '排名进前100了！可提现{withdraw}U',
+    '排名进前50了！奖金4U到手',
+    '这场拿了50积分，总决赛稳了',
   ],
   panic: [
     '连亏{streak}笔了...还有救吗',
-    '排名又掉了{ranks}名，晋级线越来越远了',
+    '排名又掉了{ranks}名，前100越来越远了',
     '止损被打了，-{pnl}U 心态崩了',
     '刚被假突破骗了，又亏了一笔',
     '只剩{trades}笔交易机会了，好慌',
-    '可提现从{before}U跌到{after}U了...',
-    '晋级分掉到{score}了，还能晋级吗？',
+    '参与分还不到5000，Bronze没奖金资格...',
+    '积分才{score}，总决赛没戏了',
     '满仓反向了，-{pnl}U 想退赛了',
-    '这个月第二次被降级了...',
   ],
   fomo: [
     '大家都在做多，我要不要跟？',
@@ -210,12 +262,12 @@ export const EMOTIONAL_CHAT_MESSAGES = {
     '看裸K线就够了，别想太多',
   ],
   pressure: [
-    '晋级线附近好紧张...还差{gap}%',
+    '奖金线附近好紧张...还差{gap}%',
     '被{count}个人超越了，排名在跌',
     '权重还是0.4x，要不要继续拿？',
-    '积分才{score}，20%分成遥遥无期',
-    '第3场了，累计才赚{total}U，压力好大',
-    '降级的话本金直接砍半...',
+    '参与分才{score}，还在Bronze区...',
+    '这个月打了5场了，总积分才{total}，总决赛悬',
+    '最后30分钟只能平仓了，紧张',
   ],
 };
 
@@ -227,10 +279,9 @@ export function generateQuantBotStats(): QuantBotStats {
   const now = Date.now();
   const equityCurve: Array<{ time: number; equity: number }> = [];
   let equity = 5000;
-  // Generate 24h of equity data (every 15 min = 96 points)
   for (let i = 0; i < 96; i++) {
     const time = now - (96 - i) * 15 * 60 * 1000;
-    const change = (Math.random() - 0.42) * 30; // slight upward bias
+    const change = (Math.random() - 0.42) * 30;
     equity = Math.max(4500, equity + change);
     equityCurve.push({ time, equity: Math.round(equity * 100) / 100 });
   }
@@ -276,11 +327,11 @@ export function generateQuantBotStats(): QuantBotStats {
 }
 
 // ============================================================
-// Historical All-Time Leaderboard
+// All-Time Leaderboard: sorted by cumulative season points
 // ============================================================
 
 const ALL_TIME_NAMES = [
-  'CryptoWhale', 'AlphaHunter', 'ScalpGod', 'SwingPro', 'ChartMaster',
+  'CryptoWhale', 'AlphaHunter', 'ScalpGod', 'ChartMaster', 'SwingPro',
   'DiamondHands', 'MoonTrader', 'OrderFlow', 'SmartMoney', 'TrendRider',
   'BreakoutKing', 'DeFiKing', 'LiquidityPro', 'FibTrader', 'VolumeSpike',
   'MomentumPlay', 'MeanRevert', 'GapFiller', 'NewsTrader', 'BasisTrade',
@@ -288,30 +339,35 @@ const ALL_TIME_NAMES = [
   'PerpSwap', 'SpotFutures', 'CrossMargin', 'LeverageKing', 'VolCrusher',
 ];
 
-const TIERS = ['Diamond', 'Gold', 'Silver', 'Bronze'];
-
 export function generateAllTimeLeaderboard(): AllTimeLeaderboardEntry[] {
   const entries: AllTimeLeaderboardEntry[] = [];
 
-  // Insert bot at rank ~8 (strong but not #1)
   for (let i = 1; i <= 50; i++) {
     const isBot = i === 8;
-    const matches = isBot ? 45 : 10 + Math.floor(Math.random() * 80);
-    const avgPnl = isBot ? 4.2 : (12 - i * 0.35 + (Math.random() - 0.5) * 2);
-    const totalPnl = avgPnl * matches * 50;
+    const matchesPlayed = isBot ? 12 : 3 + Math.floor(Math.random() * 12);
+    // Points decrease with rank
+    const basePoints = isBot ? 520 : Math.max(0, 750 - i * 15 + (Math.random() - 0.5) * 40);
+    const avgPoints = basePoints / matchesPlayed;
+    const avgPnlPct = isBot ? 4.2 : (10 - i * 0.3 + (Math.random() - 0.5) * 2);
+    const totalWeightedPnl = avgPnlPct * matchesPlayed * 50;
     const winRate = isBot ? 62.5 : Math.max(30, 65 - i * 0.5 + (Math.random() - 0.5) * 10);
-    const tier = i <= 5 ? 'Diamond' : i <= 15 ? 'Gold' : i <= 30 ? 'Silver' : 'Bronze';
+    const bestRank = isBot ? 3 : Math.max(1, Math.floor(i * 0.6 + Math.random() * 10));
+    const partTier = i <= 5 ? 'diamond' as const : i <= 15 ? 'gold' as const : i <= 30 ? 'silver' as const : 'bronze' as const;
+    const promoTier = i <= 3 ? 'advanced' as const : i <= 12 ? 'intermediate' as const : 'starter' as const;
 
     entries.push({
       rank: i,
       username: isBot ? 'AlphaEngine v3' : ALL_TIME_NAMES[(i - 1) % ALL_TIME_NAMES.length] + (i > 30 ? i.toString() : ''),
-      totalMatches: matches,
-      totalPnl: Math.round(totalPnl),
-      totalPnlPct: Math.round(avgPnl * matches * 100) / 100,
-      avgPnlPct: Math.round(avgPnl * 100) / 100,
+      seasonPoints: Math.round(basePoints),
+      matchesPlayed,
+      avgPointsPerMatch: Math.round(avgPoints * 10) / 10,
+      totalWeightedPnl: Math.round(totalWeightedPnl),
+      avgPnlPct: Math.round(avgPnlPct * 100) / 100,
       winRate: Math.round(winRate * 10) / 10,
-      bestMatch: Math.round((avgPnl * 2.5 + Math.random() * 3) * 100) / 100,
-      currentTier: tier,
+      bestMatchRank: bestRank,
+      participationTier: partTier,
+      tier: promoTier,
+      grandFinalQualified: i <= 35, // top ~500 out of many qualify
       isBot,
     });
   }
@@ -319,16 +375,18 @@ export function generateAllTimeLeaderboard(): AllTimeLeaderboardEntry[] {
 }
 
 export const SYSTEM_ALERTS = [
-  '📊 晋级线 #300 当前收益率：+{pnl}%',
-  '⚡ 晋级线附近竞争激烈！#290-#310 有 {count} 人',
+  '📊 奖金线 #100 当前加权收益：+{pnl}%',
+  '⚡ 奖金区竞争激烈！#90-#110 有 {count} 人',
   '🏆 距离比赛结束还有不到{hours}小时！',
   '📈 SOLUSDT 突破关键阻力位',
   '⚠️ 资金费率即将结算',
   '🔔 前10名平均收益率 +{topPnl}%',
   '📉 过去30分钟有{overtaken}人被超越',
   '🔥 过去5分钟有{trades}笔交易成交',
-  '💰 当前全场平均可提现：{avgWithdraw}U',
+  '💰 冠军奖金 55 USDT，前100名均有奖',
   '⚡ {count}名选手正在连亏中（3笔+）',
   '📊 全场平均交易{avgTrades}笔，你已交易{yourTrades}笔',
-  '🎯 距离20%分成还需{scoreGap}积分',
+  '🎯 本场积分：前1名100分，前10名50分',
+  '⚠️ 最后30分钟禁止开新仓！',
+  '🏅 你的赛季总积分：{points}，距总决赛线还差{gap}分',
 ];

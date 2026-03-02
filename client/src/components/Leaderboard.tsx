@@ -1,7 +1,7 @@
 // ============================================================
-// Leaderboard — with dynamic rank fluctuation
-// Design: Gold glowing promotion line, your rank highlighted
-// Ranks fluctuate ±1-3 every 30s to simulate real competition
+// Leaderboard — v4.0 with dynamic rank fluctuation
+// Per-match: sorted by weighted PnL% (收益率)
+// Shows prize amount, match points, participation tier
 // ============================================================
 
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -31,7 +31,6 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
         const updated = [...prev];
         const changes = new Map<string, number>();
 
-        // Randomly select 15-30 traders to swap ranks
         const swapCount = 15 + Math.floor(Math.random() * 15);
         for (let i = 0; i < swapCount; i++) {
           const idx = Math.floor(Math.random() * (updated.length - 1));
@@ -39,7 +38,6 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
           const targetIdx = Math.min(updated.length - 1, Math.max(0, idx + (Math.random() > 0.5 ? shift : -shift)));
 
           if (idx !== targetIdx && !updated[idx].isYou && !updated[targetIdx].isYou) {
-            // Swap pnl and recalculate
             const temp = { ...updated[idx] };
             updated[idx] = {
               ...updated[idx],
@@ -54,7 +52,7 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
           }
         }
 
-        // Also shift user's rank slightly (±1-2) for realism
+        // Shift user's rank slightly (±1-2) for realism
         const myIdx = updated.findIndex(e => e.isYou);
         if (myIdx >= 0) {
           const myShift = Math.random() > 0.6 ? (Math.random() > 0.5 ? 1 : -1) : 0;
@@ -73,9 +71,8 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
         updated.forEach((entry, idx) => {
           const oldRank = entry.rank;
           entry.rank = idx + 1;
-          entry.promotionScore = 1000 - entry.rank;
           if (oldRank !== entry.rank) {
-            changes.set(entry.username, oldRank - entry.rank); // positive = moved up
+            changes.set(entry.username, oldRank - entry.rank);
           }
         });
 
@@ -99,6 +96,18 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
     return me?.rank ?? myRank;
   }, [liveEntries, myRank]);
 
+  // Separator entry for "around me" view
+  const separatorEntry: LeaderboardEntry = {
+    rank: -1,
+    username: '...',
+    pnlPct: 0,
+    pnl: 0,
+    weightedPnl: 0,
+    matchPoints: 0,
+    participationTier: 'bronze',
+    prizeAmount: 0,
+  };
+
   const displayEntries = useMemo(() => {
     if (viewMode === 'top') {
       return liveEntries.slice(0, 30);
@@ -108,7 +117,7 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
     const end = Math.min(liveEntries.length, myIdx + 10);
     const around = liveEntries.slice(start, end);
     const top3 = liveEntries.slice(0, 3);
-    return [...top3, { rank: -1, username: '...', pnlPct: 0, pnl: 0, profitSharePct: 0, withdrawable: 0, promotionScore: 0 } as LeaderboardEntry, ...around];
+    return [...top3, separatorEntry, ...around];
   }, [liveEntries, viewMode]);
 
   const promotionEntry = liveEntries.find(e => e.rank === promotionLineRank);
@@ -116,11 +125,19 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
   const myEntry = liveEntries.find(e => e.isYou);
   const gapToPromotion = myEntry ? (promotionPnlPct - myEntry.pnlPct).toFixed(2) : '?';
 
+  // Tier badge colors
+  const tierColors: Record<string, string> = {
+    bronze: '#CD7F32',
+    silver: '#C0C0C0',
+    gold: '#F0B90B',
+    diamond: '#B9F2FF',
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="panel-header flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span>Leaderboard</span>
+          <span>排行榜</span>
           <span className="text-[9px] text-[#848E9C] bg-white/5 px-1.5 py-0.5 rounded">LIVE</span>
         </div>
         <div className="flex gap-1">
@@ -139,20 +156,19 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
         </div>
       </div>
 
-      {/* Promotion line info */}
+      {/* Prize line info */}
       <div className="px-3 py-2 bg-[#F0B90B]/5 border-b border-[#F0B90B]/20">
         <div className="flex items-center justify-between text-[10px]">
-          <span className="text-[#F0B90B] font-semibold">⚡ Promotion Line #{promotionLineRank}</span>
+          <span className="text-[#F0B90B] font-semibold">⚡ 奖金线 #{promotionLineRank}</span>
           <span className="text-[#F0B90B] font-mono">+{promotionPnlPct.toFixed(2)}%</span>
         </div>
-        {currentMyRank > promotionLineRank && (
+        {currentMyRank > promotionLineRank ? (
           <div className="text-[10px] text-[#F6465D] mt-0.5">
-            You need +{gapToPromotion}% more to reach promotion line
+            还需 +{gapToPromotion}% 才能进入奖金区
           </div>
-        )}
-        {currentMyRank <= promotionLineRank && (
+        ) : (
           <div className="text-[10px] text-[#0ECB81] mt-0.5">
-            ✓ You are above the promotion line
+            ✓ 你在奖金线以上
           </div>
         )}
       </div>
@@ -160,11 +176,11 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
       {/* Column headers */}
       <div className="flex items-center px-3 py-1 text-[10px] text-[#848E9C] border-b border-[rgba(255,255,255,0.04)]">
         <span className="w-10">#</span>
-        <span className="flex-1">Trader</span>
-        <span className="w-12 text-right">Δ</span>
-        <span className="w-16 text-right">PnL%</span>
-        <span className="w-16 text-right">PnL</span>
-        <span className="w-10 text-right">Score</span>
+        <span className="flex-1">选手</span>
+        <span className="w-10 text-right">Δ</span>
+        <span className="w-16 text-right">收益%</span>
+        <span className="w-14 text-right">奖金</span>
+        <span className="w-10 text-right">积分</span>
       </div>
 
       {/* Entries */}
@@ -182,7 +198,6 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
 
             return (
               <div key={`${entry.rank}-${entry.username}`}>
-                {/* Promotion line divider */}
                 {isPromotionLine && (
                   <div className="relative my-1">
                     <div className="absolute inset-0 flex items-center">
@@ -190,7 +205,7 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
                     </div>
                     <div className="relative flex justify-center">
                       <span className="bg-[#0B0E11] px-2 text-[9px] text-[#F0B90B] font-semibold">
-                        ═ PROMOTION LINE ═
+                        ═ 奖金线 ═
                       </span>
                     </div>
                   </div>
@@ -216,8 +231,11 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
                       </span>
                     )}
                     {entry.username}
+                    {entry.participationTier === 'bronze' && (
+                      <span className="text-[7px] text-[#F6465D]/60 ml-0.5">无资格</span>
+                    )}
                   </span>
-                  <span className="w-12 text-right text-[10px]">
+                  <span className="w-10 text-right text-[10px]">
                     {change && change !== 0 ? (
                       <span className={change > 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}>
                         {change > 0 ? `▲${change}` : `▼${Math.abs(change)}`}
@@ -229,10 +247,12 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
                   <span className={`w-16 text-right ${entry.pnlPct >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
                     {entry.pnlPct >= 0 ? '+' : ''}{entry.pnlPct.toFixed(2)}%
                   </span>
-                  <span className={`w-16 text-right ${entry.pnl >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
-                    {entry.pnl >= 0 ? '+' : ''}{entry.pnl.toFixed(1)}
+                  <span className={`w-14 text-right ${entry.prizeAmount > 0 ? 'text-[#F0B90B] font-semibold' : 'text-[#5E6673]'}`}>
+                    {entry.prizeAmount > 0 ? `${entry.prizeAmount}U` : '—'}
                   </span>
-                  <span className="w-10 text-right text-[#848E9C]">{entry.promotionScore}</span>
+                  <span className={`w-10 text-right ${entry.matchPoints > 0 ? 'text-[#F0B90B]' : 'text-[#5E6673]'}`}>
+                    {entry.matchPoints > 0 ? `+${entry.matchPoints}` : '0'}
+                  </span>
                 </div>
               </div>
             );

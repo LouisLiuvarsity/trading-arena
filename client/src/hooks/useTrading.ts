@@ -1,36 +1,29 @@
 // ============================================================
-// Simulated Trading Engine — 5000U Capital / 5%-20% Profit Share
-// Pure frontend mock trading with realistic competition mechanics
-// Supports TP/SL auto-close, hold duration weights, participation scoring
+// Simulated Trading Engine — v4.0
+// 5000U Capital / Fixed Prize Pool (500 USDT per regular match)
+// Points-based grand final qualification
+// Participation score tiers: Bronze/Silver/Gold/Diamond
 // ============================================================
 
 import { useState, useCallback, useRef } from 'react';
 import type { Position, CompletedTrade, AccountState } from '@/lib/types';
+import { HOLD_DURATION_WEIGHTS, REGULAR_PRIZE_TABLE, MATCH_POINTS_TABLE, PARTICIPATION_TIERS } from '@/lib/types';
 import { generateAccountState } from '@/lib/mockData';
 
-const HOLD_WEIGHTS: Array<{ maxSeconds: number; weight: number }> = [
-  { maxSeconds: 60, weight: 0.2 },
-  { maxSeconds: 180, weight: 0.4 },
-  { maxSeconds: 600, weight: 0.7 },
-  { maxSeconds: 1800, weight: 1.0 },
-  { maxSeconds: 7200, weight: 1.15 },
-  { maxSeconds: 14400, weight: 1.3 },
-];
-
 function getHoldWeight(seconds: number): number {
-  for (const hw of HOLD_WEIGHTS) {
-    if (seconds < hw.maxSeconds) return hw.weight;
+  for (const hw of HOLD_DURATION_WEIGHTS) {
+    if (seconds >= hw.minSeconds && seconds < hw.maxSeconds) return hw.weight;
   }
   return 1.3;
 }
 
 function getNextWeightThresholdFn(seconds: number): { nextWeight: number; secondsNeeded: number } | null {
-  for (const hw of HOLD_WEIGHTS) {
+  for (let i = 0; i < HOLD_DURATION_WEIGHTS.length; i++) {
+    const hw = HOLD_DURATION_WEIGHTS[i];
     if (seconds < hw.maxSeconds) {
-      const idx = HOLD_WEIGHTS.indexOf(hw);
-      if (idx < HOLD_WEIGHTS.length - 1) {
+      if (i < HOLD_DURATION_WEIGHTS.length - 1) {
         return {
-          nextWeight: HOLD_WEIGHTS[idx + 1].weight,
+          nextWeight: HOLD_DURATION_WEIGHTS[i + 1].weight,
           secondsNeeded: hw.maxSeconds - seconds,
         };
       }
@@ -40,12 +33,29 @@ function getNextWeightThresholdFn(seconds: number): { nextWeight: number; second
   return null;
 }
 
-// 5000U model: 5%-20% profit sharing tiers
-function getProfitShareTier(score: number): number {
-  if (score >= 40000) return 20;
-  if (score >= 25000) return 15;
-  if (score >= 10000) return 10;
-  return 5;
+function getParticipationTier(score: number): 'bronze' | 'silver' | 'gold' | 'diamond' {
+  for (const tier of [...PARTICIPATION_TIERS].reverse()) {
+    if (score >= tier.min) return tier.tier;
+  }
+  return 'bronze';
+}
+
+function isPrizeEligible(tier: 'bronze' | 'silver' | 'gold' | 'diamond'): boolean {
+  return tier !== 'bronze';
+}
+
+function getPrizeForRank(rank: number): number {
+  for (const tier of REGULAR_PRIZE_TABLE) {
+    if (rank >= tier.rankMin && rank <= tier.rankMax) return tier.prize;
+  }
+  return 0;
+}
+
+function getPointsForRank(rank: number): number {
+  for (const tier of MATCH_POINTS_TABLE) {
+    if (rank >= tier.rankMin && rank <= tier.rankMax) return tier.points;
+  }
+  return 0;
 }
 
 export function useTrading(currentPrice: number) {
@@ -126,21 +136,26 @@ export function useTrading(currentPrice: number) {
     setAccount(prev => {
       const newPnl = prev.pnl + trade.pnl;
       const newEquity = prev.capital + newPnl;
+      const newWeightedPnl = prev.weightedPnl + trade.weightedPnl;
       const newParticipation = prev.participationScore + trade.participationScore;
-      const newSharePct = getProfitShareTier(newParticipation);
-      const newWithdrawable = newPnl > 0 ? newPnl * (newSharePct / 100) : 0;
+      const newTier = getParticipationTier(newParticipation);
+      const eligible = isPrizeEligible(newTier);
       const rankDelta = trade.pnl > 0 ? -Math.floor(Math.random() * 15) : Math.floor(Math.random() * 10);
       const newRank = Math.max(1, Math.min(1000, prev.rank + rankDelta));
+      const newPrize = eligible ? getPrizeForRank(newRank) : 0;
+      const newPoints = getPointsForRank(newRank);
       return {
         ...prev,
         equity: Math.round(newEquity * 100) / 100,
         pnl: Math.round(newPnl * 100) / 100,
         pnlPct: Math.round((newPnl / prev.capital) * 10000) / 100,
+        weightedPnl: Math.round(newWeightedPnl * 100) / 100,
         participationScore: Math.round(newParticipation),
-        profitSharePct: newSharePct,
-        withdrawable: Math.round(newWithdrawable * 100) / 100,
+        participationTier: newTier,
+        prizeEligible: eligible,
         rank: newRank,
-        promotionScore: 1000 - newRank,
+        matchPoints: newPoints,
+        prizeAmount: newPrize,
       };
     });
 
