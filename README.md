@@ -1,22 +1,32 @@
 # Trading Arena
 
-> **24-Hour Crypto Trading Competition Simulator** — A real-time, gamified trading experience built with React 19, featuring live Binance market data, competitive ranking mechanics, and a tiered profit-sharing system.
+> **24-Hour Crypto Trading Competition Platform** — A real-time, gamified trading arena built with React 19, featuring live Binance SOL/USDT market data, LoL-style rank tiers, fixed prize pools, and behavioral pressure mechanics designed for competitive trading at scale.
 
 ---
 
 ## Overview
 
-Trading Arena is a fully client-side trading competition simulator that connects to **live Binance SOLUSDT market data** via WebSocket. Players compete in a 24-hour arena format with 5,000 USDT simulated capital, placing long/short trades on SOL perpetual contracts. The platform features a realistic exchange-grade interface with candlestick charts, order books, real-time leaderboards, and psychological pressure mechanics designed to simulate the emotional intensity of competitive trading.
+Trading Arena is a **24-hour crypto trading competition simulator** where players compete using 5,000 USDT simulated capital on live Binance SOL/USDT perpetual contract data. The platform runs a monthly tournament structure — 15 regular matches plus a grand final — with a fixed 10,000 USDT monthly prize budget. Rankings are determined by **Weighted P&L** (hold-duration-adjusted returns), and a cumulative **season points** system drives progression through six LoL-inspired rank tiers (Iron → Diamond), each unlocking higher leverage multipliers.
 
-This project serves as a **frontend demonstration and design prototype** for a gamified crypto trading competition platform. All trading logic runs entirely in the browser — no backend, no real money, no risk.
+The project currently operates as a **fully client-side frontend prototype**. All trading logic, ranking simulation, and competition mechanics run entirely in the browser. The architecture is designed for straightforward migration to a server-authoritative backend.
 
 ---
 
-## Screenshots
+## Core Parameters
 
-| Login | Rules Guide | Trading Arena |
-|-------|-------------|---------------|
-| Dark-themed entry with competition stats | Step-by-step onboarding with arrow navigation | Full trading interface with live data |
+| Parameter | Value |
+|---|---|
+| **Monthly Budget** | 10,000 USDT (fixed) |
+| **Regular Match Prize** | 500 USDT / match |
+| **Grand Final Prize** | 2,500 USDT |
+| **Monthly Schedule** | 15 regular + 1 grand final |
+| **Match Duration** | 24 hours |
+| **Starting Capital** | 5,000 USDT (simulated) |
+| **Trading Pair** | SOL/USDT perpetual (Binance live data) |
+| **Max Trades / Match** | 40 |
+| **Concurrent Positions** | 1 at a time |
+| **Min Trades for Prize** | 5 per match |
+| **Last 30 Minutes** | No new positions (close-only) |
 
 ---
 
@@ -24,7 +34,7 @@ This project serves as a **frontend demonstration and design prototype** for a g
 
 ### Real-Time Market Data
 
-The platform connects directly to Binance's public data streams for live SOLUSDT market information. A custom **WebSocket Manager** (`BinanceWSManager`) batches all subscriptions into a single connection, with automatic reconnection and exponential backoff. When WebSocket is unavailable, the system gracefully falls back to REST polling.
+The platform connects directly to Binance's public data streams for live SOL/USDT market information. A custom **WebSocket Manager** (`BinanceWSManager`) batches all subscriptions into a single connection, with automatic reconnection and exponential backoff. When WebSocket is unavailable, the system gracefully falls back to REST polling.
 
 | Data Stream | Source | Update Frequency |
 |---|---|---|
@@ -37,64 +47,110 @@ Five timeframes are supported: **1m, 5m, 15m, 1H, 4H**. Historical data is fetch
 
 ### Simulated Trading Engine
 
-The trading engine (`useTrading` hook) implements a complete position management system with realistic mechanics:
+The trading engine (`useTrading` hook) implements a complete position management system with realistic mechanics. Players can open long/short positions with configurable size (25%/50%/75%/100% of available equity), set take-profit and stop-loss levels, and manage a maximum of 40 trades per match. Only one position may be open at a time.
 
-- **Position Management**: Open long/short positions with configurable size (25%/50%/75%/100% of available equity). Only one position can be open at a time, with a maximum of 40 trades per match.
-- **Take-Profit / Stop-Loss**: Set TP/SL levels that automatically trigger position closure when price conditions are met. The system checks triggers on every price update.
-- **Hold Duration Weighting**: Trades are weighted by how long the position is held, incentivizing thoughtful trading over rapid scalping.
+**Hold Duration Weighting** is the core mechanic that separates Trading Arena from simple P&L competitions. Every trade's profit or loss is multiplied by a weight based on how long the position was held:
 
-| Hold Duration | Weight Multiplier |
-|---|---|
-| < 1 minute | 0.2x |
-| 1–3 minutes | 0.4x |
-| 3–10 minutes | 0.7x |
-| 10–30 minutes | 1.0x |
-| 30 min – 2 hours | 1.15x |
-| 2–4+ hours | 1.3x |
-
-### Tiered Profit Sharing (5%–20%)
-
-Profit sharing is determined by a player's **Participation Score**, which accumulates based on trade size multiplied by hold duration weight. Higher engagement unlocks better profit-sharing tiers:
-
-| Tier | Participation Score | Profit Share |
+| Hold Duration | Weight | Design Intent |
 |---|---|---|
-| Bronze | 0 – 9,999 | 5% |
-| Silver | 10,000 – 24,999 | 10% |
-| Gold | 25,000 – 39,999 | 15% |
-| Diamond | 40,000+ | 20% |
+| < 1 minute | 0.2x | Heavy penalty — suppress noise trading |
+| 1 – 3 minutes | 0.4x | Moderate penalty — allow tactical trades |
+| 3 – 10 minutes | 0.7x | Light penalty — short conviction trades |
+| 10 – 30 minutes | 1.0x | Baseline — thoughtful trading |
+| 30 min – 2 hours | 1.15x | Reward — medium conviction holds |
+| 2 – 4+ hours | 1.3x | Maximum reward — high conviction positions |
 
-### Competition Structure
+A quick 30-second scalp earning +50 USDT only counts as +10 USDT (0.2x), while a 2-hour hold earning the same +50 USDT counts as +65 USDT (1.3x). This fundamentally changes trading behavior — players must balance conviction with risk management.
 
-Each competition cycle consists of **3 consecutive matches**, with results aggregated across all three. Players cannot skip individual matches — all three must be completed. The three-match structure is divided into stages:
+### Rank Tier System (LoL-Style)
 
-1. **Trial Stage** — Familiarize with the market, establish baseline
-2. **Serious Stage** — Refine strategy, accumulate score
-3. **Final Stage** — Optimize ranking, concentrate efforts
+Players progress through six rank tiers driven by **cumulative season points**. Each tier unlocks a higher leverage multiplier, allowing higher-ranked players to amplify their returns. Leverage is applied automatically to all P&L calculations — it is not a user-selectable option, but a reward earned through consistent performance.
 
-After completing a full 3-match cycle, players receive a **personal trading analysis report** covering behavioral patterns, position timing, risk/reward analysis, emotional trading detection, and comparison against the field average.
+| Rank Tier | Points Required | Leverage | Color |
+|---|---|---|---|
+| **Iron** | 0 – 99 | 1.0x | Gray |
+| **Bronze** | 100 – 299 | 1.2x | Bronze |
+| **Silver** | 300 – 599 | 1.5x | Silver |
+| **Gold** | 600 – 999 | 2.0x | Gold |
+| **Platinum** | 1,000 – 1,499 | 2.5x | Teal |
+| **Diamond** | 1,500+ | 3.0x | Purple |
 
-### Ranking & Psychological Pressure
+**Monthly Points Decay**: At the end of each season (month), all players' cumulative points are multiplied by **0.8x**. This prevents inactive players from holding high ranks indefinitely and ensures the leaderboard reflects recent performance. A Diamond player (1,500 pts) who skips one month drops to 1,200 (Platinum); two months of inactivity drops them to 960 (Gold).
 
-The **Rank Anxiety Strip** at the bottom of the trading interface provides constant psychological pressure through real-time indicators:
+### Prize Distribution
 
-- Current rank position and distance to the promotion line
-- Number of traders who have overtaken you recently
-- Count of players clustered near the promotion threshold
-- Live scrolling feed of ranking events (overtakes, promotions, rank volatility)
+**Regular Match (500 USDT per match):**
 
-The notification system delivers competition alerts via a **draggable, closeable floating panel** that can be repositioned anywhere on screen to avoid obstructing the trading view.
+| Rank | Prize | Count | Subtotal |
+|---|---|---|---|
+| 1st | 55 USDT | 1 | 55 |
+| 2nd | 35 USDT | 1 | 35 |
+| 3rd | 25 USDT | 1 | 25 |
+| 4th–5th | 15 USDT | 2 | 30 |
+| 6th–10th | 10 USDT | 5 | 50 |
+| 11th–20th | 6 USDT | 10 | 60 |
+| 21st–50th | 4 USDT | 30 | 120 |
+| 51st–100th | 2.5 USDT | 50 | 125 |
+| **Total** | | **100** | **500 USDT** |
 
-### Information Panels
+**Grand Final (2,500 USDT):**
 
-The right sidebar offers five tabbed panels:
+| Rank | Prize | Count | Subtotal |
+|---|---|---|---|
+| Champion | 300 USDT | 1 | 300 |
+| 2nd | 200 USDT | 1 | 200 |
+| 3rd | 150 USDT | 1 | 150 |
+| 4th–5th | 100 USDT | 2 | 200 |
+| 6th–10th | 60 USDT | 5 | 300 |
+| 11th–20th | 35 USDT | 10 | 350 |
+| 21st–50th | 15 USDT | 30 | 450 |
+| 51st–100th | 11 USDT | 50 | 550 |
+| **Total** | | **100** | **2,500 USDT** |
 
-| Tab | Content |
-|---|---|
-| **Chat** | Simulated chat room with trader messages, system alerts, and emotional reactions |
-| **Trades** | Personal trade history with P&L, hold duration, and weighted scores |
-| **Rank** | Live leaderboard showing top traders, your position, and promotion zone |
-| **Stats** | Market statistics including L/S ratio, win rate, trading activity, and profit-sharing tier progress |
-| **News** | Crypto news feed with sentiment indicators (bullish/bearish/neutral) and impact ratings |
+**Prize Eligibility**: A minimum of **5 completed trades** per match is required to qualify for prizes and season points. This prevents single-trade luck from dominating results while keeping the barrier low enough for genuine participants.
+
+### Match Points & Grand Final Qualification
+
+Each regular match awards season points based on final ranking. Points accumulate across the month, and the top 500 players by total points qualify for the grand final.
+
+| Rank Range | Points | Design Intent |
+|---|---|---|
+| 1st | 100 | Clear advantage for champions |
+| 2nd–3rd | 70 | Podium has significant value |
+| 4th–10th | 50 | Top 10 is the first psychological line |
+| 11th–50th | 30 | Core players, steady point source |
+| 51st–100th | 15 | Some points, creates chase motivation |
+| 101st–300th | 5 | Participation accumulates over time |
+| 301st–1000th | 0 | Must improve to accumulate |
+
+### Quant Bot (AlphaEngine v3)
+
+A quantitative trading bot competes alongside human players, displayed with a robot icon in all leaderboards. The bot's dedicated showcase section on the landing page displays:
+
+- **Equity curve** with real-time performance tracking
+- **Core metrics**: Total return, Sharpe ratio, max drawdown, win rate
+- **Human vs. Bot comparison table**: Side-by-side performance metrics
+- **Recent trades and current positions**
+
+The bot data is currently mock-generated and designed to be replaced with live API data from the actual quantitative system.
+
+### Psychological Pressure Mechanics
+
+The **Rank Anxiety Strip** at the bottom of the trading interface provides constant competitive pressure through real-time indicators: current rank, distance to prize zone, number of recent overtakes, and crowding near the promotion line. A live scrolling feed shows ranking events (overtakes, promotions, rank volatility) with red flash effects.
+
+The **Competition Notifications** panel is a draggable, closeable floating window that delivers alerts about rank changes, milestone achievements, and competitive events. It can be repositioned anywhere on screen and minimized to a bell icon.
+
+### Public Landing Page
+
+The landing page is a public-facing portal (no login required) featuring:
+
+- **Hero section** with live match status and participant count
+- **Rules overview** — 6 core rules presented as visual cards
+- **Prize structure** — Regular match and grand final prize tables
+- **Dual leaderboards** — Current match (sorted by return %) and season total (sorted by cumulative points)
+- **Rank tier progression** — Visual display of all 6 tiers with leverage and points decay info
+- **Quant bot showcase** — AlphaEngine performance dashboard
+- **Call-to-action** — Direct entry to the competition
 
 ---
 
@@ -125,18 +181,19 @@ trading-arena/
 │       ├── main.tsx                  # React entry point
 │       ├── index.css                 # Global styles & Tailwind theme
 │       ├── pages/
+│       │   ├── LandingPage.tsx       # Public landing page (rules, leaderboards, bot)
 │       │   ├── LoginPage.tsx         # Competition entry screen
-│       │   ├── RulesPage.tsx         # Interactive rules guide (4 sections)
+│       │   ├── RulesPage.tsx         # Quick-start rules guide (single card)
 │       │   └── TradingPage.tsx       # Main trading arena layout
 │       ├── components/
 │       │   ├── CandlestickChart.tsx  # TradingView Lightweight Charts
-│       │   ├── OrderBookPanel.tsx    # Bid/ask depth display
-│       │   ├── TradingPanel.tsx      # Order entry (buy/sell/TP/SL)
+│       │   ├── OrderBookPanel.tsx    # Bid/ask depth display (grid layout)
+│       │   ├── TradingPanel.tsx      # Order entry with leverage display
 │       │   ├── StatusBar.tsx         # Top bar with account metrics
 │       │   ├── TickerBar.tsx         # 24h price statistics
 │       │   ├── NewsTicker.tsx        # Scrolling news headline bar
 │       │   ├── ChatRoom.tsx          # Simulated trader chat
-│       │   ├── Leaderboard.tsx       # Full ranking table
+│       │   ├── Leaderboard.tsx       # Full ranking table (with bot icon)
 │       │   ├── MiniLeaderboard.tsx   # Compact ranking widget
 │       │   ├── MarketStats.tsx       # Statistics & analytics panel
 │       │   ├── NewsFeed.tsx          # News list with sentiment
@@ -155,8 +212,11 @@ trading-arena/
 │       │   └── utils.ts              # Utility functions
 │       └── contexts/
 │           └── ThemeContext.tsx       # Dark/light theme provider
+├── docs/
+│   └── Trading_Arena_v4.1.docx      # Full competition design document
 ├── server/                           # Placeholder (static-only project)
 ├── shared/                           # Shared constants
+├── README.md
 └── package.json
 ```
 
@@ -166,7 +226,7 @@ trading-arena/
 
 ### Prerequisites
 
-- **Node.js** 22+ 
+- **Node.js** 22+
 - **pnpm** 10+
 
 ### Installation
@@ -194,48 +254,38 @@ pnpm preview
 
 ---
 
-## Design Philosophy
+## User Flow
 
-The visual design follows an **"Obsidian Exchange"** aesthetic — a fusion of professional crypto exchange interfaces with esports arena energy. Key design principles include:
-
-- **Dark-first palette**: Deep navy/charcoal backgrounds (`#0B0E17`, `#141722`) with high-contrast text and strategic use of Binance-inspired accent colors (gold `#F0B90B`, green `#0ECB81`, red `#F6465D`).
-- **Information density**: The trading interface maximizes data visibility within a single viewport, with no scrolling required during active trading. Every pixel serves a purpose.
-- **Psychological tension**: The UI deliberately creates competitive pressure through real-time rank changes, overtake notifications, and proximity-to-promotion indicators.
-- **Monospace data**: All numerical data uses monospace fonts for precise alignment, while headings use bold display typography for visual hierarchy.
+```
+Landing Page (public)
+    │
+    ├── Browse rules, leaderboards, bot stats
+    │
+    └── Click "进入竞技场" (Enter Arena)
+            │
+            ├── Login Page → Enter username
+            │
+            ├── Rules Quick Guide → Confirm 6 core rules
+            │
+            └── Trading Arena → 24h competition
+                    ├── Candlestick chart (5 timeframes)
+                    ├── Order book (real-time depth)
+                    ├── Trading panel (buy/sell with leverage)
+                    ├── Right sidebar (Chat/Trades/Rank/Stats/News)
+                    ├── Rank anxiety strip (bottom)
+                    └── Competition notifications (draggable)
+```
 
 ---
 
-## Game Mechanics Deep Dive
+## Design Philosophy
 
-### Participation Score
+The visual design follows an **"Obsidian Exchange"** aesthetic — a fusion of professional crypto exchange interfaces with esports arena energy:
 
-The Participation Score is the core progression metric. It is calculated as:
-
-```
-Participation Score = Σ (Trade Size × Hold Duration Weight)
-```
-
-This formula rewards traders who commit meaningful capital for sustained periods, discouraging both micro-scalping (low weight) and idle observation (no trades). The score directly determines the profit-sharing tier, creating a natural incentive to trade actively and hold positions thoughtfully.
-
-### Weighted P&L
-
-Raw profit/loss is adjusted by the hold duration weight:
-
-```
-Weighted P&L = Raw P&L × Hold Duration Weight
-```
-
-A quick 30-second scalp that earns +50 USDT only counts as +10 USDT (0.2x weight), while a 30-minute position earning the same +50 USDT counts at full value (1.0x weight). This mechanic fundamentally changes trading behavior — players must balance conviction with risk management.
-
-### Promotion System
-
-After completing a 3-match cycle, players are evaluated based on their **average promotion score** across all three matches. Strong performers advance to higher tiers with increased capital allocation and leverage access:
-
-| Current Tier | Capital | Leverage | Promotion Target |
-|---|---|---|---|
-| Starter | 5,000 USDT | 1x | Advance to 10,000U / 2x |
-| Intermediate | 10,000 USDT | 2x | Advance to 20,000U / 3x |
-| Advanced | 20,000 USDT | 3x | Top-tier status |
+- **Dark-first palette**: Deep backgrounds (`#0B0E17`, `#141722`) with Binance-inspired accents — gold (`#F0B90B`), green (`#0ECB81`), red (`#F6465D`).
+- **Information density**: The trading interface maximizes data visibility within a single viewport. Every pixel serves a purpose during active trading.
+- **Psychological tension**: Real-time rank changes, overtake notifications, and proximity-to-prize indicators create constant competitive pressure — this is a deliberate data collection mechanism.
+- **Monospace precision**: All numerical data uses monospace fonts for alignment. Display typography provides visual hierarchy.
 
 ---
 
@@ -266,17 +316,18 @@ React Hooks Layer
 Trading Engine (useTrading)
     ├── Position management (open/close/TP/SL)
     ├── Hold duration weight calculation
-    ├── Participation score accumulation
-    ├── Profit-sharing tier determination
-    └── Account state (equity, P&L, rank)
+    ├── Leverage application (tier-based)
+    ├── Prize eligibility check (min 5 trades)
+    ├── Season points tracking
+    └── Account state (equity, P&L, rank, tier)
 
     ↓
 
 UI Components
     ├── CandlestickChart (TradingView Lightweight Charts)
     ├── OrderBookPanel (grid-aligned depth display)
-    ├── TradingPanel (order entry)
-    ├── StatusBar (account metrics)
+    ├── TradingPanel (order entry + leverage badge)
+    ├── StatusBar (account metrics + rank tier)
     ├── RankAnxietyStrip (competitive pressure)
     └── Right Sidebar (Chat/Trades/Rank/Stats/News)
 ```
@@ -287,7 +338,7 @@ UI Components
 
 ### Changing the Trading Pair
 
-To switch from SOLUSDT to another pair, update the constants in `client/src/hooks/useBinanceWS.ts`:
+To switch from SOL/USDT to another pair, update the constants in `client/src/hooks/useBinanceWS.ts`:
 
 ```typescript
 const SYMBOL = 'BTCUSDT';      // Change to desired symbol
@@ -298,24 +349,40 @@ Also update references in `OrderBookPanel.tsx` (column header), `TickerBar.tsx`,
 
 ### Adjusting Game Parameters
 
-Key parameters in `client/src/hooks/useTrading.ts`:
+Key parameters are defined in `client/src/lib/types.ts`:
 
 ```typescript
-// Hold duration weight tiers
-const HOLD_WEIGHTS = [
-  { maxSeconds: 60, weight: 0.2 },   // < 1 min
-  { maxSeconds: 180, weight: 0.4 },  // 1-3 min
-  // ... customize as needed
+// Rank tiers — points thresholds and leverage
+export const RANK_TIERS = [
+  { name: 'iron',     minPoints: 0,    leverage: 1.0 },
+  { name: 'bronze',   minPoints: 100,  leverage: 1.2 },
+  { name: 'silver',   minPoints: 300,  leverage: 1.5 },
+  { name: 'gold',     minPoints: 600,  leverage: 2.0 },
+  { name: 'platinum', minPoints: 1000, leverage: 2.5 },
+  { name: 'diamond',  minPoints: 1500, leverage: 3.0 },
 ];
 
-// Profit sharing tiers
-function getProfitShareTier(score: number): number {
-  if (score >= 40000) return 20;  // Diamond: 20%
-  if (score >= 25000) return 15;  // Gold: 15%
-  if (score >= 10000) return 10;  // Silver: 10%
-  return 5;                        // Bronze: 5%
-}
+// Monthly points decay factor
+export const POINTS_DECAY_FACTOR = 0.8;
+
+// Minimum trades per match for prize eligibility
+export const MIN_TRADES_FOR_PRIZE = 5;
 ```
+
+---
+
+## Implementation Roadmap
+
+The project is designed for three-phase migration to production:
+
+**Phase 1 — Core Competition Engine (Weeks 1–4)**
+Server-side trading engine, position management, weighted P&L, server-side price validation via independent Binance WebSocket, fixed prize pool distribution, points system, and grand final qualification logic.
+
+**Phase 2 — Anti-Cheat Infrastructure (Weeks 3–6)**
+Device fingerprinting, IP correlation graph, behavioral detection batch processing (position correlation, time synchronization, open/close pairing, size mirroring), and review dashboard.
+
+**Phase 3 — Engagement & Growth (Weeks 5–8)**
+Grand final qualification tracker, badge and achievement system, cheat reporting interface, post-match trading analysis reports, and tier progression system.
 
 ---
 
@@ -345,3 +412,4 @@ This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) f
 - **shadcn/ui** — Component library foundation
 - **Radix UI** — Accessible primitive components
 - **Lucide** — Icon set used throughout the interface
+- **Framer Motion** — Animation library for landing page and UI transitions
