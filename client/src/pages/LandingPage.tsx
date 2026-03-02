@@ -278,7 +278,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
               {
                 icon: Shield,
                 title: '5,000U 模拟资金',
-                desc: '每位选手获得 5,000 USDT 模拟资金，无爆仓风险。Starter 阶段 1x 杠杆，晋级后可获 2x/3x。',
+                desc: '所有段位本金相同，无爆仓风险。晋级解锁更高杠杆 (1x/2x/3x)，更快拉开收益差距。',
                 accent: '#F0B90B',
               },
               {
@@ -505,15 +505,34 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                   <TrendingUp className="w-4 h-4 text-[#F0B90B]" />
                   段位晋级体系
                 </h3>
+                <p className="text-[10px] text-[#848E9C] mb-3 leading-relaxed">
+                  所有段位本金相同（5,000 USDT），高段位解锁更高杠杆，能更快拉开收益差距。段位可晋级也可降级。
+                </p>
                 <div className="space-y-2">
                   {PROMOTION_TIERS.map((tier, i) => (
-                    <div key={i} className="flex items-center justify-between bg-[#0B0E11]/60 rounded-lg px-4 py-2.5">
-                      <div className="flex items-center gap-3">
-                        <TierBadge tier={tier.tier} />
-                        <span className="text-white text-xs font-semibold">{tier.capital.toLocaleString()} USDT</span>
-                        <span className="text-[#848E9C] text-[10px]">{tier.leverage}x 杠杆</span>
+                    <div key={i} className="bg-[#0B0E11]/60 rounded-lg px-4 py-3 border border-white/[0.04]">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-3">
+                          <TierBadge tier={tier.tier} />
+                          <span className="text-white text-xs font-bold">{tier.leverage}x 杠杆</span>
+                          <span className="text-[#5E6673] text-[10px]">· 5,000 USDT 本金</span>
+                        </div>
                       </div>
-                      <span className="text-[10px] text-[#5E6673]">{tier.condition}</span>
+                      <div className="flex items-center gap-4 text-[9px]">
+                        {tier.promote !== '—' && (
+                          <span className="text-[#0ECB81] flex items-center gap-1">
+                            <span>▲</span> {tier.promote}
+                          </span>
+                        )}
+                        {tier.demote !== '—' && (
+                          <span className="text-[#F6465D] flex items-center gap-1">
+                            <span>▼</span> {tier.demote}
+                          </span>
+                        )}
+                        {tier.promote === '—' && (
+                          <span className="text-[#5E6673]">{(tier as any).condition || '最高段位'}</span>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

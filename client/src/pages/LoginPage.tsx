@@ -132,21 +132,21 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             <TrendingUp className="w-4 h-4 text-[#0ECB81] shrink-0 mt-0.5" />
             <div>
               <div className="text-white text-xs font-medium">Promotion System</div>
-              <div className="text-[#5E6673] text-[10px] mt-0.5">Rank up to 20,000U</div>
+              <div className="text-[#5E6673] text-[10px] mt-0.5">Rank up to 3x leverage</div>
             </div>
           </div>
           <div className="bg-[#1C2030]/40 border border-[rgba(255,255,255,0.04)] rounded-lg p-3 flex items-start gap-2.5">
             <Trophy className="w-4 h-4 text-[#F0B90B] shrink-0 mt-0.5" />
             <div>
               <div className="text-white text-xs font-medium">Profit Sharing</div>
-              <div className="text-[#5E6673] text-[10px] mt-0.5">Keep 5%-20% profits</div>
+              <div className="text-[#5E6673] text-[10px] mt-0.5">Win up to 55 USDT/match</div>
             </div>
           </div>
           <div className="bg-[#1C2030]/40 border border-[rgba(255,255,255,0.04)] rounded-lg p-3 flex items-start gap-2.5">
             <Shield className="w-4 h-4 text-[#848E9C] shrink-0 mt-0.5" />
             <div>
               <div className="text-white text-xs font-medium">Zero Risk</div>
-              <div className="text-[#5E6673] text-[10px] mt-0.5">No leverage, no liquidation</div>
+              <div className="text-[#5E6673] text-[10px] mt-0.5">Simulated capital only</div>
             </div>
           </div>
         </div>

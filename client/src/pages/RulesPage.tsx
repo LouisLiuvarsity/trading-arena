@@ -51,7 +51,7 @@ export default function RulesPage({ username, onEnterArena, onSkipRules }: Rules
               {
                 icon: Shield,
                 title: '5,000 USDT 模拟资金',
-                desc: '无爆仓风险，Starter 阶段 1x 杠杆',
+                desc: '所有段位相同本金，晋级解锁更高杠杆 (1x/2x/3x)',
                 accent: '#F0B90B',
               },
               {

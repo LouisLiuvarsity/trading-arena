@@ -89,7 +89,7 @@ export interface MatchState {
 }
 
 export interface AccountState {
-  capital: number; // 5000 (Starter), 10000 (Intermediate), 20000 (Advanced)
+  capital: number; // 5000 for all tiers, leverage differs (1x/2x/3x)
   equity: number;
   pnl: number;
   pnlPct: number;
@@ -262,11 +262,11 @@ export const PARTICIPATION_TIERS = [
   { tier: 'diamond' as const, min: 30000, max: Infinity, label: 'Diamond', eligible: true },
 ] as const;
 
-// v4.0: Promotion tiers
+// v4.0: Promotion tiers — same capital (5,000U) for all, leverage is the differentiator
 export const PROMOTION_TIERS = [
-  { tier: 'starter' as const, capital: 5000, leverage: 1, label: 'Starter', condition: 'Default' },
-  { tier: 'intermediate' as const, capital: 10000, leverage: 2, label: 'Intermediate', condition: 'Monthly avg top 20%' },
-  { tier: 'advanced' as const, capital: 20000, leverage: 3, label: 'Advanced', condition: '2 consecutive months top 10%' },
+  { tier: 'starter' as const, capital: 5000, leverage: 1, label: 'Starter', condition: '默认段位', promote: '月均排名前 20% 晋级', demote: '—' },
+  { tier: 'intermediate' as const, capital: 5000, leverage: 2, label: 'Intermediate', condition: '月均排名前 20%', promote: '连续 2 月前 10% 晋级', demote: '月均排名后 30% 降级' },
+  { tier: 'advanced' as const, capital: 5000, leverage: 3, label: 'Advanced', condition: '连续 2 月前 10%', promote: '—', demote: '月均排名后 20% 降级' },
 ] as const;
 
 export interface ChatMessage {
