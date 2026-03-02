@@ -298,12 +298,12 @@ function TradingPanel({
         </div>
       </div>
 
-      {/* Section 2: Position Size */}
-      <div className="flex items-center gap-3 px-3 border-r border-[rgba(255,255,255,0.06)] min-w-[240px]">
+      {/* Section 2: Position Size + Leverage */}
+      <div className="flex items-center gap-3 px-3 border-r border-[rgba(255,255,255,0.06)] min-w-[260px]">
         <div className="flex-1 space-y-1">
           <div className="flex justify-between text-[10px]">
-            <span className="text-[#848E9C]">Size</span>
-            <span className="font-mono text-[#D1D4DC]">{positionSize} U ({positionPct}%)</span>
+            <span className="text-[#848E9C]">Size <span className="text-[#F0B90B] font-bold">×{account.tierLeverage}</span></span>
+            <span className="font-mono text-[#D1D4DC]">{positionSize} U → <span className="text-[#F0B90B]">{Math.round(positionSize * account.tierLeverage)} U</span></span>
           </div>
           <Slider
             value={[positionSize]}
@@ -364,29 +364,36 @@ function TradingPanel({
         )}
       </div>
 
-      {/* Section 4: Buy/Sell buttons */}
+      {/* Section 4: Buy/Sell buttons with leverage badge */}
       <div className="flex items-center gap-2 px-3">
-        <button
-          onClick={() => showTpSl ? handleOpenWithTpSl('long') : onOpenPosition('long', positionSize)}
-          disabled={account.tradesUsed >= account.tradesMax || currentPrice === 0}
-          className="px-5 py-2.5 bg-[#0ECB81] hover:bg-[#0ECB81]/90 disabled:opacity-30 disabled:cursor-not-allowed text-black font-bold text-sm rounded transition-all active:scale-[0.97] whitespace-nowrap"
-        >
-          <div>Buy / Long</div>
-          <div className="text-[9px] font-normal opacity-70">{positionSize} U</div>
-        </button>
-        <button
-          onClick={() => showTpSl ? handleOpenWithTpSl('short') : onOpenPosition('short', positionSize)}
-          disabled={account.tradesUsed >= account.tradesMax || currentPrice === 0}
-          className="px-5 py-2.5 bg-[#F6465D] hover:bg-[#F6465D]/90 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold text-sm rounded transition-all active:scale-[0.97] whitespace-nowrap"
-        >
-          <div>Sell / Short</div>
-          <div className="text-[9px] font-normal opacity-70">{positionSize} U</div>
-        </button>
+        <div className="flex flex-col items-center gap-0.5">
+          <button
+            onClick={() => showTpSl ? handleOpenWithTpSl('long') : onOpenPosition('long', positionSize)}
+            disabled={account.tradesUsed >= account.tradesMax || currentPrice === 0}
+            className="px-5 py-2.5 bg-[#0ECB81] hover:bg-[#0ECB81]/90 disabled:opacity-30 disabled:cursor-not-allowed text-black font-bold text-sm rounded transition-all active:scale-[0.97] whitespace-nowrap relative"
+          >
+            <div>Buy / Long</div>
+            <div className="text-[9px] font-normal opacity-70">{positionSize} U × {account.tierLeverage}</div>
+          </button>
+        </div>
+        <div className="flex flex-col items-center gap-0.5">
+          <button
+            onClick={() => showTpSl ? handleOpenWithTpSl('short') : onOpenPosition('short', positionSize)}
+            disabled={account.tradesUsed >= account.tradesMax || currentPrice === 0}
+            className="px-5 py-2.5 bg-[#F6465D] hover:bg-[#F6465D]/90 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold text-sm rounded transition-all active:scale-[0.97] whitespace-nowrap relative"
+          >
+            <div>Sell / Short</div>
+            <div className="text-[9px] font-normal opacity-70">{positionSize} U × {account.tierLeverage}</div>
+          </button>
+        </div>
       </div>
 
-      {/* Section 5: Stage info */}
-      <div className="flex items-center px-2 text-[9px] text-[#848E9C] shrink-0">
-        {account.rankTier.toUpperCase()} • {account.tierLeverage}x • No Liq
+      {/* Section 5: Leverage badge */}
+      <div className="flex flex-col items-center justify-center px-2 shrink-0">
+        <div className="px-2 py-1 rounded border border-[#F0B90B]/30 bg-[#F0B90B]/10">
+          <div className="text-[#F0B90B] text-xs font-bold font-mono">{account.tierLeverage}x</div>
+        </div>
+        <div className="text-[8px] text-[#848E9C] mt-0.5 capitalize">{account.rankTier}</div>
       </div>
     </div>
   );

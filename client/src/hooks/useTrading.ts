@@ -98,8 +98,10 @@ export function useTrading(currentPrice: number) {
     const holdSeconds = (Date.now() - pos.openTime) / 1000;
     const weight = getHoldWeight(holdSeconds);
     const direction = pos.direction === 'long' ? 1 : -1;
-    const pnl = direction * (price - pos.entryPrice) / pos.entryPrice * pos.size;
-    const pnlPct = direction * (price - pos.entryPrice) / pos.entryPrice * 100;
+    // Apply tier leverage to P&L
+    const leverage = account.tierLeverage;
+    const pnl = direction * (price - pos.entryPrice) / pos.entryPrice * pos.size * leverage;
+    const pnlPct = direction * (price - pos.entryPrice) / pos.entryPrice * 100 * leverage;
     const weightedPnl = pnl * weight;
 
     const trade: CompletedTrade = {
@@ -192,8 +194,10 @@ export function useTrading(currentPrice: number) {
     const holdSeconds = (Date.now() - pos.openTime) / 1000;
     const weight = getHoldWeight(holdSeconds);
     const dir = pos.direction === 'long' ? 1 : -1;
-    const pnl = dir * (price - pos.entryPrice) / pos.entryPrice * pos.size;
-    const pnlPct = dir * (price - pos.entryPrice) / pos.entryPrice * 100;
+    // Apply tier leverage to unrealized P&L
+    const leverage = account.tierLeverage;
+    const pnl = dir * (price - pos.entryPrice) / pos.entryPrice * pos.size * leverage;
+    const pnlPct = dir * (price - pos.entryPrice) / pos.entryPrice * 100 * leverage;
 
     const updated: Position = {
       ...pos,
