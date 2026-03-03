@@ -1,4 +1,4 @@
-import { SYMBOL } from "./constants.js";
+import { SYMBOL } from "./constants";
 
 const REST_BASE = "https://data-api.binance.vision/api/v3";
 
