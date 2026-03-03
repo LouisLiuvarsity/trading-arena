@@ -31,3 +31,6 @@
 - [x] Audit current mobile layout issues across all pages
 - [x] Write mobile layout redesign proposal document (design only, no code changes)
 - [x] Deliver proposal to user
+
+## Data Reset
+- [x] Reset all user data in database (truncate all arena tables)

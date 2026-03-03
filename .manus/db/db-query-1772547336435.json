@@ -1,0 +1,40 @@
+{
+  "query": "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE();",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE();",
+  "rows": [
+    {
+      "TABLE_NAME": "predictions"
+    },
+    {
+      "TABLE_NAME": "arena_accounts"
+    },
+    {
+      "TABLE_NAME": "__drizzle_migrations"
+    },
+    {
+      "TABLE_NAME": "positions"
+    },
+    {
+      "TABLE_NAME": "behavior_events"
+    },
+    {
+      "TABLE_NAME": "chat_messages"
+    },
+    {
+      "TABLE_NAME": "users"
+    },
+    {
+      "TABLE_NAME": "arena_sessions"
+    },
+    {
+      "TABLE_NAME": "matches"
+    },
+    {
+      "TABLE_NAME": "trades"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\npredictions\narena_accounts\n__drizzle_migrations\npositions\nbehavior_events\nchat_messages\nusers\narena_sessions\nmatches\ntrades\n",
+  "stderr": "",
+  "execution_time_ms": 1495
+}
