@@ -3,9 +3,10 @@
 // Design: Dark background, Binance green/red candles, volume bars
 // No technical indicators — intentionally bare (per blueprint)
 // Supports TP/SL/Entry price lines when position is open
+// Double-click / long-press to set TP or SL
 // ============================================================
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   createChart,
   ColorType,
@@ -22,6 +23,23 @@ interface Props {
   timeframe: TimeframeKey;
   onTimeframeChange: (tf: TimeframeKey) => void;
   position?: Position | null;
+  onSetTpSl?: (tp?: number | null, sl?: number | null) => void;
+}
+
+function formatPrice(price: number): string {
+  if (price >= 1000) return price.toFixed(2);
+  if (price >= 1) return price.toFixed(4);
+  if (price >= 0.01) return price.toFixed(5);
+  return price.toFixed(6);
+}
+
+interface TpSlPopover {
+  type: 'tp' | 'sl';
+  price: number;
+  x: number;
+  y: number;
+  estimatedPnl: number;
+  estimatedPnlPct: number;
 }
 
 const TIMEFRAMES: { key: TimeframeKey; label: string }[] = [
@@ -32,11 +50,13 @@ const TIMEFRAMES: { key: TimeframeKey; label: string }[] = [
   { key: '4h', label: '4H' },
 ];
 
-export default function CandlestickChart({ klines, loading, timeframe, onTimeframeChange, position }: Props) {
+export default function CandlestickChart({ klines, loading, timeframe, onTimeframeChange, position, onSetTpSl }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
+  const [tpSlPopover, setTpSlPopover] = useState<TpSlPopover | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Initialize chart
   useEffect(() => {
@@ -188,6 +208,131 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
     }
   }, [position?.entryPrice, position?.takeProfit, position?.stopLoss, position?.direction]);
 
+  // Helper: compute PnL for a given exit price
+  const computePnl = useCallback((exitPrice: number) => {
+    if (!position) return { pnl: 0, pnlPct: 0 };
+    const direction = position.direction === 'long' ? 1 : -1;
+    const pnlPct = direction * (exitPrice - position.entryPrice) / position.entryPrice * 100;
+    const pnl = position.size * pnlPct / 100;
+    return { pnl, pnlPct };
+  }, [position]);
+
+  // Helper: determine if price is TP or SL based on position direction
+  const detectTpOrSl = useCallback((price: number): 'tp' | 'sl' | null => {
+    if (!position) return null;
+    if (position.direction === 'long') {
+      return price > position.entryPrice ? 'tp' : 'sl';
+    } else {
+      return price < position.entryPrice ? 'tp' : 'sl';
+    }
+  }, [position]);
+
+  // Handle double-click on chart to set TP/SL
+  const handleChartDblClick = useCallback((price: number, clientX: number, clientY: number) => {
+    if (!position || !onSetTpSl) return;
+    const type = detectTpOrSl(price);
+    if (!type) return;
+    const { pnl, pnlPct } = computePnl(price);
+    setTpSlPopover({
+      type,
+      price,
+      x: clientX,
+      y: clientY,
+      estimatedPnl: pnl,
+      estimatedPnlPct: pnlPct,
+    });
+  }, [position, onSetTpSl, detectTpOrSl, computePnl]);
+
+  // Subscribe to chart double-click events
+  useEffect(() => {
+    const chart = chartRef.current;
+    const series = candleSeriesRef.current;
+    if (!chart || !series || !position || !onSetTpSl) return;
+
+    const handler = (param: any) => {
+      if (!param.point) return;
+      const price = series.coordinateToPrice(param.point.y);
+      if (price === null || price === undefined || price <= 0) return;
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      handleChartDblClick(
+        price as number,
+        rect.left + param.point.x,
+        rect.top + param.point.y
+      );
+    };
+
+    chart.subscribeDblClick(handler);
+    return () => {
+      chart.unsubscribeDblClick(handler);
+    };
+  }, [position, onSetTpSl, handleChartDblClick]);
+
+  // Long-press support for mobile
+  useEffect(() => {
+    const container = containerRef.current;
+    const chart = chartRef.current;
+    const series = candleSeriesRef.current;
+    if (!container || !chart || !series || !position || !onSetTpSl) return;
+
+    let startY = 0;
+    let startX = 0;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      longPressTimerRef.current = setTimeout(() => {
+        const rect = container.getBoundingClientRect();
+        const chartY = startY - rect.top;
+        const price = series.coordinateToPrice(chartY);
+        if (price === null || price === undefined || (price as number) <= 0) return;
+        handleChartDblClick(price as number, startX, startY);
+      }, 600);
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!longPressTimerRef.current) return;
+      const dx = Math.abs(e.touches[0].clientX - startX);
+      const dy = Math.abs(e.touches[0].clientY - startY);
+      if (dx > 10 || dy > 10) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    };
+
+    const onTouchEnd = () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    };
+
+    container.addEventListener('touchstart', onTouchStart, { passive: true });
+    container.addEventListener('touchmove', onTouchMove, { passive: true });
+    container.addEventListener('touchend', onTouchEnd, { passive: true });
+    container.addEventListener('touchcancel', onTouchEnd, { passive: true });
+
+    return () => {
+      container.removeEventListener('touchstart', onTouchStart);
+      container.removeEventListener('touchmove', onTouchMove);
+      container.removeEventListener('touchend', onTouchEnd);
+      container.removeEventListener('touchcancel', onTouchEnd);
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    };
+  }, [position, onSetTpSl, handleChartDblClick]);
+
+  // Confirm TP/SL from popover
+  const confirmTpSl = useCallback(() => {
+    if (!tpSlPopover || !onSetTpSl) return;
+    if (tpSlPopover.type === 'tp') {
+      onSetTpSl(tpSlPopover.price, undefined);
+    } else {
+      onSetTpSl(undefined, tpSlPopover.price);
+    }
+    setTpSlPopover(null);
+  }, [tpSlPopover, onSetTpSl]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Timeframe selector */}
@@ -208,6 +353,11 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
         <div className="ml-auto text-[10px] text-[#848E9C] font-mono">
           SOLUSDT Perpetual
         </div>
+        {position && onSetTpSl && (
+          <div className="text-[9px] text-[#F0B90B]/60 ml-2">
+            Double-click to set TP/SL
+          </div>
+        )}
       </div>
 
       {/* Chart container */}
@@ -251,6 +401,64 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
               </div>
             )}
           </div>
+        )}
+
+        {/* TP/SL Confirmation Popover */}
+        {tpSlPopover && (
+          <>
+            {/* Backdrop */}
+            <div className="absolute inset-0 z-20" onClick={() => setTpSlPopover(null)} />
+            {/* Popover */}
+            <div
+              className="absolute z-30 bg-[#1C2030] border border-[rgba(255,255,255,0.15)] rounded-lg shadow-2xl p-3 min-w-[200px]"
+              style={{
+                left: Math.min(tpSlPopover.x - (containerRef.current?.getBoundingClientRect().left ?? 0), (containerRef.current?.clientWidth ?? 300) - 220),
+                top: Math.min(tpSlPopover.y - (containerRef.current?.getBoundingClientRect().top ?? 0) - 80, (containerRef.current?.clientHeight ?? 300) - 120),
+              }}
+            >
+              <div className="text-xs font-medium mb-2">
+                <span className={tpSlPopover.type === 'tp' ? 'text-[#0ECB81]' : 'text-[#F6465D]'}>
+                  Set {tpSlPopover.type === 'tp' ? 'Take Profit' : 'Stop Loss'}
+                </span>
+              </div>
+              <div className="space-y-1 mb-3">
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-[#848E9C]">Price</span>
+                  <span className="font-mono text-[#D1D4DC]">{formatPrice(tpSlPopover.price)}</span>
+                </div>
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-[#848E9C]">Est. PnL</span>
+                  <span className={`font-mono font-bold ${tpSlPopover.estimatedPnl >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
+                    {tpSlPopover.estimatedPnl >= 0 ? '+' : ''}{tpSlPopover.estimatedPnl.toFixed(2)} U
+                  </span>
+                </div>
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-[#848E9C]">Est. ROI</span>
+                  <span className={`font-mono font-bold ${tpSlPopover.estimatedPnlPct >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
+                    {tpSlPopover.estimatedPnlPct >= 0 ? '+' : ''}{tpSlPopover.estimatedPnlPct.toFixed(2)}%
+                  </span>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={confirmTpSl}
+                  className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors ${
+                    tpSlPopover.type === 'tp'
+                      ? 'bg-[#0ECB81] hover:bg-[#0ECB81]/90 text-black'
+                      : 'bg-[#F6465D] hover:bg-[#F6465D]/90 text-white'
+                  }`}
+                >
+                  Confirm
+                </button>
+                <button
+                  onClick={() => setTpSlPopover(null)}
+                  className="flex-1 py-1.5 rounded text-xs font-medium bg-white/5 text-[#D1D4DC] hover:bg-white/10 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>

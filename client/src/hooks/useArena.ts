@@ -159,12 +159,16 @@ export function useArena(token: string | null, onAuthError?: () => void) {
   }, [token, refresh]);
 
   const setTpSl = useCallback(
-    async (tp: number | null, sl: number | null) => {
+    async (tp?: number | null, sl?: number | null) => {
       if (!token) return;
+      // Build body: only include fields that are explicitly passed (not undefined)
+      const body: Record<string, number | null> = {};
+      if (tp !== undefined) body.tp = tp;
+      if (sl !== undefined) body.sl = sl;
       await apiRequest("/api/trade/tpsl", {
         method: "POST",
         token,
-        body: { tp, sl },
+        body,
       });
       void refresh();
     },

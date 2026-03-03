@@ -2,6 +2,7 @@
 // Mobile Trading Panel — Vertical stacked trade controls for mobile
 // Two modes: Order Entry (no position) and Position View (has position)
 // Compact layout optimized for thumb interaction
+// Supports price/percentage dual-mode TP/SL, independent edit/cancel
 // ============================================================
 
 import { useState, useEffect, useCallback, memo } from 'react';
@@ -16,7 +17,7 @@ interface Props {
   onOpenPosition: (direction: 'long' | 'short', size: number, tp?: number | null, sl?: number | null) => Promise<void> | void;
   onClosePosition: () => Promise<void> | void;
   getNextWeightThreshold: (seconds: number) => { nextWeight: number; secondsNeeded: number } | null;
-  onSetTpSl?: (tp: number | null, sl: number | null) => void;
+  onSetTpSl?: (tp?: number | null, sl?: number | null) => void;
   isStale?: boolean;
 }
 
@@ -45,6 +46,19 @@ function getPriceStep(price: number): number {
   return 0.000001;
 }
 
+// TP/SL percentage helpers
+function pctToPrice(entryPrice: number, pct: number, direction: 'long' | 'short', type: 'tp' | 'sl', leverage: number): number {
+  const factor = pct / 100 / leverage;
+  if (type === 'tp') {
+    return direction === 'long' ? entryPrice * (1 + factor) : entryPrice * (1 - factor);
+  }
+  return direction === 'long' ? entryPrice * (1 - factor) : entryPrice * (1 + factor);
+}
+
+const QUICK_PCT = [1, 2, 3, 5, 10];
+
+type TpSlMode = 'price' | 'pct';
+
 function MobileTradingPanel({
   account, position, currentPrice, onOpenPosition, onClosePosition, getNextWeightThreshold, onSetTpSl, isStale
 }: Props) {
@@ -54,13 +68,22 @@ function MobileTradingPanel({
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [holdSeconds, setHoldSeconds] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showTpSl, setShowTpSl] = useState(false);
-  const [tpInput, setTpInput] = useState('');
-  const [slInput, setSlInput] = useState('');
-  const [editingTpSl, setEditingTpSl] = useState(false);
-  const [editTp, setEditTp] = useState('');
-  const [editSl, setEditSl] = useState('');
   const [expanded, setExpanded] = useState(false);
+
+  // Order entry TP/SL
+  const [showTpSl, setShowTpSl] = useState(false);
+  const [orderTpSlMode, setOrderTpSlMode] = useState<TpSlMode>('pct');
+  const [orderTpInput, setOrderTpInput] = useState('');
+  const [orderSlInput, setOrderSlInput] = useState('');
+
+  // Position TP/SL editing
+  const [editingTp, setEditingTp] = useState(false);
+  const [editingTpMode, setEditingTpMode] = useState<TpSlMode>('price');
+  const [editTpInput, setEditTpInput] = useState('');
+
+  const [editingSl, setEditingSl] = useState(false);
+  const [editingSlMode, setEditingSlMode] = useState<TpSlMode>('price');
+  const [editSlInput, setEditSlInput] = useState('');
 
   useEffect(() => {
     if (!position) { setHoldSeconds(0); return; }
@@ -71,11 +94,28 @@ function MobileTradingPanel({
   }, [position]);
 
   useEffect(() => {
-    if (position && editingTpSl) {
-      setEditTp(position.takeProfit ? formatPrice(position.takeProfit) : '');
-      setEditSl(position.stopLoss ? formatPrice(position.stopLoss) : '');
+    if (editingTp && position) {
+      if (position.takeProfit) {
+        setEditTpInput(formatPrice(position.takeProfit));
+        setEditingTpMode('price');
+      } else {
+        setEditTpInput('');
+        setEditingTpMode('pct');
+      }
     }
-  }, [editingTpSl, position]);
+  }, [editingTp, position?.takeProfit]);
+
+  useEffect(() => {
+    if (editingSl && position) {
+      if (position.stopLoss) {
+        setEditSlInput(formatPrice(position.stopLoss));
+        setEditingSlMode('price');
+      } else {
+        setEditSlInput('');
+        setEditingSlMode('pct');
+      }
+    }
+  }, [editingSl, position?.stopLoss]);
 
   const handleClose = useCallback(async () => {
     if (isSubmitting) return;
@@ -91,10 +131,32 @@ function MobileTradingPanel({
     try { await onClosePosition(); } finally { setIsSubmitting(false); }
   }, [isSubmitting, onClosePosition]);
 
+  // Resolve order entry TP/SL
+  const resolveOrderTpSl = useCallback((direction: 'long' | 'short') => {
+    let tp: number | null = null;
+    let sl: number | null = null;
+    if (orderTpInput) {
+      const v = parseFloat(orderTpInput);
+      if (Number.isFinite(v) && v > 0) {
+        tp = orderTpSlMode === 'pct'
+          ? pctToPrice(currentPrice, v, direction, 'tp', account.tierLeverage)
+          : v;
+      }
+    }
+    if (orderSlInput) {
+      const v = parseFloat(orderSlInput);
+      if (Number.isFinite(v) && v > 0) {
+        sl = orderTpSlMode === 'pct'
+          ? pctToPrice(currentPrice, v, direction, 'sl', account.tierLeverage)
+          : v;
+      }
+    }
+    return { tp, sl };
+  }, [orderTpInput, orderSlInput, orderTpSlMode, currentPrice, account.tierLeverage]);
+
   const handleOpen = useCallback(async (direction: 'long' | 'short') => {
     if (isSubmitting) return;
-    const tp = showTpSl && tpInput ? parseFloat(tpInput) : null;
-    const sl = showTpSl && slInput ? parseFloat(slInput) : null;
+    const { tp, sl } = showTpSl ? resolveOrderTpSl(direction) : { tp: null, sl: null };
     if (tp !== null && direction === 'long' && tp <= currentPrice) return;
     if (tp !== null && direction === 'short' && tp >= currentPrice) return;
     if (sl !== null && direction === 'long' && sl >= currentPrice) return;
@@ -102,23 +164,51 @@ function MobileTradingPanel({
     setIsSubmitting(true);
     try {
       await onOpenPosition(direction, positionSize, tp, sl);
-      setTpInput(''); setSlInput('');
+      setOrderTpInput(''); setOrderSlInput('');
     } finally { setIsSubmitting(false); }
-  }, [isSubmitting, showTpSl, tpInput, slInput, currentPrice, positionSize, onOpenPosition]);
+  }, [isSubmitting, showTpSl, resolveOrderTpSl, currentPrice, positionSize, onOpenPosition]);
 
-  const handleSaveTpSl = useCallback(() => {
+  // Save TP independently
+  const handleSaveTp = useCallback(() => {
+    if (!onSetTpSl || !position || !editTpInput) return;
+    const v = parseFloat(editTpInput);
+    if (!Number.isFinite(v) || v <= 0) return;
+    const tpPrice = editingTpMode === 'pct'
+      ? pctToPrice(position.entryPrice, v, position.direction, 'tp', account.tierLeverage)
+      : v;
+    if (position.direction === 'long' && tpPrice <= currentPrice) return;
+    if (position.direction === 'short' && tpPrice >= currentPrice) return;
+    onSetTpSl(tpPrice, undefined);
+    setEditingTp(false);
+  }, [editTpInput, editingTpMode, position, currentPrice, account.tierLeverage, onSetTpSl]);
+
+  // Save SL independently
+  const handleSaveSl = useCallback(() => {
+    if (!onSetTpSl || !position || !editSlInput) return;
+    const v = parseFloat(editSlInput);
+    if (!Number.isFinite(v) || v <= 0) return;
+    const slPrice = editingSlMode === 'pct'
+      ? pctToPrice(position.entryPrice, v, position.direction, 'sl', account.tierLeverage)
+      : v;
+    if (position.direction === 'long' && slPrice >= currentPrice) return;
+    if (position.direction === 'short' && slPrice <= currentPrice) return;
+    onSetTpSl(undefined, slPrice);
+    setEditingSl(false);
+  }, [editSlInput, editingSlMode, position, currentPrice, account.tierLeverage, onSetTpSl]);
+
+  // Cancel (clear) TP
+  const handleCancelTp = useCallback(() => {
     if (!onSetTpSl) return;
-    const tp = editTp ? parseFloat(editTp) : null;
-    const sl = editSl ? parseFloat(editSl) : null;
-    if (position) {
-      if (tp !== null && position.direction === 'long' && tp <= currentPrice) return;
-      if (tp !== null && position.direction === 'short' && tp >= currentPrice) return;
-      if (sl !== null && position.direction === 'long' && sl >= currentPrice) return;
-      if (sl !== null && position.direction === 'short' && sl <= currentPrice) return;
-    }
-    onSetTpSl(tp, sl);
-    setEditingTpSl(false);
-  }, [editTp, editSl, position, currentPrice, onSetTpSl]);
+    onSetTpSl(null, undefined);
+    setEditingTp(false);
+  }, [onSetTpSl]);
+
+  // Cancel (clear) SL
+  const handleCancelSl = useCallback(() => {
+    if (!onSetTpSl) return;
+    onSetTpSl(undefined, null);
+    setEditingSl(false);
+  }, [onSetTpSl]);
 
   const maxEquity = Math.max(10, Math.floor(account.equity));
 
@@ -169,6 +259,17 @@ function MobileTradingPanel({
     const weightSteps = [0.2, 0.4, 0.7, 1.0, 1.15, 1.3];
     const currentWeightIdx = weightSteps.indexOf(position.holdDurationWeight);
     const weightProgress = ((currentWeightIdx + 1) / weightSteps.length) * 100;
+
+    const tpPnl = position.takeProfit
+      ? (position.direction === 'long'
+        ? (position.takeProfit - position.entryPrice) / position.entryPrice * 100 * account.tierLeverage
+        : (position.entryPrice - position.takeProfit) / position.entryPrice * 100 * account.tierLeverage)
+      : null;
+    const slPnl = position.stopLoss
+      ? (position.direction === 'long'
+        ? (position.stopLoss - position.entryPrice) / position.entryPrice * 100 * account.tierLeverage
+        : (position.entryPrice - position.stopLoss) / position.entryPrice * 100 * account.tierLeverage)
+      : null;
 
     return (
       <div className="border-t border-[rgba(255,255,255,0.08)] bg-[#0B0E11]">
@@ -231,27 +332,91 @@ function MobileTradingPanel({
               )}
             </div>
 
-            {/* TP/SL editing */}
-            {!editingTpSl ? (
-              <div className="flex items-center gap-3 text-[10px]">
-                <span className="text-[#848E9C]">TP</span>
-                {position.takeProfit ? <span className="font-mono text-[#0ECB81]">{formatPrice(position.takeProfit)}</span> : <span className="text-[#848E9C]/40">—</span>}
-                <span className="text-[#848E9C]">SL</span>
-                {position.stopLoss ? <span className="font-mono text-[#F6465D]">{formatPrice(position.stopLoss)}</span> : <span className="text-[#848E9C]/40">—</span>}
-                <button onClick={() => setEditingTpSl(true)} className="text-[#F0B90B] ml-auto">
-                  {position.takeProfit || position.stopLoss ? 'Edit' : '+ TP/SL'}
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <input type="number" step={priceStep} value={editTp} onChange={e => setEditTp(e.target.value)} placeholder="TP"
-                  className="flex-1 bg-[#0B0E11] border border-[#0ECB81]/30 rounded px-2 py-1.5 text-xs font-mono text-[#D1D4DC] placeholder:text-[#848E9C]/30 focus:border-[#0ECB81] focus:outline-none" />
-                <input type="number" step={priceStep} value={editSl} onChange={e => setEditSl(e.target.value)} placeholder="SL"
-                  className="flex-1 bg-[#0B0E11] border border-[#F6465D]/30 rounded px-2 py-1.5 text-xs font-mono text-[#D1D4DC] placeholder:text-[#848E9C]/30 focus:border-[#F6465D] focus:outline-none" />
-                <button onClick={handleSaveTpSl} className="px-3 py-1.5 bg-[#F0B90B]/20 text-[#F0B90B] text-[10px] rounded">Save</button>
-                <button onClick={() => { onSetTpSl?.(null, null); setEditingTpSl(false); }} className="px-2 py-1.5 bg-white/5 text-[#848E9C] text-[10px] rounded">Clear</button>
-              </div>
-            )}
+            {/* TP — Independent editing */}
+            <div className="flex items-center gap-2 text-[10px]">
+              <span className="text-[#0ECB81] font-medium w-6">TP</span>
+              {!editingTp ? (
+                <>
+                  {position.takeProfit ? (
+                    <span className="font-mono text-[#0ECB81]">{formatPrice(position.takeProfit)}
+                      {tpPnl !== null && <span className="text-[9px] opacity-60 ml-1">+{tpPnl.toFixed(1)}%</span>}
+                    </span>
+                  ) : (
+                    <span className="text-[#848E9C]/40">Not set</span>
+                  )}
+                  <button onClick={() => setEditingTp(true)} className="text-[#F0B90B] ml-auto">{position.takeProfit ? 'Edit' : '+ Set'}</button>
+                  {position.takeProfit && (
+                    <button onClick={handleCancelTp} className="text-[#F6465D]/60">Cancel</button>
+                  )}
+                </>
+              ) : (
+                <div className="flex-1 flex items-center gap-1.5">
+                  <div className="flex rounded overflow-hidden border border-[rgba(255,255,255,0.1)]">
+                    <button onClick={() => { setEditingTpMode('price'); setEditTpInput(''); }}
+                      className={`px-1.5 py-0.5 text-[9px] ${editingTpMode === 'price' ? 'bg-[#0ECB81]/20 text-[#0ECB81]' : 'text-[#848E9C]'}`}>$</button>
+                    <button onClick={() => { setEditingTpMode('pct'); setEditTpInput(''); }}
+                      className={`px-1.5 py-0.5 text-[9px] ${editingTpMode === 'pct' ? 'bg-[#0ECB81]/20 text-[#0ECB81]' : 'text-[#848E9C]'}`}>%</button>
+                  </div>
+                  <input type="number" step={editingTpMode === 'pct' ? 0.5 : priceStep} value={editTpInput}
+                    onChange={e => setEditTpInput(e.target.value)}
+                    placeholder={editingTpMode === 'pct' ? 'ROI %' : 'Price'}
+                    className="flex-1 bg-[#0B0E11] border border-[#0ECB81]/30 rounded px-2 py-1 text-xs font-mono text-[#D1D4DC] placeholder:text-[#848E9C]/30 focus:border-[#0ECB81] focus:outline-none" />
+                  {editingTpMode === 'pct' && (
+                    <div className="flex gap-0.5">
+                      {QUICK_PCT.slice(0, 3).map(p => (
+                        <button key={p} onClick={() => setEditTpInput(String(p))}
+                          className="px-1 py-0.5 text-[8px] bg-[#0ECB81]/10 text-[#0ECB81]/70 rounded">{p}%</button>
+                      ))}
+                    </div>
+                  )}
+                  <button onClick={handleSaveTp} className="text-[#0ECB81] font-medium">Save</button>
+                  <button onClick={() => setEditingTp(false)} className="text-[#848E9C]">×</button>
+                </div>
+              )}
+            </div>
+
+            {/* SL — Independent editing */}
+            <div className="flex items-center gap-2 text-[10px]">
+              <span className="text-[#F6465D] font-medium w-6">SL</span>
+              {!editingSl ? (
+                <>
+                  {position.stopLoss ? (
+                    <span className="font-mono text-[#F6465D]">{formatPrice(position.stopLoss)}
+                      {slPnl !== null && <span className="text-[9px] opacity-60 ml-1">{slPnl.toFixed(1)}%</span>}
+                    </span>
+                  ) : (
+                    <span className="text-[#848E9C]/40">Not set</span>
+                  )}
+                  <button onClick={() => setEditingSl(true)} className="text-[#F0B90B] ml-auto">{position.stopLoss ? 'Edit' : '+ Set'}</button>
+                  {position.stopLoss && (
+                    <button onClick={handleCancelSl} className="text-[#F6465D]/60">Cancel</button>
+                  )}
+                </>
+              ) : (
+                <div className="flex-1 flex items-center gap-1.5">
+                  <div className="flex rounded overflow-hidden border border-[rgba(255,255,255,0.1)]">
+                    <button onClick={() => { setEditingSlMode('price'); setEditSlInput(''); }}
+                      className={`px-1.5 py-0.5 text-[9px] ${editingSlMode === 'price' ? 'bg-[#F6465D]/20 text-[#F6465D]' : 'text-[#848E9C]'}`}>$</button>
+                    <button onClick={() => { setEditingSlMode('pct'); setEditSlInput(''); }}
+                      className={`px-1.5 py-0.5 text-[9px] ${editingSlMode === 'pct' ? 'bg-[#F6465D]/20 text-[#F6465D]' : 'text-[#848E9C]'}`}>%</button>
+                  </div>
+                  <input type="number" step={editingSlMode === 'pct' ? 0.5 : priceStep} value={editSlInput}
+                    onChange={e => setEditSlInput(e.target.value)}
+                    placeholder={editingSlMode === 'pct' ? 'ROI %' : 'Price'}
+                    className="flex-1 bg-[#0B0E11] border border-[#F6465D]/30 rounded px-2 py-1 text-xs font-mono text-[#D1D4DC] placeholder:text-[#848E9C]/30 focus:border-[#F6465D] focus:outline-none" />
+                  {editingSlMode === 'pct' && (
+                    <div className="flex gap-0.5">
+                      {QUICK_PCT.slice(0, 3).map(p => (
+                        <button key={p} onClick={() => setEditSlInput(String(p))}
+                          className="px-1 py-0.5 text-[8px] bg-[#F6465D]/10 text-[#F6465D]/70 rounded">{p}%</button>
+                      ))}
+                    </div>
+                  )}
+                  <button onClick={handleSaveSl} className="text-[#F6465D] font-medium">Save</button>
+                  <button onClick={() => setEditingSl(false)} className="text-[#848E9C]">×</button>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -365,23 +530,55 @@ function MobileTradingPanel({
           ))}
         </div>
 
-        {/* TP/SL toggle */}
-        <div className="flex items-center gap-2">
-          <button onClick={() => setShowTpSl(!showTpSl)}
-            className="flex items-center gap-1.5 text-[11px] text-[#848E9C] hover:text-[#D1D4DC]">
-            <span className={`w-4 h-4 rounded border flex items-center justify-center ${
-              showTpSl ? 'bg-[#F0B90B] border-[#F0B90B]' : 'border-[#848E9C]/40'
-            }`}>
-              {showTpSl && <span className="text-black text-[8px] font-bold">✓</span>}
-            </span>
-            TP/SL
-          </button>
+        {/* TP/SL toggle + dual mode */}
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowTpSl(!showTpSl)}
+              className="flex items-center gap-1.5 text-[11px] text-[#848E9C] hover:text-[#D1D4DC]">
+              <span className={`w-4 h-4 rounded border flex items-center justify-center ${
+                showTpSl ? 'bg-[#F0B90B] border-[#F0B90B]' : 'border-[#848E9C]/40'
+              }`}>
+                {showTpSl && <span className="text-black text-[8px] font-bold">✓</span>}
+              </span>
+              TP/SL
+            </button>
+            {showTpSl && (
+              <div className="flex rounded overflow-hidden border border-[rgba(255,255,255,0.1)]">
+                <button onClick={() => { setOrderTpSlMode('price'); setOrderTpInput(''); setOrderSlInput(''); }}
+                  className={`px-2 py-0.5 text-[10px] ${orderTpSlMode === 'price' ? 'bg-[#F0B90B]/20 text-[#F0B90B]' : 'text-[#848E9C]'}`}>Price</button>
+                <button onClick={() => { setOrderTpSlMode('pct'); setOrderTpInput(''); setOrderSlInput(''); }}
+                  className={`px-2 py-0.5 text-[10px] ${orderTpSlMode === 'pct' ? 'bg-[#F0B90B]/20 text-[#F0B90B]' : 'text-[#848E9C]'}`}>ROI %</button>
+              </div>
+            )}
+          </div>
           {showTpSl && (
-            <div className="flex-1 flex gap-2">
-              <input type="number" step={priceStep} value={tpInput} onChange={e => setTpInput(e.target.value)} placeholder="TP"
-                className="flex-1 bg-[#0B0E11] border border-[#0ECB81]/20 rounded px-2 py-1.5 text-xs font-mono text-[#D1D4DC] placeholder:text-[#848E9C]/30 focus:border-[#0ECB81] focus:outline-none" />
-              <input type="number" step={priceStep} value={slInput} onChange={e => setSlInput(e.target.value)} placeholder="SL"
-                className="flex-1 bg-[#0B0E11] border border-[#F6465D]/20 rounded px-2 py-1.5 text-xs font-mono text-[#D1D4DC] placeholder:text-[#848E9C]/30 focus:border-[#F6465D] focus:outline-none" />
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <input type="number" step={orderTpSlMode === 'pct' ? 0.5 : priceStep} value={orderTpInput}
+                  onChange={e => setOrderTpInput(e.target.value)}
+                  placeholder={orderTpSlMode === 'pct' ? 'TP ROI %' : 'TP Price'}
+                  className="flex-1 bg-[#0B0E11] border border-[#0ECB81]/20 rounded px-2 py-1.5 text-xs font-mono text-[#D1D4DC] placeholder:text-[#848E9C]/30 focus:border-[#0ECB81] focus:outline-none" />
+                <input type="number" step={orderTpSlMode === 'pct' ? 0.5 : priceStep} value={orderSlInput}
+                  onChange={e => setOrderSlInput(e.target.value)}
+                  placeholder={orderTpSlMode === 'pct' ? 'SL ROI %' : 'SL Price'}
+                  className="flex-1 bg-[#0B0E11] border border-[#F6465D]/20 rounded px-2 py-1.5 text-xs font-mono text-[#D1D4DC] placeholder:text-[#848E9C]/30 focus:border-[#F6465D] focus:outline-none" />
+              </div>
+              {orderTpSlMode === 'pct' && (
+                <div className="flex gap-1">
+                  <div className="flex-1 flex gap-0.5">
+                    {QUICK_PCT.map(p => (
+                      <button key={`tp-${p}`} onClick={() => setOrderTpInput(String(p))}
+                        className="flex-1 py-0.5 text-[8px] bg-[#0ECB81]/10 text-[#0ECB81]/70 rounded hover:bg-[#0ECB81]/20">{p}%</button>
+                    ))}
+                  </div>
+                  <div className="flex-1 flex gap-0.5">
+                    {QUICK_PCT.map(p => (
+                      <button key={`sl-${p}`} onClick={() => setOrderSlInput(String(p))}
+                        className="flex-1 py-0.5 text-[8px] bg-[#F6465D]/10 text-[#F6465D]/70 rounded hover:bg-[#F6465D]/20">{p}%</button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

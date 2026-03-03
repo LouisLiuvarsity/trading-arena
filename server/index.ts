@@ -24,8 +24,8 @@ const openSchema = z.object({
 });
 
 const tpslSchema = z.object({
-  tp: z.number().positive().nullable(),
-  sl: z.number().positive().nullable(),
+  tp: z.number().positive().nullable().optional(),
+  sl: z.number().positive().nullable().optional(),
 });
 
 const chatSchema = z.object({

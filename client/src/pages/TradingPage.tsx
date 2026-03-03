@@ -145,7 +145,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
   }, [apiClosePosition, trackEvent]);
 
   const handleSetTpSl = useCallback(
-    async (tp: number | null, sl: number | null) => {
+    async (tp?: number | null, sl?: number | null) => {
       try {
         await setTpSl(tp, sl);
         await trackEvent("update_tpsl", { tp, sl });
@@ -292,6 +292,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
                 await trackEvent("timeframe_change", { next });
               }}
               position={position}
+              onSetTpSl={handleSetTpSl}
             />
           )}
           {mobileContentTab === "orderbook" && (
@@ -440,6 +441,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
                   await trackEvent("timeframe_change", { next });
                 }}
                 position={position}
+                onSetTpSl={handleSetTpSl}
               />
             </div>
             {/* OrderBook resize handle + panel */}

@@ -64,3 +64,19 @@
 
 ## Hide Number Input Spinners
 - [x] Hide browser default up/down arrows on number inputs in TradingPanel
+
+## TP/SL System Redesign
+- [x] Audit current TP/SL implementation (backend engine, TradingPanel, CandlestickChart)
+- [x] Write comprehensive TP/SL design proposal (chart double-click, price/percentage modes, adjust/cancel)
+- [x] Deliver design proposal to user
+
+## TP/SL System Implementation
+- [x] Backend: Adjust setTpSl API to support partial updates (undefined = keep existing)
+- [x] Backend: Adjust useArena hook to support independent setTp/setSl
+- [x] Frontend: Order entry TP/SL with price/percentage dual mode + quick buttons
+- [x] Frontend: Position view independent TP/SL edit/cancel
+- [x] Frontend: Chart double-click to set TP/SL with confirmation popover
+- [x] Frontend: Mobile long-press (600ms) as alternative to double-click for chart TP/SL
+- [x] Frontend: Wire up data flow in TradingPage (desktop + mobile)
+- [x] Frontend: Update MobileTradingPanel with same TP/SL improvements
+- [x] Test all flows: tsc 0 errors, vitest 20 passed

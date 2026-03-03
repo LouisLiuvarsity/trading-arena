@@ -243,12 +243,15 @@ export class ArenaEngine {
     );
   }
 
-  async setTpSl(arenaAccountId: number, input: { tp: number | null; sl: number | null }) {
+  async setTpSl(arenaAccountId: number, input: { tp?: number | null; sl?: number | null }) {
     const pos = await dbHelpers.getPosition(arenaAccountId);
     if (!pos) {
       throw new Error("No open position");
     }
-    await dbHelpers.updatePositionTpSl(arenaAccountId, input.tp, input.sl);
+    // undefined = keep existing, null = clear, number = set new value
+    const newTp = input.tp === undefined ? pos.takeProfit : input.tp;
+    const newSl = input.sl === undefined ? pos.stopLoss : input.sl;
+    await dbHelpers.updatePositionTpSl(arenaAccountId, newTp, newSl);
   }
 
   async tick() {
