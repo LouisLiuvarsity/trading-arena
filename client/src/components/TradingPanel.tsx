@@ -307,9 +307,9 @@ function TradingPanel({
 
       {/* Position Size + Leverage */}
       <div className="flex items-center gap-3 px-4 border-r border-[rgba(255,255,255,0.06)] min-w-[280px]">
-        <div className="flex-1 space-y-1.5">
+        <div className="flex-1 space-y-2.5">
           {/* Row 1: Input + Unit toggle + Notional */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 relative z-10">
             <div className="relative flex-1">
               <input
                 type="number"
@@ -352,7 +352,7 @@ function TradingPanel({
             min={10}
             max={maxEquity}
             step={10}
-            className="[&_[role=slider]]:bg-[#F0B90B] [&_[role=slider]]:border-[#F0B90B] [&_[role=slider]]:h-3.5 [&_[role=slider]]:w-3.5 [&_[role=slider]]:shadow-[0_0_8px_rgba(240,185,11,0.4)]"
+            className="[&_[role=slider]]:bg-[#F0B90B] [&_[role=slider]]:border-[#F0B90B] [&_[role=slider]]:h-2.5 [&_[role=slider]]:w-2.5 [&_[role=slider]]:shadow-[0_0_6px_rgba(240,185,11,0.4)]"
           />
           {/* Row 3: Pct buttons */}
           <div className="flex gap-1.5">

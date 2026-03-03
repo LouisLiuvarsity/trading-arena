@@ -58,3 +58,6 @@
 - [x] Investigate overlapping elements in TradingPanel bottom bar (StatusBar, input, toggle, slider, buttons)
 - [x] Fix the layout overlap issue
 - [x] Test and verify the fix (tsc 0 errors, vitest 20 passed)
+
+## Fix Slider Thumb Overlapping USDT/SOL Toggle
+- [x] Fix vertical overlap between Slider thumb and USDT/SOL toggle button in TradingPanel
