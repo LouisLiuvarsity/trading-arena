@@ -491,8 +491,8 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
         </div>
       </div>
 
-      {/* Trading panel — fixed height */}
-      <div className="h-[110px] shrink-0">
+      {/* Trading panel — auto height */}
+      <div className="shrink-0 border-t border-[rgba(255,255,255,0.08)]">
         <TradingPanel
           account={account}
           position={position}

@@ -170,7 +170,7 @@ function TradingPanel({
     const weightProgress = ((currentWeightIdx + 1) / weightSteps.length) * 100;
 
     return (
-      <div className="flex items-stretch gap-0 h-full">
+      <div className="flex items-center gap-0 py-2 bg-[#0B0E11]">
         {/* Direction + PnL */}
         <div className="flex items-center gap-4 px-5 border-r border-[rgba(255,255,255,0.06)]">
           <div className={`flex items-center gap-2 px-4 py-2 rounded-lg text-base font-bold shrink-0 ${
@@ -286,7 +286,7 @@ function TradingPanel({
 
   // ─── ORDER ENTRY VIEW ────────────────────────────────────
   return (
-    <div className="flex items-stretch gap-0 h-full">
+    <div className="flex items-center gap-0 py-2 bg-[#0B0E11]">
       {/* Price + Balance */}
       <div className="flex items-center gap-5 px-5 border-r border-[rgba(255,255,255,0.06)]">
         <div>
@@ -306,7 +306,7 @@ function TradingPanel({
       </div>
 
       {/* Position Size + Leverage */}
-      <div className="flex items-center gap-4 px-5 border-r border-[rgba(255,255,255,0.06)] min-w-[340px]">
+      <div className="flex items-center gap-3 px-4 border-r border-[rgba(255,255,255,0.06)] min-w-[280px]">
         <div className="flex-1 space-y-1.5">
           {/* Row 1: Input + Unit toggle + Notional */}
           <div className="flex items-center gap-2">

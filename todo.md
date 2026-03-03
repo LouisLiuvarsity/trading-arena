@@ -53,3 +53,8 @@
 - [x] Remember username in localStorage for quick re-entry (already stored in localStorage)
 - [x] Show "Welcome back, xxx" quick login option on Landing/Login page (LoginPage already has Returning Player tab with pre-filled username)
 - [x] Test the new flow end-to-end (tsc 0 errors, vitest 20 passed)
+
+## Fix TradingPanel Overlapping Layout
+- [x] Investigate overlapping elements in TradingPanel bottom bar (StatusBar, input, toggle, slider, buttons)
+- [x] Fix the layout overlap issue
+- [x] Test and verify the fix (tsc 0 errors, vitest 20 passed)
