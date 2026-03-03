@@ -34,3 +34,15 @@
 
 ## Data Reset
 - [x] Reset all user data in database (truncate all arena tables)
+
+## Mobile Trading Page Optimization
+- [x] Audit current TradingPage layout and device detection
+- [x] Use existing useIsMobile hook for responsive device detection
+- [x] Create MobileToolbarOverlay component (floating overlay for Chat/Rank/Stats/News/Trades)
+- [x] Create MobileStatusBar component (compact 2-row status)
+- [x] Create MobileTradingPanel component (vertical stacked trade controls)
+- [x] Create MobileOrderBook component (compact horizontal layout)
+- [x] Modify TradingPage to detect mobile and render mobile layout
+- [x] Add Chart/OrderBook/Info tab switching for mobile main content area
+- [x] Test on mobile viewport and fix issues (TypeScript 0 errors, vitest 20 pass)
+- [x] Run vitest tests (20 passed)

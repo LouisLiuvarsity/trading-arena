@@ -17,9 +17,14 @@ import TradeHistory from "@/components/TradeHistory";
 import { useBinanceKline, useBinanceTicker, useBinanceDepth } from "@/hooks/useBinanceWS";
 import { useArena } from "@/hooks/useArena";
 import { generateNewsItems } from "@/lib/mockData";
+import { useIsMobile } from "@/hooks/useMobile";
+import MobileStatusBar from "@/components/MobileStatusBar";
+import MobileTradingPanel from "@/components/MobileTradingPanel";
+import MobileOrderBook from "@/components/MobileOrderBook";
+import { MobileToolbar, MobileToolbarOverlay } from "@/components/MobileToolbarOverlay";
 import type { TimeframeKey } from "@/lib/types";
 
-// ─── Resizable divider hook ─────────────────────────────────
+// ─── Resizable divider hook (desktop only) ──────────────────
 function useResizable(initial: number, min: number, max: number, direction: 'horizontal' | 'vertical') {
   const [size, setSize] = useState(initial);
   const dragging = useRef(false);
@@ -35,8 +40,8 @@ function useResizable(initial: number, min: number, max: number, direction: 'hor
     const onMove = (ev: MouseEvent) => {
       if (!dragging.current) return;
       const delta = direction === 'horizontal'
-        ? startPos.current - ev.clientX  // pulling left = bigger for right panel
-        : startPos.current - ev.clientY; // pulling up = bigger for bottom panel
+        ? startPos.current - ev.clientX
+        : startPos.current - ev.clientY;
       setSize(Math.max(min, Math.min(max, startSize.current + delta)));
     };
     const onUp = () => {
@@ -74,16 +79,18 @@ interface TradingPageProps {
 }
 
 export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
+  const isMobile = useIsMobile();
   const [timeframe, setTimeframe] = useState<TimeframeKey>("1m");
   const [rightTab, setRightTab] = useState<string>("chat");
+  const [mobilePanel, setMobilePanel] = useState<string | null>(null);
+  const [mobileContentTab, setMobileContentTab] = useState<string>("chart");
   const { klines, loading: klinesLoading } = useBinanceKline(timeframe);
   const { ticker: wsTicker, priceDirection: wsPriceDirection } = useBinanceTicker();
   const { orderBook: wsOrderBook } = useBinanceDepth();
 
-  // Resizable panels
+  // Resizable panels (desktop only)
   const orderBookResize = useResizable(200, 120, 360, 'horizontal');
   const rightPanelResize = useResizable(320, 220, 500, 'horizontal');
-
 
   const {
     loading,
@@ -181,9 +188,6 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
     ticker && ticker.priceChange > 0 ? "up" : ticker && ticker.priceChange < 0 ? "down" : "neutral"
   );
 
-  const tabTriggerClass =
-    "data-[state=active]:bg-[#F0B90B]/10 data-[state=active]:text-[#F0B90B] data-[state=active]:border-[#F0B90B]/60 data-[state=active]:shadow-none border border-[rgba(255,255,255,0.12)] text-[#848E9C] hover:text-[#D1D4DC] hover:border-[rgba(255,255,255,0.25)] hover:bg-white/[0.03] text-[10px] h-6 px-2.5 rounded-md mx-0.5 transition-all duration-200";
-
   const getNextWeightThreshold = (seconds: number) => {
     const levels = [
       { max: 60, nextWeight: 0.4 },
@@ -199,6 +203,194 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
     }
     return null;
   };
+
+  // ═══════════════════════════════════════════════════════════
+  // MOBILE LAYOUT
+  // ═══════════════════════════════════════════════════════════
+  if (isMobile) {
+    return (
+      <div className="h-[100dvh] flex flex-col bg-[#0B0E11] overflow-hidden select-none">
+        {error && (
+          <div className="px-2 py-1 text-[10px] text-[#F6465D] border-b border-[#F6465D]/20 bg-[#F6465D]/10">
+            {error}
+          </div>
+        )}
+        {ticker?.stale && (
+          <div className="px-2 py-1 text-[10px] text-[#F6465D] border-b border-[#F6465D]/20 bg-[#F6465D]/10 animate-pulse">
+            Market data stale
+          </div>
+        )}
+
+        {/* Mobile Status Bar */}
+        <MobileStatusBar account={account} match={match} season={season} />
+
+        {/* Mobile Toolbar — Chat, Trades, Rank, Stats, News */}
+        <MobileToolbar
+          activePanel={mobilePanel}
+          onSelectPanel={(panel) => setMobilePanel(panel)}
+          tradesCount={trades.length}
+        />
+
+        {/* Content tabs: Chart / OrderBook */}
+        <div className="flex items-center gap-1 px-2 py-1 border-b border-[rgba(255,255,255,0.06)]">
+          <button
+            onClick={() => setMobileContentTab("chart")}
+            className={`px-3 py-1 text-[11px] rounded transition-colors ${
+              mobileContentTab === "chart"
+                ? 'bg-[#F0B90B]/15 text-[#F0B90B] font-semibold'
+                : 'text-[#848E9C] hover:text-[#D1D4DC]'
+            }`}
+          >
+            Chart
+          </button>
+          <button
+            onClick={() => setMobileContentTab("orderbook")}
+            className={`px-3 py-1 text-[11px] rounded transition-colors ${
+              mobileContentTab === "orderbook"
+                ? 'bg-[#F0B90B]/15 text-[#F0B90B] font-semibold'
+                : 'text-[#848E9C] hover:text-[#D1D4DC]'
+            }`}
+          >
+            OrderBook
+          </button>
+          <button
+            onClick={() => setMobileContentTab("info")}
+            className={`px-3 py-1 text-[11px] rounded transition-colors ${
+              mobileContentTab === "info"
+                ? 'bg-[#F0B90B]/15 text-[#F0B90B] font-semibold'
+                : 'text-[#848E9C] hover:text-[#D1D4DC]'
+            }`}
+          >
+            Info
+          </button>
+
+          {/* Compact ticker on the right */}
+          <div className="ml-auto flex items-center gap-1.5 text-[10px]">
+            <span className="font-display font-bold text-white text-[10px]">SOL</span>
+            <span className={`font-mono font-bold tabular-nums ${
+              priceDirection === 'up' ? 'text-[#0ECB81]' : priceDirection === 'down' ? 'text-[#F6465D]' : 'text-[#D1D4DC]'
+            }`}>
+              {currentPrice.toFixed(2)}
+            </span>
+            {ticker && (
+              <span className={`font-mono ${ticker.priceChangePct >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
+                {ticker.priceChangePct >= 0 ? '+' : ''}{ticker.priceChangePct.toFixed(2)}%
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Main content area */}
+        <div className="flex-1 overflow-hidden">
+          {mobileContentTab === "chart" && (
+            <CandlestickChart
+              klines={klines}
+              loading={klinesLoading}
+              timeframe={timeframe}
+              onTimeframeChange={async next => {
+                setTimeframe(next);
+                await trackEvent("timeframe_change", { next });
+              }}
+              position={position}
+            />
+          )}
+          {mobileContentTab === "orderbook" && (
+            <div className="h-full overflow-y-auto">
+              <MobileOrderBook orderBook={orderBook} lastPrice={currentPrice} priceDirection={priceDirection} />
+            </div>
+          )}
+          {mobileContentTab === "info" && (
+            <div className="h-full overflow-y-auto p-2 space-y-2">
+              {/* Compact ticker info */}
+              <div className="grid grid-cols-3 gap-2 text-[10px]">
+                <div className="bg-white/[0.02] rounded p-2">
+                  <div className="text-[#848E9C]">24h High</div>
+                  <div className="font-mono text-[#D1D4DC]">{ticker?.high24h?.toFixed(2) ?? '—'}</div>
+                </div>
+                <div className="bg-white/[0.02] rounded p-2">
+                  <div className="text-[#848E9C]">24h Low</div>
+                  <div className="font-mono text-[#D1D4DC]">{ticker?.low24h?.toFixed(2) ?? '—'}</div>
+                </div>
+                <div className="bg-white/[0.02] rounded p-2">
+                  <div className="text-[#848E9C]">Mark</div>
+                  <div className="font-mono text-[#D1D4DC]">{ticker?.markPrice?.toFixed(2) ?? '—'}</div>
+                </div>
+                <div className="bg-white/[0.02] rounded p-2">
+                  <div className="text-[#848E9C]">Funding</div>
+                  <div className={`font-mono ${(ticker?.fundingRate ?? 0) >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
+                    {ticker?.fundingRate ? (ticker.fundingRate * 100).toFixed(4) + '%' : '—'}
+                  </div>
+                </div>
+                <div className="bg-white/[0.02] rounded p-2">
+                  <div className="text-[#848E9C]">24h Vol</div>
+                  <div className="font-mono text-[#D1D4DC]">
+                    {ticker?.volume24h ? (ticker.volume24h >= 1e6 ? (ticker.volume24h / 1e6).toFixed(1) + 'M' : (ticker.volume24h / 1e3).toFixed(1) + 'K') : '—'}
+                  </div>
+                </div>
+                <div className="bg-white/[0.02] rounded p-2">
+                  <div className="text-[#848E9C]">Prize Pool</div>
+                  <div className="font-mono text-[#F0B90B]">{match.prizePool}U</div>
+                </div>
+              </div>
+              {/* Rank anxiety info */}
+              <div className="bg-white/[0.02] rounded p-2 text-[10px]">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[#848E9C] font-semibold">Rank #{account.rank}</span>
+                  {account.rank <= 300 ? (
+                    <span className="text-[#0ECB81]">Safe +{300 - account.rank}</span>
+                  ) : (
+                    <span className="text-[#F6465D]">Need {account.rank - 300} more</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 text-[9px] text-[#848E9C]">
+                  <span>被超 <span className={social.tradersOvertakenYou > 0 ? 'text-[#F6465D]' : ''}>{social.tradersOvertakenYou}</span></span>
+                  <span>超越 <span className={social.youOvertook > 0 ? 'text-[#0ECB81]' : ''}>{social.youOvertook}</span></span>
+                  <span>线附近 {social.nearPromotionCount} 人</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Mobile Trading Panel — fixed at bottom */}
+        <MobileTradingPanel
+          account={account}
+          position={position}
+          currentPrice={currentPrice}
+          onOpenPosition={openPosition}
+          onClosePosition={closePosition}
+          getNextWeightThreshold={getNextWeightThreshold}
+          onSetTpSl={handleSetTpSl}
+          isStale={ticker?.stale}
+        />
+
+        {/* Overlay panels for Chat, Rank, Stats, News, Trades */}
+        <MobileToolbarOverlay activePanel={mobilePanel} onClose={() => setMobilePanel(null)}>
+          {mobilePanel === 'chat' && (
+            <ChatRoom messages={chatMessages} onSendMessage={handleSendMessage} />
+          )}
+          {mobilePanel === 'trades' && (
+            <TradeHistory trades={trades} />
+          )}
+          {mobilePanel === 'leaderboard' && (
+            <Leaderboard entries={leaderboard} myRank={account.rank} promotionLineRank={300} />
+          )}
+          {mobilePanel === 'stats' && (
+            <MarketStats social={social} account={account} match={match} />
+          )}
+          {mobilePanel === 'news' && (
+            <NewsFeed news={news} />
+          )}
+        </MobileToolbarOverlay>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // DESKTOP LAYOUT (unchanged)
+  // ═══════════════════════════════════════════════════════════
+  const tabTriggerClass =
+    "data-[state=active]:bg-[#F0B90B]/10 data-[state=active]:text-[#F0B90B] data-[state=active]:border-[#F0B90B]/60 data-[state=active]:shadow-none border border-[rgba(255,255,255,0.12)] text-[#848E9C] hover:text-[#D1D4DC] hover:border-[rgba(255,255,255,0.25)] hover:bg-white/[0.03] text-[10px] h-6 px-2.5 rounded-md mx-0.5 transition-all duration-200";
 
   return (
     <div className="h-screen flex flex-col bg-[#0B0E11] overflow-hidden select-none">
