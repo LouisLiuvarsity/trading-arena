@@ -1,6 +1,7 @@
 import { SYMBOL } from "./constants";
 
 const REST_BASE = "https://data-api.binance.vision/api/v3";
+const STALE_THRESHOLD_MS = 10_000; // 10 seconds
 
 type TickerSnapshot = {
   symbol: string;
@@ -14,6 +15,8 @@ type TickerSnapshot = {
   indexPrice: number;
   fundingRate: number;
   nextFundingTime: number;
+  stale: boolean;
+  lastUpdatedAt: number;
 };
 
 type DepthEntry = {
@@ -54,6 +57,8 @@ export class MarketService {
     indexPrice: 150,
     fundingRate: 0,
     nextFundingTime: Date.now() + 4 * 60 * 60 * 1000,
+    stale: true,
+    lastUpdatedAt: 0,
   };
 
   private orderBook: OrderBookSnapshot = { bids: [], asks: [] };
@@ -81,12 +86,20 @@ export class MarketService {
     }
   }
 
+  isStale(): boolean {
+    if (this.ticker.lastUpdatedAt === 0) return true;
+    return Date.now() - this.ticker.lastUpdatedAt > STALE_THRESHOLD_MS;
+  }
+
   getLastPrice(): number {
     return this.ticker.lastPrice;
   }
 
   getTicker(): TickerSnapshot {
-    return this.ticker;
+    return {
+      ...this.ticker,
+      stale: this.isStale(),
+    };
   }
 
   getOrderBook(): OrderBookSnapshot {
@@ -94,56 +107,66 @@ export class MarketService {
   }
 
   private async refreshTicker() {
-    const raw = await fetchJson<{
-      symbol: string;
-      lastPrice: string;
-      priceChange: string;
-      priceChangePercent: string;
-      highPrice: string;
-      lowPrice: string;
-      quoteVolume: string;
-    }>(`${REST_BASE}/ticker/24hr?symbol=${SYMBOL}`);
+    try {
+      const raw = await fetchJson<{
+        symbol: string;
+        lastPrice: string;
+        priceChange: string;
+        priceChangePercent: string;
+        highPrice: string;
+        lowPrice: string;
+        quoteVolume: string;
+      }>(`${REST_BASE}/ticker/24hr?symbol=${SYMBOL}`);
 
-    const lastPrice = Number(raw.lastPrice);
-    if (!Number.isFinite(lastPrice) || lastPrice <= 0) {
-      return;
+      const lastPrice = Number(raw.lastPrice);
+      if (!Number.isFinite(lastPrice) || lastPrice <= 0) {
+        return;
+      }
+
+      this.ticker = {
+        symbol: raw.symbol,
+        lastPrice,
+        priceChange: Number(raw.priceChange),
+        priceChangePct: Number(raw.priceChangePercent),
+        high24h: Number(raw.highPrice),
+        low24h: Number(raw.lowPrice),
+        volume24h: Number(raw.quoteVolume),
+        markPrice: lastPrice,
+        indexPrice: lastPrice,
+        fundingRate: this.ticker.fundingRate,
+        nextFundingTime: this.ticker.nextFundingTime,
+        stale: false,
+        lastUpdatedAt: Date.now(),
+      };
+    } catch (err) {
+      console.error("[market] refreshTicker failed:", (err as Error).message);
     }
-
-    this.ticker = {
-      symbol: raw.symbol,
-      lastPrice,
-      priceChange: Number(raw.priceChange),
-      priceChangePct: Number(raw.priceChangePercent),
-      high24h: Number(raw.highPrice),
-      low24h: Number(raw.lowPrice),
-      volume24h: Number(raw.quoteVolume),
-      markPrice: lastPrice,
-      indexPrice: lastPrice,
-      fundingRate: this.ticker.fundingRate,
-      nextFundingTime: this.ticker.nextFundingTime,
-    };
   }
 
   private async refreshDepth() {
-    const raw = await fetchJson<{ bids: [string, string][]; asks: [string, string][] }>(
-      `${REST_BASE}/depth?symbol=${SYMBOL}&limit=20`,
-    );
+    try {
+      const raw = await fetchJson<{ bids: [string, string][]; asks: [string, string][] }>(
+        `${REST_BASE}/depth?symbol=${SYMBOL}&limit=20`,
+      );
 
-    let bidTotal = 0;
-    let askTotal = 0;
+      let bidTotal = 0;
+      let askTotal = 0;
 
-    this.orderBook = {
-      bids: raw.bids.slice(0, 15).map(([price, qty]) => {
-        const quantity = Number(qty);
-        bidTotal += quantity;
-        return { price: Number(price), quantity, total: bidTotal };
-      }),
-      asks: raw.asks.slice(0, 15).map(([price, qty]) => {
-        const quantity = Number(qty);
-        askTotal += quantity;
-        return { price: Number(price), quantity, total: askTotal };
-      }),
-    };
+      this.orderBook = {
+        bids: raw.bids.slice(0, 15).map(([price, qty]) => {
+          const quantity = Number(qty);
+          bidTotal += quantity;
+          return { price: Number(price), quantity, total: bidTotal };
+        }),
+        asks: raw.asks.slice(0, 15).map(([price, qty]) => {
+          const quantity = Number(qty);
+          askTotal += quantity;
+          return { price: Number(price), quantity, total: askTotal };
+        }),
+      };
+    } catch (err) {
+      console.error("[market] refreshDepth failed:", (err as Error).message);
+    }
   }
 }
 

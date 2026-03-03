@@ -26,6 +26,22 @@ export interface TickerData {
   indexPrice: number;
   fundingRate: number;
   nextFundingTime: number;
+  stale?: boolean;
+  lastUpdatedAt?: number;
+}
+
+export interface PredictionState {
+  currentRoundKey: string;
+  isWindowOpen: boolean;
+  windowClosesIn: number;
+  alreadySubmitted: boolean;
+  submittedDirection: "up" | "down" | null;
+  stats: {
+    totalPredictions: number;
+    correctPredictions: number;
+    accuracy: number;
+    pendingCount: number;
+  };
 }
 
 export interface OrderBookEntry {

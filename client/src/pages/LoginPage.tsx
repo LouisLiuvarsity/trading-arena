@@ -7,21 +7,22 @@ import { useState } from 'react';
 import { Trophy, Zap, TrendingUp, Shield, ChevronRight } from 'lucide-react';
 
 interface LoginPageProps {
-  onLogin: (username: string) => Promise<void>;
+  onLogin: (inviteCode: string, username: string) => Promise<void>;
 }
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
+  const [inviteCode, setInviteCode] = useState('');
   const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim()) return;
+    if (!inviteCode.trim() || !username.trim()) return;
     setIsLoading(true);
     setError(null);
     try {
-      await onLogin(username.trim());
+      await onLogin(inviteCode.trim(), username.trim());
     } catch (err) {
       setError((err as Error).message);
       setIsLoading(false);
@@ -88,7 +89,21 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         <div className="bg-[#1C2030]/80 backdrop-blur-sm border border-[rgba(255,255,255,0.06)] rounded-xl p-6">
           <form onSubmit={handleSubmit}>
             <label className="block text-[#848E9C] text-xs uppercase tracking-wider mb-2">
-              Enter Username
+              Invite Code
+            </label>
+            <input
+              type="text"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              placeholder="Enter your unique ID..."
+              maxLength={32}
+              className="w-full bg-[#0B0E11] border border-[rgba(255,255,255,0.1)] rounded-lg px-4 py-3 text-white placeholder:text-[#5E6673] focus:outline-none focus:border-[#F0B90B]/50 transition-colors text-sm"
+              style={{ fontFamily: "'DM Mono', monospace" }}
+              autoFocus
+            />
+
+            <label className="block text-[#848E9C] text-xs uppercase tracking-wider mb-2 mt-4">
+              Username
             </label>
             <input
               type="text"
@@ -98,12 +113,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               maxLength={20}
               className="w-full bg-[#0B0E11] border border-[rgba(255,255,255,0.1)] rounded-lg px-4 py-3 text-white placeholder:text-[#5E6673] focus:outline-none focus:border-[#F0B90B]/50 transition-colors text-sm"
               style={{ fontFamily: "'DM Mono', monospace" }}
-              autoFocus
             />
 
             <button
               type="submit"
-              disabled={!username.trim() || isLoading}
+              disabled={!inviteCode.trim() || !username.trim() || isLoading}
               className="w-full mt-4 bg-gradient-to-r from-[#F0B90B] to-[#F0B90B]/90 hover:from-[#F0B90B]/90 hover:to-[#F0B90B] text-[#0B0E11] font-bold py-3 rounded-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
             >
               {isLoading ? (

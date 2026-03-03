@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { nanoid } from "nanoid";
 import * as dbHelpers from "./db";
+import { db } from "./db";
 import {
   CLOSE_ONLY_SECONDS,
   MATCH_DURATION_MS,
@@ -74,6 +75,8 @@ export class ArenaEngine {
   private nearPromotionDelta = 0;
   private lastRankSnapshotAt = 0;
   private initialized = false;
+  private rotationLock = false;
+  private lastResolvedRound = "";
 
   constructor(private readonly market: MarketService) {}
 
@@ -83,13 +86,17 @@ export class ArenaEngine {
     this.initialized = true;
   }
 
-  async login(usernameInput: string, authUserId: number): Promise<{ token: string; account: ArenaAccount }> {
+  async login(inviteCode: string, usernameInput: string): Promise<{ token: string; account: ArenaAccount }> {
     const username = usernameInput.trim();
     if (!username || username.length < 2 || username.length > 20) {
       throw new Error("Username length must be between 2 and 20");
     }
+    const code = inviteCode.trim();
+    if (!code || code.length < 4) {
+      throw new Error("Invalid invite code");
+    }
 
-    const account = await dbHelpers.getOrCreateArenaAccount(authUserId, username);
+    const account = await dbHelpers.getOrCreateArenaAccountByCode(code, username);
     const token = crypto.randomBytes(24).toString("hex");
     await dbHelpers.createArenaSession(account.id, token);
 
@@ -144,42 +151,54 @@ export class ArenaEngine {
       throw new Error("Close-only mode in last 30 minutes");
     }
 
-    const existingPosition = await dbHelpers.getPosition(arenaAccountId);
-    if (existingPosition) {
-      throw new Error("Only one position is allowed");
-    }
-
-    const tradesUsed = await dbHelpers.getTradeCountForUserMatch(arenaAccountId, active.id);
-    if (tradesUsed >= MAX_TRADES_PER_MATCH) {
-      throw new Error("Trade limit reached");
-    }
-
     const size = Number(input.size);
     if (!Number.isFinite(size) || size <= 0) {
       throw new Error("Invalid size");
     }
-
-    const leaderboard = await this.buildLeaderboard(active.id);
-    const me = leaderboard.find((row) => row.arenaAccountId === arenaAccountId);
-    const equity = STARTING_CAPITAL + (me?.pnl ?? 0);
-    if (size > equity) {
-      throw new Error("Insufficient equity");
+    if (size < 10) {
+      throw new Error("Minimum position size is 10 USDT");
     }
 
     const price = this.market.getLastPrice();
     if (price <= 0) {
       throw new Error("Price feed unavailable");
     }
+    if (this.market.isStale()) {
+      throw new Error("Market data is stale, trading temporarily disabled");
+    }
 
-    await dbHelpers.insertPosition({
-      arenaAccountId,
-      direction: input.direction,
-      size,
-      entryPrice: price,
-      openTime: Date.now(),
-      takeProfit: input.tp ?? null,
-      stopLoss: input.sl ?? null,
-      tradeNumber: tradesUsed + 1,
+    // Use transaction to prevent race condition on position creation
+    await db.transaction(async (tx: dbHelpers.DbOrTx) => {
+      const existingPosition = await dbHelpers.getPosition(arenaAccountId, tx);
+      if (existingPosition) {
+        throw new Error("Only one position is allowed");
+      }
+
+      const tradesUsed = await dbHelpers.getTradeCountForUserMatch(arenaAccountId, active.id, tx);
+      if (tradesUsed >= MAX_TRADES_PER_MATCH) {
+        throw new Error("Trade limit reached");
+      }
+
+      const leaderboard = await this.buildLeaderboard(active.id);
+      const me = leaderboard.find((row) => row.arenaAccountId === arenaAccountId);
+      const equity = STARTING_CAPITAL + (me?.pnl ?? 0);
+      if (size > equity) {
+        throw new Error("Insufficient equity");
+      }
+
+      await dbHelpers.insertPosition(
+        {
+          arenaAccountId,
+          direction: input.direction,
+          size,
+          entryPrice: price,
+          openTime: Date.now(),
+          takeProfit: input.tp ?? null,
+          stopLoss: input.sl ?? null,
+          tradeNumber: tradesUsed + 1,
+        },
+        tx,
+      );
     });
   }
 
@@ -215,6 +234,7 @@ export class ArenaEngine {
   async tick() {
     await this.rotateMatchIfNeeded();
     await this.autoCloseByTpSl();
+    await this.resolvePredictions();
   }
 
   async getPublicSummary() {
@@ -319,6 +339,9 @@ export class ArenaEngine {
     const recentTradeVolume = await dbHelpers.getRecentTradeVolume(active.id, 5 * 60 * 1000);
 
     const userTrades = await dbHelpers.getTradesForUserMatch(arenaAccountId, active.id);
+
+    // Prediction state
+    const predictionState = await this.getPredictionState(arenaAccountId);
 
     return {
       account: {
@@ -438,13 +461,113 @@ export class ArenaEngine {
       chatMessages: await dbHelpers.getRecentChatMessages(120),
       ticker: this.market.getTicker(),
       orderBook: this.market.getOrderBook(),
+      prediction: predictionState,
     };
   }
+
+  // ─── Prediction System ──────────────────────────────────────────────────────
+
+  private getPredictionRoundKey(): string {
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(now.getUTCDate()).padStart(2, "0");
+    const hour = String(now.getUTCHours()).padStart(2, "0");
+    return `${year}-${month}-${day}T${hour}:00`;
+  }
+
+  private isInPredictionWindow(): boolean {
+    const now = new Date();
+    const secondsPastHour = now.getUTCMinutes() * 60 + now.getUTCSeconds();
+    return secondsPastHour <= 60;
+  }
+
+  private shouldResolvePredictions(): boolean {
+    const now = new Date();
+    const secondsPastHour = now.getUTCMinutes() * 60 + now.getUTCSeconds();
+    return secondsPastHour >= 300 && secondsPastHour <= 330;
+  }
+
+  async submitPrediction(arenaAccountId: number, direction: "up" | "down", confidence: number) {
+    if (!this.isInPredictionWindow()) {
+      throw new Error("Prediction window is closed");
+    }
+
+    const roundKey = this.getPredictionRoundKey();
+    const existing = await dbHelpers.getPredictionForRound(arenaAccountId, roundKey);
+    if (existing) {
+      throw new Error("Already submitted prediction for this round");
+    }
+
+    const active = await this.getActiveMatch();
+    const price = this.market.getLastPrice();
+    const position = await dbHelpers.getPosition(arenaAccountId);
+
+    await dbHelpers.insertPrediction({
+      arenaAccountId,
+      matchId: active.id,
+      roundKey,
+      direction,
+      confidence: Math.min(5, Math.max(1, confidence)),
+      priceAtPrediction: price,
+      actualPositionDirection: position?.direction ?? null,
+      submittedAt: Date.now(),
+    });
+  }
+
+  async getPredictionState(arenaAccountId: number) {
+    const active = await this.getActiveMatch();
+    const roundKey = this.getPredictionRoundKey();
+    const existingPrediction = await dbHelpers.getPredictionForRound(arenaAccountId, roundKey);
+    const stats = await dbHelpers.getPredictionStats(arenaAccountId, active.id);
+    const resolved = stats.total - stats.pending;
+
+    return {
+      currentRoundKey: roundKey,
+      isWindowOpen: this.isInPredictionWindow(),
+      windowClosesIn: this.isInPredictionWindow()
+        ? Math.max(0, 60 - (new Date().getUTCMinutes() * 60 + new Date().getUTCSeconds()))
+        : 0,
+      alreadySubmitted: !!existingPrediction,
+      submittedDirection: existingPrediction?.direction ?? null,
+      stats: {
+        totalPredictions: stats.total,
+        correctPredictions: stats.correct,
+        accuracy: resolved > 0 ? Math.round((stats.correct / resolved) * 100) : 0,
+        pendingCount: stats.pending,
+      },
+    };
+  }
+
+  private async resolvePredictions() {
+    if (!this.shouldResolvePredictions()) return;
+
+    const roundKey = this.getPredictionRoundKey();
+    if (this.lastResolvedRound === roundKey) return;
+
+    const pendingPredictions = await dbHelpers.getPendingPredictionsForRound(roundKey);
+    if (pendingPredictions.length === 0) {
+      this.lastResolvedRound = roundKey;
+      return;
+    }
+
+    const currentPrice = this.market.getLastPrice();
+    if (currentPrice <= 0 || this.market.isStale()) return;
+
+    for (const pred of pendingPredictions) {
+      const actualDirection = currentPrice > pred.priceAtPrediction ? "up" : "down";
+      const correct = pred.direction === actualDirection;
+      await dbHelpers.resolvePrediction(pred.id, currentPrice, correct);
+    }
+
+    this.lastResolvedRound = roundKey;
+  }
+
+  // ─── Internal Helpers ───────────────────────────────────────────────────────
 
   private async getActiveMatch(): Promise<MatchRow> {
     const row = await dbHelpers.getActiveMatch();
     if (!row) {
-      // Create a new match if none exists
       const now = Date.now();
       const id = await dbHelpers.createMatch(1, now, now + MATCH_DURATION_MS);
       return { id, matchNumber: 1, startTime: now, endTime: now + MATCH_DURATION_MS };
@@ -491,97 +614,137 @@ export class ArenaEngine {
     const weighted = pnl * weight;
 
     const tradeId = `trade-${nanoid(12)}`;
-    await dbHelpers.insertTrade({
-      id: tradeId,
-      arenaAccountId: pos.arenaAccountId,
-      matchId: active.id,
-      direction: pos.direction,
-      size: pos.size,
-      entryPrice: pos.entryPrice,
-      exitPrice: closePrice,
-      pnl: round2(pnl),
-      pnlPct: round2(pnlPct),
-      weightedPnl: round2(weighted),
-      holdDuration: round2(holdDuration),
-      holdWeight: weight,
-      closeReason: reason,
-      openTime: pos.openTime,
-      closeTime: Date.now(),
+
+    // Atomic: insert trade + delete position in one transaction
+    await db.transaction(async (tx: dbHelpers.DbOrTx) => {
+      // Re-verify position still exists (prevents double-close)
+      const currentPos = await dbHelpers.getPosition(pos.arenaAccountId, tx);
+      if (!currentPos) {
+        throw new Error("Position already closed");
+      }
+
+      await dbHelpers.insertTrade(
+        {
+          id: tradeId,
+          arenaAccountId: pos.arenaAccountId,
+          matchId: active.id,
+          direction: pos.direction,
+          size: pos.size,
+          entryPrice: pos.entryPrice,
+          exitPrice: closePrice,
+          pnl: round2(pnl),
+          pnlPct: round2(pnlPct),
+          weightedPnl: round2(weighted),
+          holdDuration: round2(holdDuration),
+          holdWeight: weight,
+          closeReason: reason,
+          openTime: pos.openTime,
+          closeTime: Date.now(),
+        },
+        tx,
+      );
+      await dbHelpers.deletePosition(pos.arenaAccountId, tx);
     });
-    await dbHelpers.deletePosition(pos.arenaAccountId);
+
     return tradeId;
   }
 
   private async autoCloseByTpSl() {
     const price = this.market.getLastPrice();
+    if (price <= 0) return;
+    if (this.market.isStale()) return;
+
     const allPositions = await dbHelpers.getAllPositions();
     for (const pos of allPositions) {
+      let shouldClose = false;
+      let reason: "tp" | "sl" = "tp";
+      let closePrice = price;
+
       if (pos.takeProfit !== null) {
         if (pos.direction === "long" && price >= pos.takeProfit) {
-          await this.closePositionInternal(
-            { ...pos, arenaAccountId: pos.arenaAccountId },
-            "tp",
-            pos.takeProfit,
-          );
-          continue;
-        }
-        if (pos.direction === "short" && price <= pos.takeProfit) {
-          await this.closePositionInternal(
-            { ...pos, arenaAccountId: pos.arenaAccountId },
-            "tp",
-            pos.takeProfit,
-          );
-          continue;
+          shouldClose = true;
+          reason = "tp";
+          closePrice = pos.takeProfit;
+        } else if (pos.direction === "short" && price <= pos.takeProfit) {
+          shouldClose = true;
+          reason = "tp";
+          closePrice = pos.takeProfit;
         }
       }
-      if (pos.stopLoss !== null) {
+      if (!shouldClose && pos.stopLoss !== null) {
         if (pos.direction === "long" && price <= pos.stopLoss) {
-          await this.closePositionInternal(
-            { ...pos, arenaAccountId: pos.arenaAccountId },
-            "sl",
-            pos.stopLoss,
-          );
-          continue;
+          shouldClose = true;
+          reason = "sl";
+          closePrice = pos.stopLoss;
+        } else if (pos.direction === "short" && price >= pos.stopLoss) {
+          shouldClose = true;
+          reason = "sl";
+          closePrice = pos.stopLoss;
         }
-        if (pos.direction === "short" && price >= pos.stopLoss) {
+      }
+
+      if (shouldClose) {
+        try {
           await this.closePositionInternal(
             { ...pos, arenaAccountId: pos.arenaAccountId },
-            "sl",
-            pos.stopLoss,
+            reason,
+            closePrice,
           );
-          continue;
+        } catch (err) {
+          // Position was already closed by another path — expected, not an error
+          if ((err as Error).message !== "Position already closed") {
+            console.error("[autoCloseByTpSl]", err);
+          }
         }
       }
     }
   }
 
   private async rotateMatchIfNeeded() {
+    if (this.rotationLock) return;
+
     const active = await dbHelpers.getActiveMatch();
     if (!active) return;
     const now = Date.now();
     if (now < active.endTime) return;
 
-    // Close all open positions
-    const openPositions = await dbHelpers.getAllPositions();
-    for (const pos of openPositions) {
-      await this.closePositionInternal(
-        { ...pos, arenaAccountId: pos.arenaAccountId },
-        "match_end",
-      );
-    }
+    this.rotationLock = true;
+    try {
+      // Re-check inside lock
+      const recheck = await dbHelpers.getActiveMatch();
+      if (!recheck || Date.now() < recheck.endTime) return;
 
-    // Award season points
-    const finalLeaderboard = await this.buildLeaderboard(active.id);
-    for (const row of finalLeaderboard) {
-      const points = getPointsForRank(row.rank);
-      if (points > 0) {
-        await dbHelpers.updateSeasonPoints(row.arenaAccountId, points);
+      // Close all open positions
+      const openPositions = await dbHelpers.getAllPositions();
+      for (const pos of openPositions) {
+        try {
+          await this.closePositionInternal(
+            { ...pos, arenaAccountId: pos.arenaAccountId },
+            "match_end",
+          );
+        } catch (err) {
+          if ((err as Error).message !== "Position already closed") {
+            console.error("[rotateMatch] close error", err);
+          }
+        }
       }
-    }
 
-    // Complete old match and create new one
-    await dbHelpers.completeMatch(active.id);
-    await dbHelpers.createMatch(active.matchNumber + 1, now, now + MATCH_DURATION_MS);
+      // Award season points + complete + create new match in one transaction
+      const finalLeaderboard = await this.buildLeaderboard(recheck.id);
+      await db.transaction(async (tx: dbHelpers.DbOrTx) => {
+        for (const row of finalLeaderboard) {
+          const points = getPointsForRank(row.rank);
+          if (points > 0) {
+            await dbHelpers.updateSeasonPoints(row.arenaAccountId, points, tx);
+          }
+        }
+        await dbHelpers.completeMatch(recheck.id, tx);
+        const rotateNow = Date.now();
+        await dbHelpers.createMatch(recheck.matchNumber + 1, rotateNow, rotateNow + MATCH_DURATION_MS, tx);
+      });
+    } finally {
+      this.rotationLock = false;
+    }
   }
 
   private async buildLeaderboard(matchId: number): Promise<LeaderboardRow[]> {

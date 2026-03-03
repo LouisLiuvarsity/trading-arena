@@ -23,8 +23,8 @@ function App() {
     setScreen('login');
   }, []);
 
-  const handleLogin = useCallback(async (name: string) => {
-    const result = await login(name);
+  const handleLogin = useCallback(async (inviteCode: string, name: string) => {
+    const result = await login(inviteCode, name);
     setUsername(result.user.username);
     setAuthToken(result.token);
     localStorage.setItem("arena_username", result.user.username);

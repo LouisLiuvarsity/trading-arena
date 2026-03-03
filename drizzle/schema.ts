@@ -1,17 +1,11 @@
-import { bigint, double, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { bigint, double, int, index, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
  * Columns use camelCase to match both database fields and generated types.
  */
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
@@ -27,11 +21,13 @@ export type InsertUser = typeof users.$inferInsert;
 
 // ─── Arena Tables ────────────────────────────────────────────────────────────
 
-/** Arena player accounts (linked to auth users via openId) */
+/** Arena player accounts — login via unique inviteCode */
 export const arenaAccounts = mysqlTable("arena_accounts", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
   username: varchar("username", { length: 64 }).notNull().unique(),
+  /** Unique invite code / ID used for login */
+  inviteCode: varchar("inviteCode", { length: 32 }).notNull().unique(),
   capital: double("capital").notNull().default(5000),
   seasonPoints: double("seasonPoints").notNull().default(0),
   createdAt: bigint("createdAt", { mode: "number" }).notNull(),
@@ -44,7 +40,9 @@ export const arenaSessions = mysqlTable("arena_sessions", {
   arenaAccountId: int("arenaAccountId").notNull(),
   createdAt: bigint("createdAt", { mode: "number" }).notNull(),
   lastSeen: bigint("lastSeen", { mode: "number" }).notNull(),
-});
+}, (table) => [
+  index("idx_sessions_account").on(table.arenaAccountId),
+]);
 
 /** Trading matches (24h competition rounds) */
 export const matches = mysqlTable("matches", {
@@ -87,7 +85,10 @@ export const trades = mysqlTable("trades", {
   closeReason: varchar("closeReason", { length: 16 }).notNull(),
   openTime: bigint("openTime", { mode: "number" }).notNull(),
   closeTime: bigint("closeTime", { mode: "number" }).notNull(),
-});
+}, (table) => [
+  index("idx_trades_account_match").on(table.arenaAccountId, table.matchId),
+  index("idx_trades_close_time").on(table.closeTime),
+]);
 
 /** Chat messages */
 export const chatMessages = mysqlTable("chat_messages", {
@@ -97,7 +98,9 @@ export const chatMessages = mysqlTable("chat_messages", {
   message: text("message").notNull(),
   type: varchar("type", { length: 16 }).notNull().default("user"),
   timestamp: bigint("timestamp", { mode: "number" }).notNull(),
-});
+}, (table) => [
+  index("idx_chat_timestamp").on(table.timestamp),
+]);
 
 /** Behavior events for analytics */
 export const behaviorEvents = mysqlTable("behavior_events", {
@@ -107,4 +110,35 @@ export const behaviorEvents = mysqlTable("behavior_events", {
   payload: text("payload"),
   source: varchar("source", { length: 32 }),
   timestamp: bigint("timestamp", { mode: "number" }).notNull(),
-});
+}, (table) => [
+  index("idx_behavior_account").on(table.arenaAccountId),
+  index("idx_behavior_timestamp").on(table.timestamp),
+]);
+
+/** Hourly price predictions */
+export const predictions = mysqlTable("predictions", {
+  id: int("id").autoincrement().primaryKey(),
+  arenaAccountId: int("arenaAccountId").notNull(),
+  matchId: int("matchId").notNull(),
+  /** Hourly round identifier, e.g. "2026-03-03T14:00" */
+  roundKey: varchar("roundKey", { length: 32 }).notNull(),
+  /** "up" or "down" */
+  direction: varchar("direction", { length: 8 }).notNull(),
+  /** 1-5 confidence scale */
+  confidence: int("confidence").notNull().default(3),
+  /** Price when prediction was submitted */
+  priceAtPrediction: double("priceAtPrediction").notNull(),
+  /** Price at resolution time (5 min after the hour) */
+  priceAtResolution: double("priceAtResolution"),
+  /** null = unresolved, 0 = wrong, 1 = correct */
+  correct: int("correct"),
+  /** User's actual position direction at prediction time, if any */
+  actualPositionDirection: varchar("actualPositionDirection", { length: 8 }),
+  submittedAt: bigint("submittedAt", { mode: "number" }).notNull(),
+  resolvedAt: bigint("resolvedAt", { mode: "number" }),
+  status: varchar("status", { length: 16 }).notNull().default("pending"),
+}, (table) => [
+  index("idx_predictions_account_match").on(table.arenaAccountId, table.matchId),
+  index("idx_predictions_round").on(table.roundKey),
+  index("idx_predictions_status").on(table.status),
+]);

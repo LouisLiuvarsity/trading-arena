@@ -41,11 +41,13 @@ export default function TradingPage({ authToken }: TradingPageProps) {
     chatMessages,
     ticker,
     orderBook,
+    prediction,
     openPosition: apiOpenPosition,
     closePosition: apiClosePosition,
     setTpSl,
     sendChatMessage,
     trackEvent,
+    submitPrediction,
   } = useArena(authToken);
 
   const news = useMemo(() => generateNewsItems(), []);
@@ -145,10 +147,29 @@ export default function TradingPage({ authToken }: TradingPageProps) {
           {error}
         </div>
       )}
+      {ticker?.stale && (
+        <div className="px-3 py-1 text-xs text-[#F6465D] border-b border-[#F6465D]/20 bg-[#F6465D]/10 animate-pulse">
+          Market data is stale — trading temporarily disabled
+        </div>
+      )}
 
       <StatusBar account={account} match={match} season={season} />
       <NewsTicker news={news} />
-      <CompetitionNotifications account={account} match={match} social={social} />
+      <CompetitionNotifications
+        account={account}
+        match={match}
+        social={social}
+        prediction={prediction}
+        onSubmitPrediction={async (direction, confidence) => {
+          try {
+            await submitPrediction(direction, confidence);
+            await trackEvent("prediction_submit", { direction, confidence });
+            toast(`Prediction: ${direction.toUpperCase()}`, { description: "Result in 5 minutes" });
+          } catch (err) {
+            toast.error((err as Error).message);
+          }
+        }}
+      />
 
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 flex flex-col">
@@ -228,6 +249,7 @@ export default function TradingPage({ authToken }: TradingPageProps) {
           onClosePosition={closePosition}
           getNextWeightThreshold={getNextWeightThreshold}
           onSetTpSl={handleSetTpSl}
+          isStale={ticker?.stale}
         />
       </div>
 

@@ -35,9 +35,9 @@ export async function apiRequest<T>(
   return data as T;
 }
 
-export async function login(username: string) {
+export async function login(inviteCode: string, username: string) {
   return apiRequest<{ token: string; user: { id: number; username: string } }>("/api/auth/login", {
     method: "POST",
-    body: { username },
+    body: { inviteCode, username },
   });
 }

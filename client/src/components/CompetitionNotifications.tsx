@@ -7,12 +7,14 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, GripHorizontal, Bell, BellOff } from 'lucide-react';
-import type { AccountState, MatchState, SocialData } from '@/lib/types';
+import type { AccountState, MatchState, PredictionState, SocialData } from '@/lib/types';
 
 interface Props {
   account: AccountState;
   match: MatchState;
   social?: SocialData;
+  prediction?: PredictionState | null;
+  onSubmitPrediction?: (direction: "up" | "down", confidence: number) => Promise<void>;
 }
 
 interface NotificationItem {
@@ -20,6 +22,7 @@ interface NotificationItem {
   message: string;
   borderColor: string;
   timestamp: number;
+  type?: "standard" | "prediction";
 }
 
 interface ScheduledNotification {
@@ -85,7 +88,7 @@ const NOTIFICATIONS: ScheduledNotification[] = [
   },
 ];
 
-export default function CompetitionNotifications({ account, match, social }: Props) {
+export default function CompetitionNotifications({ account, match, social, prediction, onSubmitPrediction }: Props) {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isVisible, setIsVisible] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
@@ -188,6 +191,34 @@ export default function CompetitionNotifications({ account, match, social }: Pro
 
     return () => clearInterval(emotionalInterval);
   }, [account, social, getElapsedPct, addNotification]);
+
+  // Prediction window notifications
+  useEffect(() => {
+    if (!prediction) return;
+    const interval = setInterval(() => {
+      if (prediction.isWindowOpen && !prediction.alreadySubmitted) {
+        const roundId = `pred-${prediction.currentRoundKey}`;
+        if (!firedRef.current.has(roundId)) {
+          firedRef.current.add(roundId);
+          if (isMuted) return;
+          const id = roundId;
+          setNotifications(prev => {
+            if (prev.some(n => n.id === id)) return prev;
+            const next = [{
+              id,
+              message: `🔮 价格预测投票！5分钟后SOL会涨还是跌？\n准确率: ${prediction.stats.accuracy}% (${prediction.stats.correctPredictions}/${prediction.stats.totalPredictions})`,
+              borderColor: '#F0B90B',
+              timestamp: Date.now(),
+              type: "prediction" as const,
+            }, ...prev];
+            return next.slice(0, maxNotifications);
+          });
+          setIsVisible(true);
+        }
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [prediction, isMuted]);
 
   // Auto-remove old notifications after 15 seconds
   useEffect(() => {
@@ -323,6 +354,30 @@ export default function CompetitionNotifications({ account, match, social }: Pro
                     {line}
                   </div>
                 ))}
+                {notif.type === 'prediction' && prediction && !prediction.alreadySubmitted && prediction.isWindowOpen && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <button
+                      onClick={() => onSubmitPrediction?.("up", 3)}
+                      className="flex-1 py-1.5 bg-[#0ECB81]/20 text-[#0ECB81] text-[10px] font-bold rounded hover:bg-[#0ECB81]/30 transition-colors"
+                    >
+                      ↑ UP
+                    </button>
+                    <button
+                      onClick={() => onSubmitPrediction?.("down", 3)}
+                      className="flex-1 py-1.5 bg-[#F6465D]/20 text-[#F6465D] text-[10px] font-bold rounded hover:bg-[#F6465D]/30 transition-colors"
+                    >
+                      ↓ DOWN
+                    </button>
+                    <span className="text-[9px] text-[#848E9C] tabular-nums font-mono shrink-0">
+                      {prediction.windowClosesIn}s
+                    </span>
+                  </div>
+                )}
+                {notif.type === 'prediction' && prediction?.alreadySubmitted && (
+                  <div className="mt-1.5 text-[10px] text-[#F0B90B] font-medium">
+                    已提交: {prediction.submittedDirection === 'up' ? '↑ UP' : '↓ DOWN'} — 等待结算
+                  </div>
+                )}
                 <div className="text-[8px] text-[#5E6673] mt-1">
                   {new Date(notif.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                 </div>

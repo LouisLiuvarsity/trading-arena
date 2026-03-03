@@ -8,6 +8,7 @@ import type {
   MatchState,
   OrderBook,
   Position,
+  PredictionState,
   SeasonState,
   SocialData,
   TickerData,
@@ -24,6 +25,7 @@ type ArenaState = {
   chatMessages: ChatMessage[];
   ticker: TickerData | null;
   orderBook: OrderBook;
+  prediction: PredictionState | null;
 };
 
 const emptyState: ArenaState = {
@@ -100,6 +102,7 @@ const emptyState: ArenaState = {
   chatMessages: [],
   ticker: null,
   orderBook: { bids: [], asks: [] },
+  prediction: null,
 };
 
 export function useArena(token: string | null) {
@@ -193,6 +196,19 @@ export function useArena(token: string | null) {
     [token],
   );
 
+  const submitPrediction = useCallback(
+    async (direction: "up" | "down", confidence: number = 3) => {
+      if (!token) return;
+      await apiRequest("/api/prediction", {
+        method: "POST",
+        token,
+        body: { direction, confidence },
+      });
+      await refresh();
+    },
+    [token, refresh],
+  );
+
   return useMemo(
     () => ({
       ...state,
@@ -204,7 +220,8 @@ export function useArena(token: string | null) {
       setTpSl,
       sendChatMessage,
       trackEvent,
+      submitPrediction,
     }),
-    [state, loading, error, refresh, openPosition, closePosition, setTpSl, sendChatMessage, trackEvent],
+    [state, loading, error, refresh, openPosition, closePosition, setTpSl, sendChatMessage, trackEvent, submitPrediction],
   );
 }

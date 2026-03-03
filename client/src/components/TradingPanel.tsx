@@ -12,10 +12,11 @@ interface Props {
   account: AccountState;
   position: Position | null;
   currentPrice: number;
-  onOpenPosition: (direction: 'long' | 'short', size: number, tp?: number | null, sl?: number | null) => void;
-  onClosePosition: () => void;
+  onOpenPosition: (direction: 'long' | 'short', size: number, tp?: number | null, sl?: number | null) => Promise<void> | void;
+  onClosePosition: () => Promise<void> | void;
   getNextWeightThreshold: (seconds: number) => { nextWeight: number; secondsNeeded: number } | null;
   onSetTpSl?: (tp: number | null, sl: number | null) => void;
+  isStale?: boolean;
 }
 
 function formatDuration(seconds: number): string {
@@ -44,11 +45,12 @@ function getPriceStep(price: number): number {
 }
 
 function TradingPanel({
-  account, position, currentPrice, onOpenPosition, onClosePosition, getNextWeightThreshold, onSetTpSl
+  account, position, currentPrice, onOpenPosition, onClosePosition, getNextWeightThreshold, onSetTpSl, isStale
 }: Props) {
   const [positionSize, setPositionSize] = useState(250);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [holdSeconds, setHoldSeconds] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // TP/SL state for order entry
   const [showTpSl, setShowTpSl] = useState(false);
@@ -80,30 +82,58 @@ function TradingPanel({
     }
   }, [editingTpSl, position]);
 
-  const handleClose = useCallback(() => {
+  const handleClose = useCallback(async () => {
+    if (isSubmitting) return;
     if (position && holdSeconds < 60) {
       setShowCloseWarning(true);
       return;
     }
-    onClosePosition();
-  }, [position, holdSeconds, onClosePosition]);
+    setIsSubmitting(true);
+    try {
+      await onClosePosition();
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [isSubmitting, position, holdSeconds, onClosePosition]);
 
-  const confirmClose = useCallback(() => {
+  const confirmClose = useCallback(async () => {
+    if (isSubmitting) return;
     setShowCloseWarning(false);
-    onClosePosition();
-  }, [onClosePosition]);
+    setIsSubmitting(true);
+    try {
+      await onClosePosition();
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [isSubmitting, onClosePosition]);
 
-  const handleOpenWithTpSl = useCallback((direction: 'long' | 'short') => {
+  const handleOpenWithTpSl = useCallback(async (direction: 'long' | 'short') => {
+    if (isSubmitting) return;
     const tp = tpInput ? parseFloat(tpInput) : null;
     const sl = slInput ? parseFloat(slInput) : null;
     if (tp !== null && direction === 'long' && tp <= currentPrice) return;
     if (tp !== null && direction === 'short' && tp >= currentPrice) return;
     if (sl !== null && direction === 'long' && sl >= currentPrice) return;
     if (sl !== null && direction === 'short' && sl <= currentPrice) return;
-    onOpenPosition(direction, positionSize, tp, sl);
-    setTpInput('');
-    setSlInput('');
-  }, [tpInput, slInput, currentPrice, positionSize, onOpenPosition]);
+    setIsSubmitting(true);
+    try {
+      await onOpenPosition(direction, positionSize, tp, sl);
+      setTpInput('');
+      setSlInput('');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [isSubmitting, tpInput, slInput, currentPrice, positionSize, onOpenPosition]);
+
+  const handleOpen = useCallback(async (direction: 'long' | 'short') => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onOpenPosition(direction, positionSize);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [isSubmitting, positionSize, onOpenPosition]);
 
   const handleSaveTpSl = useCallback(() => {
     if (!onSetTpSl) return;
@@ -257,13 +287,18 @@ function TradingPanel({
           {!showCloseWarning ? (
             <button
               onClick={handleClose}
-              className={`px-6 py-2.5 rounded font-semibold text-sm transition-all active:scale-[0.97] whitespace-nowrap ${
+              disabled={isSubmitting}
+              className={`px-6 py-2.5 rounded font-semibold text-sm transition-all active:scale-[0.97] whitespace-nowrap disabled:opacity-50 ${
                 isProfitable
                   ? 'bg-[#0ECB81] hover:bg-[#0ECB81]/90 text-black'
                   : 'bg-[#F6465D] hover:bg-[#F6465D]/90 text-white'
               }`}
             >
-              Close ({isProfitable ? '+' : ''}{position.unrealizedPnl.toFixed(2)} U)
+              {isSubmitting ? (
+                <div className="w-5 h-5 border-2 border-current/30 border-t-current rounded-full animate-spin mx-auto" />
+              ) : (
+                <>Close ({isProfitable ? '+' : ''}{position.unrealizedPnl.toFixed(2)} U)</>
+              )}
             </button>
           ) : (
             <div className="flex items-center gap-2">
@@ -368,22 +403,34 @@ function TradingPanel({
       <div className="flex items-center gap-2 px-3">
         <div className="flex flex-col items-center gap-0.5">
           <button
-            onClick={() => showTpSl ? handleOpenWithTpSl('long') : onOpenPosition('long', positionSize)}
-            disabled={account.tradesUsed >= account.tradesMax || currentPrice === 0}
+            onClick={() => showTpSl ? handleOpenWithTpSl('long') : handleOpen('long')}
+            disabled={account.tradesUsed >= account.tradesMax || currentPrice === 0 || isStale || isSubmitting}
             className="px-5 py-2.5 bg-[#0ECB81] hover:bg-[#0ECB81]/90 disabled:opacity-30 disabled:cursor-not-allowed text-black font-bold text-sm rounded transition-all active:scale-[0.97] whitespace-nowrap relative"
           >
-            <div>Buy / Long</div>
-            <div className="text-[9px] font-normal opacity-70">{positionSize} U × {account.tierLeverage}</div>
+            {isSubmitting ? (
+              <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin mx-auto" />
+            ) : (
+              <>
+                <div>Buy / Long</div>
+                <div className="text-[9px] font-normal opacity-70">{positionSize} U × {account.tierLeverage}</div>
+              </>
+            )}
           </button>
         </div>
         <div className="flex flex-col items-center gap-0.5">
           <button
-            onClick={() => showTpSl ? handleOpenWithTpSl('short') : onOpenPosition('short', positionSize)}
-            disabled={account.tradesUsed >= account.tradesMax || currentPrice === 0}
+            onClick={() => showTpSl ? handleOpenWithTpSl('short') : handleOpen('short')}
+            disabled={account.tradesUsed >= account.tradesMax || currentPrice === 0 || isStale || isSubmitting}
             className="px-5 py-2.5 bg-[#F6465D] hover:bg-[#F6465D]/90 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold text-sm rounded transition-all active:scale-[0.97] whitespace-nowrap relative"
           >
-            <div>Sell / Short</div>
-            <div className="text-[9px] font-normal opacity-70">{positionSize} U × {account.tierLeverage}</div>
+            {isSubmitting ? (
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
+            ) : (
+              <>
+                <div>Sell / Short</div>
+                <div className="text-[9px] font-normal opacity-70">{positionSize} U × {account.tierLeverage}</div>
+              </>
+            )}
           </button>
         </div>
       </div>

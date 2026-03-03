@@ -1,16 +1,13 @@
 /**
  * server/db.ts — Database helpers
  *
- * This file provides two sets of functions:
- * 1. Auth helpers (getUserByOpenId, upsertUser) required by _core/sdk.ts and _core/oauth.ts
- *    — These use Drizzle ORM with the MySQL database
- * 2. Arena helpers for the trading engine
- *    — These also use Drizzle ORM with the same MySQL database
+ * All helpers accept an optional last parameter `dbOrTx` to support
+ * running inside a MySQL transaction. Defaults to the module-level `db`.
  */
 
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { eq, and, desc, sql, asc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import {
   users,
   arenaAccounts,
@@ -20,6 +17,7 @@ import {
   trades,
   chatMessages,
   behaviorEvents,
+  predictions,
   type User,
 } from "../drizzle/schema";
 import { MATCH_DURATION_MS, STARTING_CAPITAL } from "./constants";
@@ -34,11 +32,14 @@ if (!connectionString) {
 const pool = mysql.createPool({
   uri: connectionString,
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: 15,
   ssl: { rejectUnauthorized: true },
 });
 
 export const db = drizzle(pool);
+
+/** Type alias: either the root db or a transaction handle */
+export type DbOrTx = typeof db;
 
 // ─── Auth Helpers (required by _core/sdk.ts and _core/oauth.ts) ──────────────
 
@@ -99,6 +100,52 @@ export async function getOrCreateArenaAccount(
   const result = await db.insert(arenaAccounts).values({
     userId,
     username,
+    inviteCode: username, // legacy fallback
+    capital: STARTING_CAPITAL,
+    seasonPoints: 0,
+    createdAt: now,
+    updatedAt: now,
+  });
+  const insertId = Number(result[0].insertId);
+  return { id: insertId, username, capital: STARTING_CAPITAL, seasonPoints: 0 };
+}
+
+/** Lookup or create arena account by invite code (ID-based login) */
+export async function getOrCreateArenaAccountByCode(
+  inviteCode: string,
+  username: string,
+): Promise<{ id: number; username: string; capital: number; seasonPoints: number }> {
+  // Check if account exists with this invite code
+  const existing = await db
+    .select()
+    .from(arenaAccounts)
+    .where(eq(arenaAccounts.inviteCode, inviteCode))
+    .limit(1);
+
+  if (existing[0]) {
+    return {
+      id: existing[0].id,
+      username: existing[0].username,
+      capital: existing[0].capital,
+      seasonPoints: existing[0].seasonPoints,
+    };
+  }
+
+  // Check username uniqueness
+  const usernameCheck = await db
+    .select()
+    .from(arenaAccounts)
+    .where(eq(arenaAccounts.username, username))
+    .limit(1);
+  if (usernameCheck[0]) {
+    throw new Error("Username already taken");
+  }
+
+  const now = Date.now();
+  const result = await db.insert(arenaAccounts).values({
+    userId: 0,
+    username,
+    inviteCode,
     capital: STARTING_CAPITAL,
     seasonPoints: 0,
     createdAt: now,
@@ -110,8 +157,9 @@ export async function getOrCreateArenaAccount(
 
 export async function getArenaAccountById(
   arenaAccountId: number,
+  dbOrTx: DbOrTx = db,
 ): Promise<{ id: number; userId: number; username: string; capital: number; seasonPoints: number } | null> {
-  const rows = await db
+  const rows = await dbOrTx
     .select()
     .from(arenaAccounts)
     .where(eq(arenaAccounts.id, arenaAccountId))
@@ -164,13 +212,15 @@ export async function getArenaAccountByToken(
   return rows[0] ?? null;
 }
 
-export async function getActiveMatch(): Promise<{
+export async function getActiveMatch(
+  dbOrTx: DbOrTx = db,
+): Promise<{
   id: number;
   matchNumber: number;
   startTime: number;
   endTime: number;
 } | null> {
-  const rows = await db
+  const rows = await dbOrTx
     .select()
     .from(matches)
     .where(eq(matches.status, "active"))
@@ -181,8 +231,13 @@ export async function getActiveMatch(): Promise<{
     : null;
 }
 
-export async function createMatch(matchNumber: number, startTime: number, endTime: number): Promise<number> {
-  const result = await db.insert(matches).values({
+export async function createMatch(
+  matchNumber: number,
+  startTime: number,
+  endTime: number,
+  dbOrTx: DbOrTx = db,
+): Promise<number> {
+  const result = await dbOrTx.insert(matches).values({
     matchNumber,
     matchType: "regular",
     startTime,
@@ -192,12 +247,13 @@ export async function createMatch(matchNumber: number, startTime: number, endTim
   return Number(result[0].insertId);
 }
 
-export async function completeMatch(matchId: number): Promise<void> {
-  await db.update(matches).set({ status: "completed" }).where(eq(matches.id, matchId));
+export async function completeMatch(matchId: number, dbOrTx: DbOrTx = db): Promise<void> {
+  await dbOrTx.update(matches).set({ status: "completed" }).where(eq(matches.id, matchId));
 }
 
 export async function getPosition(
   arenaAccountId: number,
+  dbOrTx: DbOrTx = db,
 ): Promise<{
   id: number;
   arenaAccountId: number;
@@ -209,7 +265,7 @@ export async function getPosition(
   stopLoss: number | null;
   tradeNumber: number;
 } | null> {
-  const rows = await db
+  const rows = await dbOrTx
     .select()
     .from(positions)
     .where(eq(positions.arenaAccountId, arenaAccountId))
@@ -217,7 +273,9 @@ export async function getPosition(
   return rows[0] ?? null;
 }
 
-export async function getAllPositions(): Promise<
+export async function getAllPositions(
+  dbOrTx: DbOrTx = db,
+): Promise<
   Array<{
     id: number;
     arenaAccountId: number;
@@ -230,20 +288,23 @@ export async function getAllPositions(): Promise<
     tradeNumber: number;
   }>
 > {
-  return db.select().from(positions);
+  return dbOrTx.select().from(positions);
 }
 
-export async function insertPosition(input: {
-  arenaAccountId: number;
-  direction: string;
-  size: number;
-  entryPrice: number;
-  openTime: number;
-  takeProfit: number | null;
-  stopLoss: number | null;
-  tradeNumber: number;
-}): Promise<void> {
-  await db.insert(positions).values({
+export async function insertPosition(
+  input: {
+    arenaAccountId: number;
+    direction: string;
+    size: number;
+    entryPrice: number;
+    openTime: number;
+    takeProfit: number | null;
+    stopLoss: number | null;
+    tradeNumber: number;
+  },
+  dbOrTx: DbOrTx = db,
+): Promise<void> {
+  await dbOrTx.insert(positions).values({
     ...input,
     updatedAt: Date.now(),
   });
@@ -260,28 +321,31 @@ export async function updatePositionTpSl(
     .where(eq(positions.arenaAccountId, arenaAccountId));
 }
 
-export async function deletePosition(arenaAccountId: number): Promise<void> {
-  await db.delete(positions).where(eq(positions.arenaAccountId, arenaAccountId));
+export async function deletePosition(arenaAccountId: number, dbOrTx: DbOrTx = db): Promise<void> {
+  await dbOrTx.delete(positions).where(eq(positions.arenaAccountId, arenaAccountId));
 }
 
-export async function insertTrade(input: {
-  id: string;
-  arenaAccountId: number;
-  matchId: number;
-  direction: string;
-  size: number;
-  entryPrice: number;
-  exitPrice: number;
-  pnl: number;
-  pnlPct: number;
-  weightedPnl: number;
-  holdDuration: number;
-  holdWeight: number;
-  closeReason: string;
-  openTime: number;
-  closeTime: number;
-}): Promise<void> {
-  await db.insert(trades).values(input);
+export async function insertTrade(
+  input: {
+    id: string;
+    arenaAccountId: number;
+    matchId: number;
+    direction: string;
+    size: number;
+    entryPrice: number;
+    exitPrice: number;
+    pnl: number;
+    pnlPct: number;
+    weightedPnl: number;
+    holdDuration: number;
+    holdWeight: number;
+    closeReason: string;
+    openTime: number;
+    closeTime: number;
+  },
+  dbOrTx: DbOrTx = db,
+): Promise<void> {
+  await dbOrTx.insert(trades).values(input);
 }
 
 export async function getTradesForUserMatch(
@@ -312,8 +376,12 @@ export async function getTradesForUserMatch(
     .limit(200);
 }
 
-export async function getTradeCountForUserMatch(arenaAccountId: number, matchId: number): Promise<number> {
-  const rows = await db
+export async function getTradeCountForUserMatch(
+  arenaAccountId: number,
+  matchId: number,
+  dbOrTx: DbOrTx = db,
+): Promise<number> {
+  const rows = await dbOrTx
     .select({ count: sql<number>`COUNT(*)` })
     .from(trades)
     .where(and(eq(trades.arenaAccountId, arenaAccountId), eq(trades.matchId, matchId)));
@@ -363,8 +431,12 @@ export async function getAllArenaAccountsWithCapital(): Promise<
   return db.select().from(arenaAccounts);
 }
 
-export async function updateSeasonPoints(arenaAccountId: number, additionalPoints: number): Promise<void> {
-  await db
+export async function updateSeasonPoints(
+  arenaAccountId: number,
+  additionalPoints: number,
+  dbOrTx: DbOrTx = db,
+): Promise<void> {
+  await dbOrTx
     .update(arenaAccounts)
     .set({
       seasonPoints: sql`${arenaAccounts.seasonPoints} + ${additionalPoints}`,
@@ -453,7 +525,7 @@ export async function getDirectionConsistency(arenaAccountId: number, matchId: n
     .orderBy(desc(trades.closeTime))
     .limit(30);
   if (rows.length === 0) return 0;
-  const longCount = rows.filter((r) => r.direction === "long").length;
+  const longCount = rows.filter((r: { direction: string }) => r.direction === "long").length;
   const shortCount = rows.length - longCount;
   return Math.round((Math.max(longCount, shortCount) / rows.length) * 100) / 100;
 }
@@ -464,4 +536,90 @@ export async function ensureActiveMatch(): Promise<void> {
     const now = Date.now();
     await createMatch(1, now, now + MATCH_DURATION_MS);
   }
+}
+
+// ─── Prediction Helpers ──────────────────────────────────────────────────────
+
+export async function insertPrediction(input: {
+  arenaAccountId: number;
+  matchId: number;
+  roundKey: string;
+  direction: string;
+  confidence: number;
+  priceAtPrediction: number;
+  actualPositionDirection: string | null;
+  submittedAt: number;
+}): Promise<void> {
+  await db.insert(predictions).values({
+    ...input,
+    status: "pending",
+  });
+}
+
+export async function getPredictionForRound(
+  arenaAccountId: number,
+  roundKey: string,
+): Promise<{ id: number; direction: string } | null> {
+  const rows = await db
+    .select({ id: predictions.id, direction: predictions.direction })
+    .from(predictions)
+    .where(and(eq(predictions.arenaAccountId, arenaAccountId), eq(predictions.roundKey, roundKey)))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getPendingPredictionsForRound(
+  roundKey: string,
+): Promise<Array<{ id: number; arenaAccountId: number; direction: string; confidence: number; priceAtPrediction: number }>> {
+  return db
+    .select({
+      id: predictions.id,
+      arenaAccountId: predictions.arenaAccountId,
+      direction: predictions.direction,
+      confidence: predictions.confidence,
+      priceAtPrediction: predictions.priceAtPrediction,
+    })
+    .from(predictions)
+    .where(and(eq(predictions.roundKey, roundKey), eq(predictions.status, "pending")));
+}
+
+export async function resolvePrediction(
+  predictionId: number,
+  priceAtResolution: number,
+  correct: boolean,
+): Promise<void> {
+  await db
+    .update(predictions)
+    .set({
+      priceAtResolution,
+      correct: correct ? 1 : 0,
+      resolvedAt: Date.now(),
+      status: "resolved",
+    })
+    .where(eq(predictions.id, predictionId));
+}
+
+export async function getPredictionStats(
+  arenaAccountId: number,
+  matchId: number,
+): Promise<{ total: number; correct: number; pending: number }> {
+  const rows = await db
+    .select({
+      status: predictions.status,
+      correct: predictions.correct,
+      count: sql<number>`COUNT(*)`,
+    })
+    .from(predictions)
+    .where(and(eq(predictions.arenaAccountId, arenaAccountId), eq(predictions.matchId, matchId)))
+    .groupBy(predictions.status, predictions.correct);
+
+  let total = 0,
+    correctCount = 0,
+    pending = 0;
+  for (const row of rows) {
+    total += row.count;
+    if (row.status === "pending") pending += row.count;
+    if (row.correct === 1) correctCount += row.count;
+  }
+  return { total, correct: correctCount, pending };
 }

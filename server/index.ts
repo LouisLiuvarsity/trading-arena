@@ -1,18 +1,14 @@
 /**
  * server/index.ts — Arena REST API routes
- *
- * These routes are registered on the Express app created by _core/index.ts.
- * The old standalone server has been replaced by the template's _core/index.ts boot.
- * This file exports a `registerArenaRoutes` function that mounts all arena endpoints.
  */
 
 import type { Express, Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { ArenaEngine } from "./engine";
 import { MarketService } from "./market";
-import * as dbHelpers from "./db";
 
 const loginSchema = z.object({
+  inviteCode: z.string().trim().min(4).max(32),
   username: z.string().trim().min(2).max(20),
 });
 
@@ -38,6 +34,11 @@ const eventSchema = z.object({
   source: z.string().trim().max(32).optional(),
 });
 
+const predictionSchema = z.object({
+  direction: z.enum(["up", "down"]),
+  confidence: z.number().int().min(1).max(5).default(3),
+});
+
 function getAuthToken(req: Request): string | null {
   const header = req.headers.authorization;
   if (!header) return null;
@@ -56,7 +57,7 @@ export async function registerArenaRoutes(app: Express) {
   await engine.init();
   engineInstance = engine;
 
-  // Tick every second for TP/SL and match rotation
+  // Tick every second for TP/SL, match rotation, and prediction resolution
   setInterval(async () => {
     try {
       await engine.tick();
@@ -70,25 +71,15 @@ export async function registerArenaRoutes(app: Express) {
     res.json({ ok: true, ts: Date.now() });
   });
 
-  // Arena login — creates an arena account linked to the Manus OAuth user
+  // Arena login — ID-based with invite code + username
   app.post("/api/auth/login", async (req: Request, res: Response) => {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ error: "Invalid username" });
+      res.status(400).json({ error: "Invalid invite code or username" });
       return;
     }
     try {
-      // Get the Manus OAuth user from the session cookie
-      const { sdk } = await import("./_core/sdk");
-      let authUser;
-      try {
-        authUser = await sdk.authenticateRequest(req);
-      } catch {
-        // Fall back: allow anonymous arena login for now
-        authUser = null;
-      }
-      const authUserId = authUser?.id ?? 0;
-      const result = await engine.login(parsed.data.username, authUserId);
+      const result = await engine.login(parsed.data.inviteCode, parsed.data.username);
       res.json({ token: result.token, user: { id: result.account.id, username: result.account.username } });
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
@@ -115,12 +106,10 @@ export async function registerArenaRoutes(app: Express) {
 
   // Arena auth middleware — checks Bearer token for arena-specific endpoints
   const arenaAuth = async (req: Request, res: Response, next: NextFunction) => {
-    // Skip for public and auth endpoints
     if (req.path.startsWith("/api/auth/") || req.path.startsWith("/api/public/") || req.path === "/api/health") {
       next();
       return;
     }
-    // Only apply to /api/arena/* routes
     if (!req.path.startsWith("/api/arena/")) {
       next();
       return;
@@ -138,7 +127,8 @@ export async function registerArenaRoutes(app: Express) {
 
   app.use(arenaAuth);
 
-  // Arena-specific endpoints (require arena token)
+  // ─── Arena endpoints (require arena token) ─────────────────────────────────
+
   app.get("/api/arena/state", async (req: Request, res: Response) => {
     try {
       const arenaAccountId = (req as any).arenaAccountId as number;
@@ -227,7 +217,24 @@ export async function registerArenaRoutes(app: Express) {
     }
   });
 
-  // Legacy API compatibility — map old /api/state etc. to /api/arena/*
+  app.post("/api/arena/prediction", async (req: Request, res: Response) => {
+    const parsed = predictionSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid prediction payload" });
+      return;
+    }
+    try {
+      const arenaAccountId = (req as any).arenaAccountId as number;
+      await engine.submitPrediction(arenaAccountId, parsed.data.direction, parsed.data.confidence);
+      await engine.recordBehaviorEvent(arenaAccountId, "prediction_submit", parsed.data);
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+    }
+  });
+
+  // ─── Legacy API compatibility ──────────────────────────────────────────────
+
   app.get("/api/state", async (req: Request, res: Response) => {
     const token = getAuthToken(req);
     const account = await engine.getAccountByToken(token);
@@ -340,6 +347,27 @@ export async function registerArenaRoutes(app: Express) {
         parsed.data.payload,
         parsed.data.source ?? "client",
       );
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+    }
+  });
+
+  app.post("/api/prediction", async (req: Request, res: Response) => {
+    const token = getAuthToken(req);
+    const account = await engine.getAccountByToken(token);
+    if (!account) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    const parsed = predictionSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid prediction payload" });
+      return;
+    }
+    try {
+      await engine.submitPrediction(account.id, parsed.data.direction, parsed.data.confidence);
+      await engine.recordBehaviorEvent(account.id, "prediction_submit", parsed.data);
       res.json({ ok: true });
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
