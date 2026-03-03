@@ -61,3 +61,6 @@
 
 ## Fix Slider Thumb Overlapping USDT/SOL Toggle
 - [x] Fix vertical overlap between Slider thumb and USDT/SOL toggle button in TradingPanel
+
+## Hide Number Input Spinners
+- [x] Hide browser default up/down arrows on number inputs in TradingPanel
