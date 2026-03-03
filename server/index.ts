@@ -12,6 +12,10 @@ const loginSchema = z.object({
   username: z.string().trim().min(2).max(20),
 });
 
+const quickLoginSchema = z.object({
+  username: z.string().trim().min(2).max(20),
+});
+
 const openSchema = z.object({
   direction: z.enum(["long", "short"]),
   size: z.number().positive(),
@@ -80,6 +84,21 @@ export async function registerArenaRoutes(app: Express) {
     }
     try {
       const result = await engine.login(parsed.data.inviteCode, parsed.data.username);
+      res.json({ token: result.token, user: { id: result.account.id, username: result.account.username } });
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+    }
+  });
+
+  // Quick login — returning user by username only
+  app.post("/api/auth/quick-login", async (req: Request, res: Response) => {
+    const parsed = quickLoginSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid username" });
+      return;
+    }
+    try {
+      const result = await engine.loginByUsername(parsed.data.username);
       res.json({ token: result.token, user: { id: result.account.id, username: result.account.username } });
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });

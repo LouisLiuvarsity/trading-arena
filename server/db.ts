@@ -110,7 +110,7 @@ export async function getOrCreateArenaAccount(
   return { id: insertId, username, capital: STARTING_CAPITAL, seasonPoints: 0 };
 }
 
-/** Lookup or create arena account by invite code (ID-based login) */
+/** Lookup or create arena account by invite code (first-time registration) */
 export async function getOrCreateArenaAccountByCode(
   inviteCode: string,
   username: string,
@@ -153,6 +153,24 @@ export async function getOrCreateArenaAccountByCode(
   });
   const insertId = Number(result[0].insertId);
   return { id: insertId, username, capital: STARTING_CAPITAL, seasonPoints: 0 };
+}
+
+/** Login existing account by username (returning users) */
+export async function getArenaAccountByUsernameForLogin(
+  username: string,
+): Promise<{ id: number; username: string; capital: number; seasonPoints: number } | null> {
+  const rows = await db
+    .select()
+    .from(arenaAccounts)
+    .where(eq(arenaAccounts.username, username))
+    .limit(1);
+  if (!rows[0]) return null;
+  return {
+    id: rows[0].id,
+    username: rows[0].username,
+    capital: rows[0].capital,
+    seasonPoints: rows[0].seasonPoints,
+  };
 }
 
 export async function getArenaAccountById(

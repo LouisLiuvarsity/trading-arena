@@ -103,6 +103,20 @@ export class ArenaEngine {
     return { token, account };
   }
 
+  async loginByUsername(usernameInput: string): Promise<{ token: string; account: ArenaAccount }> {
+    const username = usernameInput.trim();
+    if (!username || username.length < 2 || username.length > 20) {
+      throw new Error("Invalid username");
+    }
+    const account = await dbHelpers.getArenaAccountByUsernameForLogin(username);
+    if (!account) {
+      throw new Error("Account not found. Please register with an invite code first.");
+    }
+    const token = crypto.randomBytes(24).toString("hex");
+    await dbHelpers.createArenaSession(account.id, token);
+    return { token, account };
+  }
+
   async getAccountByToken(token: string | null | undefined): Promise<ArenaAccount | null> {
     if (!token) return null;
     const account = await dbHelpers.getArenaAccountByToken(token);

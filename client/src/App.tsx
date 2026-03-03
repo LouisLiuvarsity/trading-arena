@@ -7,7 +7,7 @@ import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import RulesPage from "./pages/RulesPage";
 import TradingPage from "./pages/TradingPage";
-import { login, apiRequest } from "./lib/api";
+import { login, quickLogin, apiRequest } from "./lib/api";
 
 type AppScreen = 'landing' | 'login' | 'rules' | 'trading';
 
@@ -53,6 +53,15 @@ function App() {
     setScreen('trading');
   }, []);
 
+  const handleQuickLogin = useCallback(async (name: string) => {
+    const result = await quickLogin(name);
+    setUsername(result.user.username);
+    setAuthToken(result.token);
+    localStorage.setItem("arena_username", result.user.username);
+    localStorage.setItem("arena_token", result.token);
+    setScreen('trading');
+  }, []);
+
   const handleLogout = useCallback(() => {
     localStorage.removeItem("arena_token");
     setAuthToken(null);
@@ -81,7 +90,7 @@ function App() {
         <TooltipProvider>
           <Toaster theme="dark" position="top-right" toastOptions={{ style: { background: '#1C2030', border: '1px solid rgba(255,255,255,0.1)', color: '#D1D4DC' } }} />
           {screen === 'landing' && <LandingPage onEnterArena={handleEnterFromLanding} />}
-          {screen === 'login' && <LoginPage onLogin={handleLogin} />}
+          {screen === 'login' && <LoginPage onLogin={handleLogin} onQuickLogin={handleQuickLogin} />}
           {screen === 'rules' && (
             <RulesPage
               username={username}

@@ -41,3 +41,10 @@ export async function login(inviteCode: string, username: string) {
     body: { inviteCode, username },
   });
 }
+
+export async function quickLogin(username: string) {
+  return apiRequest<{ token: string; user: { id: number; username: string } }>("/api/auth/quick-login", {
+    method: "POST",
+    body: { username },
+  });
+}
