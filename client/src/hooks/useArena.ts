@@ -143,7 +143,7 @@ export function useArena(token: string | null, onAuthError?: () => void) {
         token,
         body: { direction, size, tp: tp ?? null, sl: sl ?? null },
       });
-      await refresh();
+      void refresh();
     },
     [token, refresh],
   );
@@ -154,7 +154,7 @@ export function useArena(token: string | null, onAuthError?: () => void) {
       method: "POST",
       token,
     });
-    await refresh();
+    void refresh();
     return result.tradeId;
   }, [token, refresh]);
 
@@ -166,7 +166,7 @@ export function useArena(token: string | null, onAuthError?: () => void) {
         token,
         body: { tp, sl },
       });
-      await refresh();
+      void refresh();
     },
     [token, refresh],
   );
@@ -179,7 +179,7 @@ export function useArena(token: string | null, onAuthError?: () => void) {
         token,
         body: { message },
       });
-      await refresh();
+      void refresh();
     },
     [token, refresh],
   );
@@ -208,7 +208,7 @@ export function useArena(token: string | null, onAuthError?: () => void) {
         token,
         body: { direction, confidence },
       });
-      await refresh();
+      void refresh();
     },
     [token, refresh],
   );
