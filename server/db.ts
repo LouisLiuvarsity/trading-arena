@@ -38,8 +38,10 @@ const pool = mysql.createPool({
 
 export const db = drizzle(pool);
 
-/** Type alias: either the root db or a transaction handle */
-export type DbOrTx = typeof db;
+/** Type alias: either the root db or a transaction handle.
+ *  Drizzle transaction objects have the same query API as db, so we use `any`. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DbOrTx = any;
 
 // ─── Auth Helpers (required by _core/sdk.ts and _core/oauth.ts) ──────────────
 

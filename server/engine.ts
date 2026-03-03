@@ -182,7 +182,7 @@ export class ArenaEngine {
     }
 
     // Use transaction to prevent race condition on position creation
-    await db.transaction(async (tx: dbHelpers.DbOrTx) => {
+    await db.transaction(async (tx) => {
       const existingPosition = await dbHelpers.getPosition(arenaAccountId, tx);
       if (existingPosition) {
         throw new Error("Only one position is allowed");
@@ -630,7 +630,7 @@ export class ArenaEngine {
     const tradeId = `trade-${nanoid(12)}`;
 
     // Atomic: insert trade + delete position in one transaction
-    await db.transaction(async (tx: dbHelpers.DbOrTx) => {
+    await db.transaction(async (tx) => {
       // Re-verify position still exists (prevents double-close)
       const currentPos = await dbHelpers.getPosition(pos.arenaAccountId, tx);
       if (!currentPos) {
@@ -745,7 +745,7 @@ export class ArenaEngine {
 
       // Award season points + complete + create new match in one transaction
       const finalLeaderboard = await this.buildLeaderboard(recheck.id);
-      await db.transaction(async (tx: dbHelpers.DbOrTx) => {
+      await db.transaction(async (tx) => {
         for (const row of finalLeaderboard) {
           const points = getPointsForRank(row.rank);
           if (points > 0) {
