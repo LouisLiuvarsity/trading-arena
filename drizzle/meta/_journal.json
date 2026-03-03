@@ -15,6 +15,13 @@
       "when": 1772522799132,
       "tag": "0001_blushing_riptide",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1772547202099,
+      "tag": "0002_condemned_nova",
+      "breakpoints": true
     }
   ]
 }

@@ -25,4 +25,9 @@
 - [x] Fix all TypeScript errors
 - [x] Write vitest tests for key server functionality
 - [x] Test full integration between frontend and backend
-- [ ] Save checkpoint (in progress)
+- [x] Save checkpoint
+
+## Mobile Portrait Layout Redesign
+- [x] Audit current mobile layout issues across all pages
+- [x] Write mobile layout redesign proposal document (design only, no code changes)
+- [x] Deliver proposal to user
