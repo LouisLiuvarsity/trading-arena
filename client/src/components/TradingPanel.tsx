@@ -42,6 +42,8 @@ function TradingPanel({
   account, position, currentPrice, onOpenPosition, onClosePosition, getNextWeightThreshold, onSetTpSl, isStale
 }: Props) {
   const [positionSize, setPositionSize] = useState(250);
+  const [sizeUnit, setSizeUnit] = useState<'USDT' | 'SOL'>('USDT');
+  const [sizeInput, setSizeInput] = useState('250');
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [holdSeconds, setHoldSeconds] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -115,6 +117,46 @@ function TradingPanel({
     onSetTpSl(tp, sl);
     setEditingTpSl(false);
   }, [editTp, editSl, position, currentPrice, onSetTpSl]);
+
+  // Sync input ↔ slider ↔ unit conversion
+  const maxEquity = Math.max(10, Math.floor(account.equity));
+
+  const handleSizeInputChange = useCallback((raw: string) => {
+    setSizeInput(raw);
+    const v = parseFloat(raw);
+    if (!Number.isFinite(v) || v <= 0) return;
+    const usdt = sizeUnit === 'SOL' && currentPrice > 0 ? Math.round(v * currentPrice) : Math.round(v);
+    setPositionSize(Math.max(10, Math.min(usdt, maxEquity)));
+  }, [sizeUnit, currentPrice, maxEquity]);
+
+  const handleSliderChange = useCallback((v: number) => {
+    setPositionSize(v);
+    if (sizeUnit === 'SOL' && currentPrice > 0) {
+      setSizeInput((v / currentPrice).toFixed(4));
+    } else {
+      setSizeInput(String(v));
+    }
+  }, [sizeUnit, currentPrice]);
+
+  const handlePctClick = useCallback((pct: number) => {
+    const usdt = Math.max(10, Math.floor(account.equity * pct / 100));
+    setPositionSize(usdt);
+    if (sizeUnit === 'SOL' && currentPrice > 0) {
+      setSizeInput((usdt / currentPrice).toFixed(4));
+    } else {
+      setSizeInput(String(usdt));
+    }
+  }, [account.equity, sizeUnit, currentPrice]);
+
+  const handleToggleUnit = useCallback(() => {
+    const next = sizeUnit === 'USDT' ? 'SOL' : 'USDT';
+    setSizeUnit(next);
+    if (next === 'SOL' && currentPrice > 0) {
+      setSizeInput((positionSize / currentPrice).toFixed(4));
+    } else {
+      setSizeInput(String(positionSize));
+    }
+  }, [sizeUnit, currentPrice, positionSize]);
 
   const nextThreshold = position ? getNextWeightThreshold(holdSeconds) : null;
   const priceStep = getPriceStep(currentPrice);
@@ -263,43 +305,71 @@ function TradingPanel({
         </div>
       </div>
 
-      {/* Position Size + Leverage — BIGGER */}
-      <div className="flex items-center gap-4 px-5 border-r border-[rgba(255,255,255,0.06)] min-w-[320px]">
-        <div className="flex-1 space-y-2">
-          <div className="flex justify-between items-baseline">
-            <span className="text-xs text-[#848E9C]">
-              Size
-              <span className="ml-1.5 text-[#F0B90B] font-bold text-sm">×{account.tierLeverage}</span>
-            </span>
-            <div className="font-mono text-base">
-              <span className="text-[#D1D4DC] font-semibold">{positionSize}</span>
-              <span className="text-[#848E9C] mx-1">→</span>
-              <span className="text-[#F0B90B] font-bold">{notionalSize} U</span>
+      {/* Position Size + Leverage */}
+      <div className="flex items-center gap-4 px-5 border-r border-[rgba(255,255,255,0.06)] min-w-[340px]">
+        <div className="flex-1 space-y-1.5">
+          {/* Row 1: Input + Unit toggle + Notional */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <input
+                type="number"
+                value={sizeInput}
+                onChange={e => handleSizeInputChange(e.target.value)}
+                onBlur={() => {
+                  const v = parseFloat(sizeInput);
+                  if (!Number.isFinite(v) || v <= 0) {
+                    setSizeInput(sizeUnit === 'SOL' && currentPrice > 0 ? (positionSize / currentPrice).toFixed(4) : String(positionSize));
+                  }
+                }}
+                min={0}
+                step={sizeUnit === 'SOL' ? 0.01 : 10}
+                className="w-full bg-[#0B0E11] border border-[#2B3139] rounded px-2.5 py-1.5 pr-16 text-sm font-mono text-[#D1D4DC] placeholder:text-[#848E9C]/30 focus:border-[#F0B90B] focus:outline-none tabular-nums"
+              />
+              <button
+                onClick={handleToggleUnit}
+                className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 transition-colors text-xs font-medium"
+              >
+                <span className={sizeUnit === 'USDT' ? 'text-[#F0B90B]' : 'text-[#848E9C]'}>USDT</span>
+                <span className="text-[#848E9C]/40">/</span>
+                <span className={sizeUnit === 'SOL' ? 'text-[#F0B90B]' : 'text-[#848E9C]'}>SOL</span>
+              </button>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="font-mono text-xs">
+                <span className="text-[#848E9C]">×{account.tierLeverage}</span>
+                <span className="text-[#848E9C] mx-0.5">=</span>
+                <span className="text-[#F0B90B] font-bold">{notionalSize} U</span>
+              </div>
+              {sizeUnit === 'SOL' && currentPrice > 0 && (
+                <div className="text-[10px] text-[#848E9C]/60 font-mono">{positionSize} USDT</div>
+              )}
             </div>
           </div>
+          {/* Row 2: Slider */}
           <Slider
             value={[positionSize]}
-            onValueChange={([v]) => setPositionSize(v)}
+            onValueChange={([v]) => handleSliderChange(v)}
             min={10}
-            max={Math.max(10, Math.floor(account.equity))}
+            max={maxEquity}
             step={10}
-            className="[&_[role=slider]]:bg-[#F0B90B] [&_[role=slider]]:border-[#F0B90B] [&_[role=slider]]:h-4 [&_[role=slider]]:w-4 [&_[role=slider]]:shadow-[0_0_8px_rgba(240,185,11,0.4)]"
+            className="[&_[role=slider]]:bg-[#F0B90B] [&_[role=slider]]:border-[#F0B90B] [&_[role=slider]]:h-3.5 [&_[role=slider]]:w-3.5 [&_[role=slider]]:shadow-[0_0_8px_rgba(240,185,11,0.4)]"
           />
+          {/* Row 3: Pct buttons */}
           <div className="flex gap-1.5">
             {[25, 50, 75, 100].map(pct => (
               <button key={pct}
-                onClick={() => setPositionSize(Math.max(10, Math.floor(account.equity * pct / 100)))}
-                className="flex-1 py-1 bg-white/5 rounded text-xs text-[#D1D4DC] hover:bg-white/10 hover:text-[#F0B90B] transition-colors font-medium"
+                onClick={() => handlePctClick(pct)}
+                className="flex-1 py-0.5 bg-white/5 rounded text-[11px] text-[#D1D4DC] hover:bg-white/10 hover:text-[#F0B90B] transition-colors font-medium"
               >
                 {pct}%
               </button>
             ))}
           </div>
         </div>
-        {/* Leverage badge — bigger */}
+        {/* Leverage badge */}
         <div className="flex flex-col items-center shrink-0">
-          <div className="px-3 py-2 rounded-lg border-2 border-[#F0B90B]/40 bg-[#F0B90B]/10">
-            <div className="text-[#F0B90B] text-lg font-bold font-mono leading-none">{account.tierLeverage}x</div>
+          <div className="px-2.5 py-1.5 rounded-lg border-2 border-[#F0B90B]/40 bg-[#F0B90B]/10">
+            <div className="text-[#F0B90B] text-base font-bold font-mono leading-none">{account.tierLeverage}x</div>
           </div>
           <div className="text-[9px] text-[#848E9C] mt-1 capitalize font-medium">{account.rankTier}</div>
         </div>

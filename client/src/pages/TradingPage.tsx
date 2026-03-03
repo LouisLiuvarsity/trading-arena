@@ -83,7 +83,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
   // Resizable panels
   const orderBookResize = useResizable(200, 120, 360, 'horizontal');
   const rightPanelResize = useResizable(320, 220, 500, 'horizontal');
-  const tradingPanelResize = useResizable(110, 80, 200, 'vertical');
+
 
   const {
     loading,
@@ -299,9 +299,8 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
         </div>
       </div>
 
-      {/* Trading panel resize handle + panel */}
-      <ResizeHandle direction="vertical" onMouseDown={tradingPanelResize.onMouseDown} />
-      <div style={{ height: tradingPanelResize.size }} className="shrink-0">
+      {/* Trading panel — fixed height */}
+      <div className="h-[110px] shrink-0">
         <TradingPanel
           account={account}
           position={position}
