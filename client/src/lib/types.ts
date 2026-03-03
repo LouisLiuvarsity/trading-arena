@@ -76,6 +76,7 @@ export interface CompletedTrade {
   exitPrice: number;
   pnl: number;
   pnlPct: number;
+  fee: number;
   weightedPnl: number;
   holdDuration: number;
   holdDurationWeight: number;

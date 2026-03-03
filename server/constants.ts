@@ -4,6 +4,7 @@ export const MAX_TRADES_PER_MATCH = 40;
 export const MIN_TRADES_FOR_PRIZE = 5;
 export const MATCH_DURATION_MS = 24 * 60 * 60 * 1000;
 export const CLOSE_ONLY_SECONDS = 30 * 60;
+export const FEE_RATE = 0.0005; // 0.05% per side
 
 export const HOLD_DURATION_WEIGHTS = [
   { minSeconds: 0, maxSeconds: 60, weight: 0.2 },

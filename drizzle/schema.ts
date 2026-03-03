@@ -79,6 +79,7 @@ export const trades = mysqlTable("trades", {
   exitPrice: double("exitPrice").notNull(),
   pnl: double("pnl").notNull(),
   pnlPct: double("pnlPct").notNull(),
+  fee: double("fee").notNull().default(0),
   weightedPnl: double("weightedPnl").notNull(),
   holdDuration: double("holdDuration").notNull(),
   holdWeight: double("holdWeight").notNull(),

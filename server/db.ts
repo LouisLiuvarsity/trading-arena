@@ -356,6 +356,7 @@ export async function insertTrade(
     exitPrice: number;
     pnl: number;
     pnlPct: number;
+    fee: number;
     weightedPnl: number;
     holdDuration: number;
     holdWeight: number;
@@ -380,6 +381,7 @@ export async function getTradesForUserMatch(
     exitPrice: number;
     pnl: number;
     pnlPct: number;
+    fee: number;
     weightedPnl: number;
     holdDuration: number;
     holdWeight: number;

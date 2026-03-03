@@ -104,6 +104,7 @@ export function useTrading(currentPrice: number) {
     const pnlPct = direction * (price - pos.entryPrice) / pos.entryPrice * 100 * leverage;
     const weightedPnl = pnl * weight;
 
+    const fee = Math.round(pos.size * 0.001 * 100) / 100; // 0.05% per side
     const trade: CompletedTrade = {
       id: `trade-${Date.now()}`,
       direction: pos.direction,
@@ -112,6 +113,7 @@ export function useTrading(currentPrice: number) {
       exitPrice: price,
       pnl: Math.round(pnl * 100) / 100,
       pnlPct: Math.round(pnlPct * 100) / 100,
+      fee,
       weightedPnl: Math.round(weightedPnl * 100) / 100,
       holdDuration: holdSeconds,
       holdDurationWeight: weight,

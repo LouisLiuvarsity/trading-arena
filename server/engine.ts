@@ -4,6 +4,7 @@ import * as dbHelpers from "./db";
 import { db } from "./db";
 import {
   CLOSE_ONLY_SECONDS,
+  FEE_RATE,
   MATCH_DURATION_MS,
   MAX_TRADES_PER_MATCH,
   MIN_TRADES_FOR_PRIZE,
@@ -392,6 +393,7 @@ export class ArenaEngine {
         exitPrice: row.exitPrice,
         pnl: row.pnl,
         pnlPct: row.pnlPct,
+        fee: row.fee ?? 0,
         weightedPnl: row.weightedPnl,
         holdDuration: row.holdDuration,
         holdDurationWeight: row.holdWeight,
@@ -600,8 +602,11 @@ export class ArenaEngine {
     const weight = getHoldWeight(holdSeconds);
     const sign = pos.direction === "long" ? 1 : -1;
     // pos.size already includes leverage (applied at open time)
-    const pnl = sign * ((price - pos.entryPrice) / pos.entryPrice) * pos.size;
-    const pnlPct = sign * ((price - pos.entryPrice) / pos.entryPrice) * 100;
+    const rawPnl = sign * ((price - pos.entryPrice) / pos.entryPrice) * pos.size;
+    // Estimated fee: open side + close side (both 0.05%)
+    const estFee = round2(pos.size * FEE_RATE + pos.size * (price / pos.entryPrice) * FEE_RATE);
+    const pnl = rawPnl - estFee;
+    const pnlPct = (pnl / pos.size) * 100;
     return {
       direction: pos.direction,
       size: pos.size,
@@ -609,6 +614,7 @@ export class ArenaEngine {
       openTime: pos.openTime,
       unrealizedPnl: round2(pnl),
       unrealizedPnlPct: round2(pnlPct),
+      unrealizedFee: estFee,
       holdDurationWeight: weight,
       tradeNumber: pos.tradeNumber,
       takeProfit: pos.takeProfit,
@@ -627,8 +633,11 @@ export class ArenaEngine {
     const weight = getHoldWeight(holdDuration);
     const sign = pos.direction === "long" ? 1 : -1;
     // pos.size already includes leverage (applied at open time)
-    const pnl = sign * ((closePrice - pos.entryPrice) / pos.entryPrice) * pos.size;
-    const pnlPct = sign * ((closePrice - pos.entryPrice) / pos.entryPrice) * 100;
+    const rawPnl = sign * ((closePrice - pos.entryPrice) / pos.entryPrice) * pos.size;
+    // Fee: 0.05% per side (open + close)
+    const fee = round2(pos.size * FEE_RATE + pos.size * (closePrice / pos.entryPrice) * FEE_RATE);
+    const pnl = rawPnl - fee;
+    const pnlPct = (pnl / pos.size) * 100;
     const weighted = pnl * weight;
 
     const tradeId = `trade-${nanoid(12)}`;
@@ -652,6 +661,7 @@ export class ArenaEngine {
           exitPrice: closePrice,
           pnl: round2(pnl),
           pnlPct: round2(pnlPct),
+          fee,
           weightedPnl: round2(weighted),
           holdDuration: round2(holdDuration),
           holdWeight: weight,
@@ -791,8 +801,10 @@ export class ArenaEngine {
         const hold = Math.max(0, (Date.now() - position.openTime) / 1000);
         const w = getHoldWeight(hold);
         // position.size already includes leverage (applied at open time)
-        const unrealized =
+        const rawUnrealized =
           sign * ((lastPrice - position.entryPrice) / position.entryPrice) * position.size;
+        const estFee = position.size * FEE_RATE + position.size * (lastPrice / position.entryPrice) * FEE_RATE;
+        const unrealized = rawUnrealized - estFee;
         pnl += unrealized;
         weighted += unrealized * w;
         tradesUsed = Math.max(base.trades, position.tradeNumber);
@@ -814,7 +826,7 @@ export class ArenaEngine {
     });
 
     rows.sort((a, b) => {
-      if (b.weightedPnl !== a.weightedPnl) return b.weightedPnl - a.weightedPnl;
+      if (b.pnlPct !== a.pnlPct) return b.pnlPct - a.pnlPct;
       if (b.pnl !== a.pnl) return b.pnl - a.pnl;
       return a.arenaAccountId - b.arenaAccountId;
     });
