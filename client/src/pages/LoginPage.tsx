@@ -7,21 +7,25 @@ import { useState } from 'react';
 import { Trophy, Zap, TrendingUp, Shield, ChevronRight } from 'lucide-react';
 
 interface LoginPageProps {
-  onLogin: (username: string) => void;
+  onLogin: (username: string) => Promise<void>;
 }
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
   const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim()) return;
     setIsLoading(true);
-    // Simulate login delay
-    setTimeout(() => {
-      onLogin(username.trim());
-    }, 800);
+    setError(null);
+    try {
+      await onLogin(username.trim());
+    } catch (err) {
+      setError((err as Error).message);
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -111,6 +115,10 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 </>
               )}
             </button>
+
+            {error && (
+              <p className="mt-3 text-[#F6465D] text-xs text-center">{error}</p>
+            )}
           </form>
 
           {/* Quick join hint */}

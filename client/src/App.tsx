@@ -7,19 +7,28 @@ import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import RulesPage from "./pages/RulesPage";
 import TradingPage from "./pages/TradingPage";
+import { login } from "./lib/api";
 
 type AppScreen = 'landing' | 'login' | 'rules' | 'trading';
 
 function App() {
-  const [screen, setScreen] = useState<AppScreen>('landing');
-  const [username, setUsername] = useState('');
+  const [screen, setScreen] = useState<AppScreen>(() => {
+    const token = localStorage.getItem("arena_token");
+    return token ? "trading" : "landing";
+  });
+  const [username, setUsername] = useState(() => localStorage.getItem("arena_username") ?? "");
+  const [authToken, setAuthToken] = useState<string | null>(() => localStorage.getItem("arena_token"));
 
   const handleEnterFromLanding = useCallback(() => {
     setScreen('login');
   }, []);
 
-  const handleLogin = useCallback((name: string) => {
-    setUsername(name);
+  const handleLogin = useCallback(async (name: string) => {
+    const result = await login(name);
+    setUsername(result.user.username);
+    setAuthToken(result.token);
+    localStorage.setItem("arena_username", result.user.username);
+    localStorage.setItem("arena_token", result.token);
     setScreen('rules');
   }, []);
 
@@ -46,7 +55,7 @@ function App() {
               onSkipRules={handleSkipRules}
             />
           )}
-          {screen === 'trading' && <TradingPage />}
+          {screen === 'trading' && <TradingPage authToken={authToken} />}
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

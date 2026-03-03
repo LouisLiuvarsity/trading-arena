@@ -4,7 +4,7 @@
 // Sections: Hero, Rules, Prize, Leaderboard, Quant Bot, CTA
 // ============================================================
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, useInView } from 'framer-motion';
 import {
   Trophy, Zap, Clock, TrendingUp, Bot, ChevronRight,
@@ -27,6 +27,7 @@ import {
   POINTS_DECAY_FACTOR,
 } from '@/lib/types';
 import type { AllTimeLeaderboardEntry, QuantBotStats } from '@/lib/types';
+import { apiRequest } from '@/lib/api';
 
 interface LandingPageProps {
   onEnterArena: () => void;
@@ -152,11 +153,33 @@ function EquityChart({ data }: { data: Array<{ time: number; equity: number }> }
 
 // ─── Main Landing Page ────────────────────────────────────────
 export default function LandingPage({ onEnterArena }: LandingPageProps) {
-  const [leaderboard] = useState(() => generateLeaderboard(285));
+  const [leaderboard, setLeaderboard] = useState(() => generateLeaderboard(285));
   const [allTimeLeaderboard] = useState(() => generateAllTimeLeaderboard());
   const [botStats] = useState(() => generateQuantBotStats());
   const [activeLeaderboard, setActiveLeaderboard] = useState<'current' | 'alltime'>('current');
   const [activePrize, setActivePrize] = useState<'regular' | 'grand'>('regular');
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchLeaderboard = async () => {
+      try {
+        const data = await apiRequest<any[]>('/api/public/leaderboard?limit=50');
+        if (!cancelled && Array.isArray(data) && data.length > 0) {
+          setLeaderboard(data.map((row, idx) => ({ ...row, isYou: idx === 0 ? false : row.isYou })));
+        }
+      } catch {
+        // Keep fallback mock leaderboard if API is unavailable.
+      }
+    };
+    void fetchLeaderboard();
+    const timer = setInterval(() => {
+      void fetchLeaderboard();
+    }, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#0B0E11] text-white overflow-x-hidden">
