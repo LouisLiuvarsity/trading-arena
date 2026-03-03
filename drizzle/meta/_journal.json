@@ -22,6 +22,13 @@
       "when": 1772547202099,
       "tag": "0002_condemned_nova",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1772552937705,
+      "tag": "0003_giant_zzzax",
+      "breakpoints": true
     }
   ]
 }

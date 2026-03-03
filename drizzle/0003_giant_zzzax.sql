@@ -1,0 +1,1 @@
+ALTER TABLE `trades` ADD `fee` double DEFAULT 0 NOT NULL;
