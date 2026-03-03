@@ -391,7 +391,22 @@ export async function getTradesForUserMatch(
   }>
 > {
   return db
-    .select()
+    .select({
+      id: trades.id,
+      direction: trades.direction,
+      size: trades.size,
+      entryPrice: trades.entryPrice,
+      exitPrice: trades.exitPrice,
+      pnl: trades.pnl,
+      pnlPct: trades.pnlPct,
+      fee: trades.fee,
+      weightedPnl: trades.weightedPnl,
+      holdDuration: trades.holdDuration,
+      holdWeight: trades.holdWeight,
+      closeReason: trades.closeReason,
+      openTime: trades.openTime,
+      closeTime: trades.closeTime,
+    })
     .from(trades)
     .where(and(eq(trades.arenaAccountId, arenaAccountId), eq(trades.matchId, matchId)))
     .orderBy(desc(trades.closeTime))
