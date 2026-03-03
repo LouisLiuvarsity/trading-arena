@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -7,37 +7,15 @@ import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import RulesPage from "./pages/RulesPage";
 import TradingPage from "./pages/TradingPage";
-import { login, quickLogin, apiRequest } from "./lib/api";
+import { login, quickLogin } from "./lib/api";
 
 type AppScreen = 'landing' | 'login' | 'rules' | 'trading';
 
 function App() {
+  // Always start on landing — no auto-restore to trading
   const [screen, setScreen] = useState<AppScreen>('landing');
   const [username, setUsername] = useState(() => localStorage.getItem("arena_username") ?? "");
-  const [authToken, setAuthToken] = useState<string | null>(() => localStorage.getItem("arena_token"));
-  const [validatingToken, setValidatingToken] = useState(true);
-
-  // On mount: validate stored token. If valid → trading, else → login page
-  useEffect(() => {
-    const token = localStorage.getItem("arena_token");
-    if (!token) {
-      setValidatingToken(false);
-      setScreen('landing');
-      return;
-    }
-    apiRequest<unknown>("/api/state", { token })
-      .then(() => {
-        setScreen('trading');
-      })
-      .catch(() => {
-        // Token expired or invalid — clear it
-        localStorage.removeItem("arena_token");
-        setAuthToken(null);
-        // If we have a stored invite code, show login with it pre-filled
-        setScreen('login');
-      })
-      .finally(() => setValidatingToken(false));
-  }, []);
+  const [authToken, setAuthToken] = useState<string | null>(null);
 
   const handleEnterFromLanding = useCallback(() => {
     setScreen('login');
@@ -65,7 +43,7 @@ function App() {
   const handleLogout = useCallback(() => {
     localStorage.removeItem("arena_token");
     setAuthToken(null);
-    setScreen('login');
+    setScreen('landing');
   }, []);
 
   const handleEnterArena = useCallback(() => {
@@ -75,14 +53,6 @@ function App() {
   const handleSkipRules = useCallback(() => {
     setScreen('trading');
   }, []);
-
-  if (validatingToken) {
-    return (
-      <div className="h-screen w-screen bg-[#0B0E11] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-[#F0B90B]/30 border-t-[#F0B90B] rounded-full animate-spin" />
-      </div>
-    );
-  }
 
   return (
     <ErrorBoundary>

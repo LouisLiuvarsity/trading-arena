@@ -46,3 +46,10 @@
 - [x] Add Chart/OrderBook/Info tab switching for mobile main content area
 - [x] Test on mobile viewport and fix issues (TypeScript 0 errors, vitest 20 pass)
 - [x] Run vitest tests (20 passed)
+
+## Always Start on Landing Page with Quick Login
+- [x] Remove auto-restore session to trading page on app load
+- [x] Always show Landing Page on first visit
+- [x] Remember username in localStorage for quick re-entry (already stored in localStorage)
+- [x] Show "Welcome back, xxx" quick login option on Landing/Login page (LoginPage already has Returning Player tab with pre-filled username)
+- [x] Test the new flow end-to-end (tsc 0 errors, vitest 20 passed)
