@@ -200,11 +200,16 @@ export class ArenaEngine {
         throw new Error("Insufficient equity");
       }
 
+      // Leverage increases the notional position size (not PnL directly)
+      const accountRow = await dbHelpers.getArenaAccountById(arenaAccountId, tx);
+      const leverage = getRankTier(accountRow?.seasonPoints ?? 0).leverage;
+      const notionalSize = round2(size * leverage);
+
       await dbHelpers.insertPosition(
         {
           arenaAccountId,
           direction: input.direction,
-          size,
+          size: notionalSize,
           entryPrice: price,
           openTime: Date.now(),
           takeProfit: input.tp ?? null,
@@ -589,14 +594,14 @@ export class ArenaEngine {
     return row;
   }
 
-  private toPositionView(pos: PositionRow, seasonPoints: number) {
+  private toPositionView(pos: PositionRow, _seasonPoints: number) {
     const price = this.market.getLastPrice();
     const holdSeconds = Math.max(0, (Date.now() - pos.openTime) / 1000);
     const weight = getHoldWeight(holdSeconds);
     const sign = pos.direction === "long" ? 1 : -1;
-    const leverage = getRankTier(seasonPoints).leverage;
-    const pnl = sign * ((price - pos.entryPrice) / pos.entryPrice) * pos.size * leverage;
-    const pnlPct = sign * ((price - pos.entryPrice) / pos.entryPrice) * 100 * leverage;
+    // pos.size already includes leverage (applied at open time)
+    const pnl = sign * ((price - pos.entryPrice) / pos.entryPrice) * pos.size;
+    const pnlPct = sign * ((price - pos.entryPrice) / pos.entryPrice) * 100;
     return {
       direction: pos.direction,
       size: pos.size,
@@ -620,11 +625,10 @@ export class ArenaEngine {
     const closePrice = exitPrice ?? this.market.getLastPrice();
     const holdDuration = Math.max(0, (Date.now() - pos.openTime) / 1000);
     const weight = getHoldWeight(holdDuration);
-    const account = await dbHelpers.getArenaAccountById(pos.arenaAccountId);
-    const leverage = getRankTier(account?.seasonPoints ?? 0).leverage;
     const sign = pos.direction === "long" ? 1 : -1;
-    const pnl = sign * ((closePrice - pos.entryPrice) / pos.entryPrice) * pos.size * leverage;
-    const pnlPct = sign * ((closePrice - pos.entryPrice) / pos.entryPrice) * 100 * leverage;
+    // pos.size already includes leverage (applied at open time)
+    const pnl = sign * ((closePrice - pos.entryPrice) / pos.entryPrice) * pos.size;
+    const pnlPct = sign * ((closePrice - pos.entryPrice) / pos.entryPrice) * 100;
     const weighted = pnl * weight;
 
     const tradeId = `trade-${nanoid(12)}`;
@@ -786,8 +790,9 @@ export class ArenaEngine {
         const sign = position.direction === "long" ? 1 : -1;
         const hold = Math.max(0, (Date.now() - position.openTime) / 1000);
         const w = getHoldWeight(hold);
+        // position.size already includes leverage (applied at open time)
         const unrealized =
-          sign * ((lastPrice - position.entryPrice) / position.entryPrice) * position.size * tier.leverage;
+          sign * ((lastPrice - position.entryPrice) / position.entryPrice) * position.size;
         pnl += unrealized;
         weighted += unrealized * w;
         tradesUsed = Math.max(base.trades, position.tradeNumber);

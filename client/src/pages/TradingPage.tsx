@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import CandlestickChart from "@/components/CandlestickChart";
@@ -19,6 +19,55 @@ import { useArena } from "@/hooks/useArena";
 import { generateNewsItems } from "@/lib/mockData";
 import type { TimeframeKey } from "@/lib/types";
 
+// ─── Resizable divider hook ─────────────────────────────────
+function useResizable(initial: number, min: number, max: number, direction: 'horizontal' | 'vertical') {
+  const [size, setSize] = useState(initial);
+  const dragging = useRef(false);
+  const startPos = useRef(0);
+  const startSize = useRef(0);
+
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    dragging.current = true;
+    startPos.current = direction === 'horizontal' ? e.clientX : e.clientY;
+    startSize.current = size;
+
+    const onMove = (ev: MouseEvent) => {
+      if (!dragging.current) return;
+      const delta = direction === 'horizontal'
+        ? startPos.current - ev.clientX  // pulling left = bigger for right panel
+        : startPos.current - ev.clientY; // pulling up = bigger for bottom panel
+      setSize(Math.max(min, Math.min(max, startSize.current + delta)));
+    };
+    const onUp = () => {
+      dragging.current = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.body.style.cursor = direction === 'horizontal' ? 'col-resize' : 'row-resize';
+    document.body.style.userSelect = 'none';
+  }, [size, min, max, direction]);
+
+  return { size, onMouseDown };
+}
+
+function ResizeHandle({ direction, onMouseDown }: { direction: 'horizontal' | 'vertical'; onMouseDown: (e: React.MouseEvent) => void }) {
+  const isH = direction === 'horizontal';
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      className={`${isH ? 'w-[5px] cursor-col-resize hover:bg-[#F0B90B]/30' : 'h-[5px] cursor-row-resize hover:bg-[#F0B90B]/30'} bg-transparent transition-colors shrink-0 flex items-center justify-center group`}
+    >
+      <div className={`${isH ? 'w-[1px] h-6' : 'h-[1px] w-6'} bg-[rgba(255,255,255,0.08)] group-hover:bg-[#F0B90B]/50 transition-colors`} />
+    </div>
+  );
+}
+
+// ─── Main Page ──────────────────────────────────────────────
 interface TradingPageProps {
   authToken: string | null;
   onLogout?: () => void;
@@ -30,6 +79,11 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
   const { klines, loading: klinesLoading } = useBinanceKline(timeframe);
   const { ticker: wsTicker, priceDirection: wsPriceDirection } = useBinanceTicker();
   const { orderBook: wsOrderBook } = useBinanceDepth();
+
+  // Resizable panels
+  const orderBookResize = useResizable(200, 120, 360, 'horizontal');
+  const rightPanelResize = useResizable(320, 220, 500, 'horizontal');
+  const tradingPanelResize = useResizable(110, 80, 200, 'vertical');
 
   const {
     loading,
@@ -54,8 +108,6 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
   } = useArena(authToken, onLogout);
 
   const news = useMemo(() => generateNewsItems(), []);
-  // Prefer client-side Binance WS data for ticker & orderBook (lower latency)
-  // Fall back to server ticker for staleness info
   const ticker = wsTicker ?? serverTicker;
   const orderBook = wsOrderBook;
   const currentPrice = ticker?.lastPrice ?? 0;
@@ -179,11 +231,14 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
         }}
       />
 
+      {/* Main content area */}
       <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 flex flex-col">
+        {/* Left: Chart + OrderBook */}
+        <div className="flex-1 flex flex-col min-w-0">
           <TickerBar ticker={ticker} priceDirection={priceDirection} />
           <div className="flex-1 flex overflow-hidden">
-            <div className="flex-1 flex flex-col">
+            {/* Chart */}
+            <div className="flex-1 flex flex-col min-w-0">
               <CandlestickChart
                 klines={klines}
                 loading={klinesLoading}
@@ -195,13 +250,17 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
                 position={position}
               />
             </div>
-            <div className="w-[180px] border-l border-[rgba(255,255,255,0.06)]">
+            {/* OrderBook resize handle + panel */}
+            <ResizeHandle direction="horizontal" onMouseDown={orderBookResize.onMouseDown} />
+            <div style={{ width: orderBookResize.size }} className="shrink-0 overflow-hidden">
               <OrderBookPanel orderBook={orderBook} lastPrice={currentPrice} priceDirection={priceDirection} />
             </div>
           </div>
         </div>
 
-        <div className="w-[300px] border-l border-[rgba(255,255,255,0.06)] flex flex-col">
+        {/* Right panel resize handle + panel */}
+        <ResizeHandle direction="horizontal" onMouseDown={rightPanelResize.onMouseDown} />
+        <div style={{ width: rightPanelResize.size }} className="shrink-0 flex flex-col overflow-hidden">
           <Tabs
             value={rightTab}
             onValueChange={async value => {
@@ -211,22 +270,14 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
             className="flex flex-col h-full"
           >
             <TabsList className="bg-[rgba(255,255,255,0.02)] border-b border-[rgba(255,255,255,0.08)] rounded-none h-8 px-1.5 gap-0 justify-start w-full shrink-0 items-center">
-              <TabsTrigger value="chat" className={tabTriggerClass}>
-                Chat
-              </TabsTrigger>
+              <TabsTrigger value="chat" className={tabTriggerClass}>Chat</TabsTrigger>
               <TabsTrigger value="trades" className={tabTriggerClass}>
                 Trades
                 {trades.length > 0 && <span className="ml-1 text-[9px] text-[#848E9C]">({trades.length})</span>}
               </TabsTrigger>
-              <TabsTrigger value="leaderboard" className={tabTriggerClass}>
-                Rank
-              </TabsTrigger>
-              <TabsTrigger value="stats" className={tabTriggerClass}>
-                Stats
-              </TabsTrigger>
-              <TabsTrigger value="news" className={tabTriggerClass}>
-                News
-              </TabsTrigger>
+              <TabsTrigger value="leaderboard" className={tabTriggerClass}>Rank</TabsTrigger>
+              <TabsTrigger value="stats" className={tabTriggerClass}>Stats</TabsTrigger>
+              <TabsTrigger value="news" className={tabTriggerClass}>News</TabsTrigger>
             </TabsList>
 
             <TabsContent value="chat" className="flex-1 overflow-hidden mt-0">
@@ -248,7 +299,9 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
         </div>
       </div>
 
-      <div className="h-[76px] shrink-0 border-t border-[rgba(255,255,255,0.06)]">
+      {/* Trading panel resize handle + panel */}
+      <ResizeHandle direction="vertical" onMouseDown={tradingPanelResize.onMouseDown} />
+      <div style={{ height: tradingPanelResize.size }} className="shrink-0">
         <TradingPanel
           account={account}
           position={position}
