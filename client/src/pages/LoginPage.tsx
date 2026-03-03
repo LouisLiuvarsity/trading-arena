@@ -11,10 +11,11 @@ interface LoginPageProps {
 }
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
-  const [inviteCode, setInviteCode] = useState('');
-  const [username, setUsername] = useState('');
+  const [inviteCode, setInviteCode] = useState(() => localStorage.getItem("arena_invite_code") ?? '');
+  const [username, setUsername] = useState(() => localStorage.getItem("arena_username") ?? '');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isReturningUser = !!(localStorage.getItem("arena_invite_code") && localStorage.getItem("arena_username"));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,10 +136,16 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             )}
           </form>
 
-          {/* Quick join hint */}
-          <p className="text-center text-[#5E6673] text-[10px] mt-3">
-            Free entry — No deposit required
-          </p>
+          {isReturningUser && (
+            <p className="text-center text-[#5E6673] text-[10px] mt-3">
+              Welcome back — click Enter Arena to rejoin
+            </p>
+          )}
+          {!isReturningUser && (
+            <p className="text-center text-[#5E6673] text-[10px] mt-3">
+              Free entry — No deposit required
+            </p>
+          )}
         </div>
 
         {/* Feature highlights */}

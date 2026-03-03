@@ -21,9 +21,10 @@ import type { TimeframeKey } from "@/lib/types";
 
 interface TradingPageProps {
   authToken: string | null;
+  onLogout?: () => void;
 }
 
-export default function TradingPage({ authToken }: TradingPageProps) {
+export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
   const [timeframe, setTimeframe] = useState<TimeframeKey>("1m");
   const [rightTab, setRightTab] = useState<string>("chat");
   const { klines, loading: klinesLoading } = useBinanceKline(timeframe);
@@ -48,7 +49,7 @@ export default function TradingPage({ authToken }: TradingPageProps) {
     sendChatMessage,
     trackEvent,
     submitPrediction,
-  } = useArena(authToken);
+  } = useArena(authToken, onLogout);
 
   const news = useMemo(() => generateNewsItems(), []);
   const currentPrice = ticker?.lastPrice ?? 0;

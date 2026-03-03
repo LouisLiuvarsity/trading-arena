@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -7,17 +7,37 @@ import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import RulesPage from "./pages/RulesPage";
 import TradingPage from "./pages/TradingPage";
-import { login } from "./lib/api";
+import { login, apiRequest } from "./lib/api";
 
 type AppScreen = 'landing' | 'login' | 'rules' | 'trading';
 
 function App() {
-  const [screen, setScreen] = useState<AppScreen>(() => {
-    const token = localStorage.getItem("arena_token");
-    return token ? "trading" : "landing";
-  });
+  const [screen, setScreen] = useState<AppScreen>('landing');
   const [username, setUsername] = useState(() => localStorage.getItem("arena_username") ?? "");
   const [authToken, setAuthToken] = useState<string | null>(() => localStorage.getItem("arena_token"));
+  const [validatingToken, setValidatingToken] = useState(true);
+
+  // On mount: validate stored token. If valid → trading, else → login page
+  useEffect(() => {
+    const token = localStorage.getItem("arena_token");
+    if (!token) {
+      setValidatingToken(false);
+      setScreen('landing');
+      return;
+    }
+    apiRequest<unknown>("/api/state", { token })
+      .then(() => {
+        setScreen('trading');
+      })
+      .catch(() => {
+        // Token expired or invalid — clear it
+        localStorage.removeItem("arena_token");
+        setAuthToken(null);
+        // If we have a stored invite code, show login with it pre-filled
+        setScreen('login');
+      })
+      .finally(() => setValidatingToken(false));
+  }, []);
 
   const handleEnterFromLanding = useCallback(() => {
     setScreen('login');
@@ -29,17 +49,31 @@ function App() {
     setAuthToken(result.token);
     localStorage.setItem("arena_username", result.user.username);
     localStorage.setItem("arena_token", result.token);
-    setScreen('rules');
+    localStorage.setItem("arena_invite_code", inviteCode);
+    setScreen('trading');
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem("arena_token");
+    setAuthToken(null);
+    setScreen('login');
   }, []);
 
   const handleEnterArena = useCallback(() => {
     setScreen('trading');
   }, []);
 
-  // Skip rules — go directly to trading (for returning users)
   const handleSkipRules = useCallback(() => {
     setScreen('trading');
   }, []);
+
+  if (validatingToken) {
+    return (
+      <div className="h-screen w-screen bg-[#0B0E11] flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-[#F0B90B]/30 border-t-[#F0B90B] rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <ErrorBoundary>
@@ -55,7 +89,7 @@ function App() {
               onSkipRules={handleSkipRules}
             />
           )}
-          {screen === 'trading' && <TradingPage authToken={authToken} />}
+          {screen === 'trading' && <TradingPage authToken={authToken} onLogout={handleLogout} />}
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

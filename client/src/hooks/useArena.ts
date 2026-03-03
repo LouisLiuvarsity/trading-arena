@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { apiRequest } from "@/lib/api";
+import { apiRequest, ApiError } from "@/lib/api";
 import type {
   AccountState,
   ChatMessage,
@@ -105,7 +105,7 @@ const emptyState: ArenaState = {
   prediction: null,
 };
 
-export function useArena(token: string | null) {
+export function useArena(token: string | null, onAuthError?: () => void) {
   const [state, setState] = useState<ArenaState>(emptyState);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -117,9 +117,13 @@ export function useArena(token: string | null) {
       setState(next);
       setError(null);
     } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onAuthError?.();
+        return;
+      }
       setError((err as Error).message);
     }
-  }, [token]);
+  }, [token, onAuthError]);
 
   useEffect(() => {
     if (!token) return;
