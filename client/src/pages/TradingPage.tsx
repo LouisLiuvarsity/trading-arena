@@ -14,7 +14,7 @@ import MarketStats from "@/components/MarketStats";
 import RankAnxietyStrip from "@/components/RankAnxietyStrip";
 import TickerBar from "@/components/TickerBar";
 import TradeHistory from "@/components/TradeHistory";
-import { useBinanceKline } from "@/hooks/useBinanceWS";
+import { useBinanceKline, useBinanceTicker, useBinanceDepth } from "@/hooks/useBinanceWS";
 import { useArena } from "@/hooks/useArena";
 import { generateNewsItems } from "@/lib/mockData";
 import type { TimeframeKey } from "@/lib/types";
@@ -28,6 +28,8 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
   const [timeframe, setTimeframe] = useState<TimeframeKey>("1m");
   const [rightTab, setRightTab] = useState<string>("chat");
   const { klines, loading: klinesLoading } = useBinanceKline(timeframe);
+  const { ticker: wsTicker, priceDirection: wsPriceDirection } = useBinanceTicker();
+  const { orderBook: wsOrderBook } = useBinanceDepth();
 
   const {
     loading,
@@ -40,8 +42,8 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
     season,
     match,
     chatMessages,
-    ticker,
-    orderBook,
+    ticker: serverTicker,
+    orderBook: _serverOrderBook,
     prediction,
     openPosition: apiOpenPosition,
     closePosition: apiClosePosition,
@@ -52,6 +54,10 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
   } = useArena(authToken, onLogout);
 
   const news = useMemo(() => generateNewsItems(), []);
+  // Prefer client-side Binance WS data for ticker & orderBook (lower latency)
+  // Fall back to server ticker for staleness info
+  const ticker = wsTicker ?? serverTicker;
+  const orderBook = wsOrderBook;
   const currentPrice = ticker?.lastPrice ?? 0;
 
   const openPosition = useCallback(
@@ -119,8 +125,9 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
     );
   }
 
-  const priceDirection =
-    ticker && ticker.priceChange > 0 ? "up" : ticker && ticker.priceChange < 0 ? "down" : "neutral";
+  const priceDirection = wsPriceDirection ?? (
+    ticker && ticker.priceChange > 0 ? "up" : ticker && ticker.priceChange < 0 ? "down" : "neutral"
+  );
 
   const tabTriggerClass =
     "data-[state=active]:bg-[#F0B90B]/10 data-[state=active]:text-[#F0B90B] data-[state=active]:border-[#F0B90B]/60 data-[state=active]:shadow-none border border-[rgba(255,255,255,0.12)] text-[#848E9C] hover:text-[#D1D4DC] hover:border-[rgba(255,255,255,0.25)] hover:bg-white/[0.03] text-[10px] h-6 px-2.5 rounded-md mx-0.5 transition-all duration-200";
