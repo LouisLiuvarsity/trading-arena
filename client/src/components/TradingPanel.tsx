@@ -272,13 +272,6 @@ function TradingPanel({
   const priceStep = getPriceStep(currentPrice);
   const notionalSize = Math.round(positionSize * account.tierLeverage);
 
-  // Compute estimated PnL for TP/SL preview in order entry
-  const orderTpSlPreview = useMemo(() => {
-    if (!showTpSl || !orderTpInput && !orderSlInput) return null;
-    // We don't know direction yet, so show for both
-    return null; // Will be shown contextually on buttons
-  }, [showTpSl, orderTpInput, orderSlInput]);
-
   // ─── POSITION VIEW ───────────────────────────────────────
   if (position) {
     const isProfitable = position.unrealizedPnl >= 0;

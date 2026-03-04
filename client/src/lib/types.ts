@@ -104,8 +104,9 @@ export interface MatchState {
   monthLabel: string; // e.g. "2026年3月"
 }
 
-// v5.0: LoL-style rank tiers driven by cumulative season points
-export type RankTier = 'iron' | 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
+// Import + re-export RankTier from shared (canonical definition)
+import type { RankTier } from '../../../shared/competitionTypes';
+export type { RankTier };
 
 export const RANK_TIERS = [
   { tier: 'iron' as const, minPoints: 0, maxPoints: 99, label: '黑铁', labelEn: 'Iron', leverage: 1, color: '#5E6673', icon: '⚙️' },

@@ -3,7 +3,8 @@
 // Shared between server and client
 // ============================================================
 
-import type { RankTier } from "../client/src/lib/types";
+// RankTier defined here so shared/ never depends on client/
+export type RankTier = 'iron' | 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
 
 // ─── Enums ──────────────────────────────────────────────────
 

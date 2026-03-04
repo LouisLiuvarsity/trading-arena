@@ -18,12 +18,16 @@ export async function apiRequest<T>(
     body?: unknown;
   } = {},
 ): Promise<T> {
+  const headers: Record<string, string> = {
+    ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
+  };
+  if (options.body !== undefined) {
+    headers["Content-Type"] = "application/json";
+  }
   const res = await fetch(`${API_BASE}${path}`, {
     method: options.method ?? "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
-    },
+    headers,
+    credentials: "include",
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
   });
 

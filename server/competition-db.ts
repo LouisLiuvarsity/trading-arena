@@ -314,6 +314,22 @@ export async function getAcceptedAccountIds(
   return rows.map((r) => r.arenaAccountId);
 }
 
+/** Get all registrations for a specific user account (across all competitions) */
+export async function getRegistrationsForAccount(
+  arenaAccountId: number,
+): Promise<Array<{ competitionId: number; status: string; appliedAt: number }>> {
+  const rows = await db
+    .select({
+      competitionId: competitionRegistrations.competitionId,
+      status: competitionRegistrations.status,
+      appliedAt: competitionRegistrations.appliedAt,
+    })
+    .from(competitionRegistrations)
+    .where(eq(competitionRegistrations.arenaAccountId, arenaAccountId))
+    .orderBy(desc(competitionRegistrations.appliedAt));
+  return rows;
+}
+
 // ─── Match Results Helpers ───────────────────────────────────────────────────
 
 export async function insertMatchResult(
@@ -523,7 +539,7 @@ export async function searchInstitutions(
   return db
     .select()
     .from(institutions)
-    .where(sql`${institutions.name} LIKE ${`%${query}%`}`)
+    .where(sql`${institutions.name} LIKE ${`%${query.replace(/[%_\\]/g, '\\$&')}%`}`)
     .limit(limit);
 }
 

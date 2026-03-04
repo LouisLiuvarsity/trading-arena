@@ -136,7 +136,7 @@ export class ArenaEngine {
     if (!account.passwordHash) {
       throw new Error("Account has no password set. Please re-register with your invite code to set a password.");
     }
-    if (!dbHelpers.verifyPassword(password, account.passwordHash)) {
+    if (!(await dbHelpers.verifyPassword(password, account.passwordHash))) {
       throw new Error("Incorrect password");
     }
     const token = crypto.randomBytes(24).toString("hex");
@@ -316,7 +316,7 @@ export class ArenaEngine {
         }
       }
 
-      await dbHelpers.updatePositionTpSl(arenaAccountId, newTp, newSl);
+      await dbHelpers.updatePositionTpSl(arenaAccountId, newTp, newSl, tx);
     });
   }
 
@@ -711,7 +711,7 @@ export class ArenaEngine {
     };
   }
 
-  private async closePositionInternal(
+  async closePositionInternal(
     pos: PositionRow,
     reason: "manual" | "sl" | "tp" | "match_end",
     exitPrice?: number,
@@ -866,7 +866,7 @@ export class ArenaEngine {
     }
   }
 
-  private async buildLeaderboard(matchId: number): Promise<LeaderboardRow[]> {
+  async buildLeaderboard(matchId: number): Promise<LeaderboardRow[]> {
     // Return cached result if still fresh
     const now = Date.now();
     if (this.leaderboardCache && this.leaderboardCache.matchId === matchId && now - this.leaderboardCache.at < ArenaEngine.LEADERBOARD_CACHE_TTL_MS) {

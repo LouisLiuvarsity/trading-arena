@@ -166,12 +166,14 @@ export class CompetitionEngine {
         return;
       }
 
-      // 1. Close all open positions at market price
-      const openPositions = await db.getAllPositions();
+      // 1. Close open positions for competition participants only
+      const acceptedIds = new Set(await compDb.getAcceptedAccountIds(comp.id));
+      const allPositions = await db.getAllPositions();
+      const openPositions = allPositions.filter(p => acceptedIds.has(p.arenaAccountId));
       for (const pos of openPositions) {
         try {
           // Use ArenaEngine's internal close (which handles PnL + fee + trade record)
-          await (this.arena as any).closePositionInternal(
+          await this.arena.closePositionInternal(
             {
               arenaAccountId: pos.arenaAccountId,
               direction: pos.direction,
@@ -191,11 +193,12 @@ export class CompetitionEngine {
         }
       }
 
-      // 2. Build final leaderboard via ArenaEngine
-      const leaderboard = await (this.arena as any).buildLeaderboard(comp.matchId);
+      // 2. Build final leaderboard via ArenaEngine (filtered to participants)
+      const leaderboard = await this.arena.buildLeaderboard(comp.matchId!);
+      const participantLeaderboard = leaderboard.filter((r) => acceptedIds.has(r.arenaAccountId));
 
       // 3. Write match_results for every participant
-      for (const row of leaderboard) {
+      for (const row of participantLeaderboard) {
         const trades = await db.getTradesForUserMatch(row.arenaAccountId, comp.matchId!);
         const wins = trades.filter((t: any) => t.pnl > 0);
         const losses = trades.filter((t: any) => t.pnl < 0);
@@ -293,8 +296,10 @@ export class CompetitionEngine {
       throw new Error("Already registered");
     }
 
-    // Check capacity
-    const currentCount = await compDb.countRegistrations(competitionId);
+    // Check capacity (only count active registrations, not withdrawn/rejected)
+    const acceptedCount = await compDb.countRegistrations(competitionId, "accepted");
+    const pendingCount = await compDb.countRegistrations(competitionId, "pending");
+    const currentCount = acceptedCount + pendingCount;
     if (currentCount >= comp.maxParticipants) {
       throw new Error("Competition is full");
     }
@@ -383,7 +388,7 @@ export class CompetitionEngine {
     for (const comp of liveComps) {
       const reg = await compDb.getRegistration(comp.id, arenaAccountId);
       if (reg && reg.status === "accepted" && comp.matchId) {
-        const leaderboard = await (this.arena as any).buildLeaderboard(comp.matchId);
+        const leaderboard = await this.arena.buildLeaderboard(comp.matchId!);
         const me = leaderboard.find((r: any) => r.arenaAccountId === arenaAccountId);
         activeCompetition = {
           id: comp.id,
@@ -402,9 +407,21 @@ export class CompetitionEngine {
       }
     }
 
-    // My registrations — use DB query directly since listRegistrations only takes competitionId
-    // For now return empty; will be populated when we add a dedicated user-registrations query
-    const myRegistrations: any[] = [];
+    // My registrations — query all registrations for this user
+    const rawRegs = await compDb.getRegistrationsForAccount(arenaAccountId);
+    const myRegistrations = [];
+    for (const reg of rawRegs) {
+      const comp = await compDb.getCompetitionById(reg.competitionId);
+      if (!comp) continue;
+      myRegistrations.push({
+        competitionId: comp.id,
+        competitionTitle: comp.title,
+        competitionType: comp.competitionType,
+        status: reg.status,
+        startTime: comp.startTime,
+        appliedAt: reg.appliedAt,
+      });
+    }
 
     // Upcoming competitions
     const upcoming = await compDb.getCompetitionsByStatus("registration_open");
@@ -507,22 +524,26 @@ export class CompetitionEngine {
             pointsCurve: [],
           }
         : null,
-      recentResults: recentResults.map((r) => ({
-        competitionId: r.competitionId,
-        competitionTitle: "",
-        competitionNumber: 0,
-        finalRank: r.finalRank,
-        totalPnl: r.totalPnl,
-        totalPnlPct: r.totalPnlPct,
-        totalWeightedPnl: r.totalWeightedPnl,
-        tradesCount: r.tradesCount,
-        winCount: r.winCount,
-        lossCount: r.lossCount,
-        pointsEarned: r.pointsEarned,
-        prizeWon: r.prizeWon,
-        prizeEligible: !!r.prizeEligible,
-        participantCount: 0,
-        createdAt: r.createdAt,
+      recentResults: await Promise.all(recentResults.map(async (r) => {
+        const comp = await compDb.getCompetitionById(r.competitionId);
+        const participantCount = comp ? await compDb.countRegistrations(comp.id, "accepted") : 0;
+        return {
+          competitionId: r.competitionId,
+          competitionTitle: comp?.title ?? "",
+          competitionNumber: comp?.competitionNumber ?? 0,
+          finalRank: r.finalRank,
+          totalPnl: r.totalPnl,
+          totalPnlPct: r.totalPnlPct,
+          totalWeightedPnl: r.totalWeightedPnl,
+          tradesCount: r.tradesCount,
+          winCount: r.winCount,
+          lossCount: r.lossCount,
+          pointsEarned: r.pointsEarned,
+          prizeWon: r.prizeWon,
+          prizeEligible: !!r.prizeEligible,
+          participantCount,
+          createdAt: r.createdAt,
+        };
       })),
       quickStats,
       unreadNotificationCount,

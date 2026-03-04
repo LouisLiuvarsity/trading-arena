@@ -71,7 +71,7 @@ export function registerAnalyticsRoutes(app: Express, arenaEngine: ArenaEngine) 
         avgPnlPerTrade: Math.round((totalPnl / allTrades.length) * 100) / 100,
         avgHoldDuration: Math.round(allTrades.reduce((s, t) => s + t.holdDuration, 0) / allTrades.length),
         avgHoldWeight: Math.round((allTrades.reduce((s, t) => s + t.holdWeight, 0) / allTrades.length) * 100) / 100,
-        profitFactor: totalLoss > 0 ? Math.round((totalProfit / totalLoss) * 100) / 100 : totalProfit > 0 ? Infinity : 0,
+        profitFactor: totalLoss > 0 ? Math.round((totalProfit / totalLoss) * 100) / 100 : totalProfit > 0 ? 9999 : 0,
       };
 
       // PnL distribution (buckets)

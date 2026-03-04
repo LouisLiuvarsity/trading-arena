@@ -72,7 +72,7 @@ export default function AppShell({ children }: Props) {
           {[
             { path: "/hub", label: "Hub", icon: Home },
             { path: "/competitions", label: "赛程", icon: Calendar },
-            { path: "/arena", label: "比赛", icon: Swords },
+            { path: "/competitions", label: "比赛", icon: Swords },
             { path: "/leaderboard", label: "排行", icon: Trophy },
             { path: "/profile", label: "我的", icon: User },
           ].map((item) => (

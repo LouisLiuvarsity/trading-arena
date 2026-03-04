@@ -165,7 +165,7 @@ export default function TradingPage({ authToken: authTokenProp, onLogout: onLogo
       setChatHighlightFrom(undefined);
       lastSeenChatCountRef.current = chatMessages.length;
     }
-  }, [rightTab, mobilePanel, isMobile]);
+  }, [rightTab, mobilePanel, isMobile, chatUnread, chatMessages.length]);
 
   // Screen shake on big loss
   const [isShaking, setIsShaking] = useState(false);

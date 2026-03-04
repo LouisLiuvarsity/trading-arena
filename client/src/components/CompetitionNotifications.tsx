@@ -161,6 +161,7 @@ export default function CompetitionNotifications({ account, match, social, predi
 
   // Prediction window notifications — trigger on the hour, stay 5 minutes
   const predictionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const removalTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => {
     const makePredMessage = () => {
       const stats = prediction?.stats;
@@ -192,9 +193,9 @@ export default function CompetitionNotifications({ account, match, social, predi
             return next.slice(0, maxNotifications);
           });
           setIsVisible(true);
-          setTimeout(() => {
+          removalTimersRef.current.push(setTimeout(() => {
             setNotifications(prev => prev.filter(n => n.id !== id));
-          }, 5 * 60 * 1000);
+          }, 5 * 60 * 1000));
         }
         scheduleNextHour();
       }, msUntilNextHour);
@@ -219,15 +220,17 @@ export default function CompetitionNotifications({ account, match, social, predi
         });
         setIsVisible(true);
         const remainMs = (5 - now.getMinutes()) * 60 * 1000 - now.getSeconds() * 1000;
-        setTimeout(() => {
+        removalTimersRef.current.push(setTimeout(() => {
           setNotifications(prev => prev.filter(n => n.id !== id));
-        }, remainMs);
+        }, remainMs));
       }
     }
 
     scheduleNextHour();
     return () => {
       if (predictionTimerRef.current) clearTimeout(predictionTimerRef.current);
+      removalTimersRef.current.forEach(clearTimeout);
+      removalTimersRef.current = [];
     };
   }, [prediction, isMuted, t]);
 

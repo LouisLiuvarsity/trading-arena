@@ -28,17 +28,27 @@ import { MATCH_DURATION_MS, SESSION_TTL_MS, STARTING_CAPITAL } from "./constants
 const SCRYPT_KEYLEN = 64;
 const SCRYPT_COST = 16384;
 
-export function hashPassword(password: string): string {
+export async function hashPassword(password: string): Promise<string> {
   const salt = crypto.randomBytes(16).toString("hex");
-  const hash = crypto.scryptSync(password, salt, SCRYPT_KEYLEN, { N: SCRYPT_COST }).toString("hex");
-  return `${salt}:${hash}`;
+  const hash = await new Promise<Buffer>((resolve, reject) => {
+    crypto.scrypt(password, salt, SCRYPT_KEYLEN, { N: SCRYPT_COST }, (err, key) => {
+      if (err) reject(err);
+      else resolve(key);
+    });
+  });
+  return `${salt}:${hash.toString("hex")}`;
 }
 
-export function verifyPassword(password: string, stored: string): boolean {
+export async function verifyPassword(password: string, stored: string): Promise<boolean> {
   const [salt, hash] = stored.split(":");
   if (!salt || !hash) return false;
-  const derived = crypto.scryptSync(password, salt, SCRYPT_KEYLEN, { N: SCRYPT_COST }).toString("hex");
-  return crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(derived, "hex"));
+  const derived = await new Promise<Buffer>((resolve, reject) => {
+    crypto.scrypt(password, salt, SCRYPT_KEYLEN, { N: SCRYPT_COST }, (err, key) => {
+      if (err) reject(err);
+      else resolve(key);
+    });
+  });
+  return crypto.timingSafeEqual(Buffer.from(hash, "hex"), derived);
 }
 
 // ─── Drizzle DB Connection ───────────────────────────────────────────────────
@@ -149,7 +159,7 @@ export async function registerArenaAccount(
       throw new Error("Invite code already used");
     }
     // Legacy account without password — set password now
-    const hashed = hashPassword(password);
+    const hashed = await hashPassword(password);
     await db
       .update(arenaAccounts)
       .set({ passwordHash: hashed, inviteConsumed: 1, updatedAt: Date.now() })
@@ -173,7 +183,7 @@ export async function registerArenaAccount(
   }
 
   const now = Date.now();
-  const hashed = hashPassword(password);
+  const hashed = await hashPassword(password);
   const result = await db.insert(arenaAccounts).values({
     userId: 0,
     username,
@@ -213,7 +223,14 @@ export async function getArenaAccountById(
   dbOrTx: DbOrTx = db,
 ): Promise<{ id: number; userId: number; username: string; capital: number; seasonPoints: number; role: string } | null> {
   const rows = await dbOrTx
-    .select()
+    .select({
+      id: arenaAccounts.id,
+      userId: arenaAccounts.userId,
+      username: arenaAccounts.username,
+      capital: arenaAccounts.capital,
+      seasonPoints: arenaAccounts.seasonPoints,
+      role: arenaAccounts.role,
+    })
     .from(arenaAccounts)
     .where(eq(arenaAccounts.id, arenaAccountId))
     .limit(1);
@@ -299,6 +316,10 @@ export async function getArenaAccountByToken(
 export async function cleanupExpiredSessions(): Promise<void> {
   const now = Date.now();
   await db.delete(arenaSessions).where(and(lt(arenaSessions.expiresAt, now), sql`${arenaSessions.expiresAt} > 0`));
+  // Purge stale entries from lastSeenCache to prevent unbounded growth
+  lastSeenCache.forEach((lastUpdate, token) => {
+    if (now - lastUpdate > SESSION_TTL_MS) lastSeenCache.delete(token);
+  });
 }
 
 /** Delete old behavior events (older than 30 days) */
@@ -415,8 +436,9 @@ export async function updatePositionTpSl(
   arenaAccountId: number,
   tp: number | null,
   sl: number | null,
+  dbOrTx: DbOrTx = db,
 ): Promise<void> {
-  await db
+  await dbOrTx
     .update(positions)
     .set({ takeProfit: tp, stopLoss: sl, updatedAt: Date.now() })
     .where(eq(positions.arenaAccountId, arenaAccountId));

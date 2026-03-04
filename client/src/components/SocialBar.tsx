@@ -18,13 +18,14 @@ function SocialBar({ social, account }: Props) {
 
   // Randomly flash a field to draw attention
   useEffect(() => {
+    let flashTimeout: ReturnType<typeof setTimeout>;
     const interval = setInterval(() => {
       const fields = ['ls', 'pnl', 'trades', 'zone', 'overtaken', 'streak'];
       const pick = fields[Math.floor(Math.random() * fields.length)];
       setFlashField(pick);
-      setTimeout(() => setFlashField(null), 1200);
+      flashTimeout = setTimeout(() => setFlashField(null), 1200);
     }, 8000);
-    return () => clearInterval(interval);
+    return () => { clearInterval(interval); clearTimeout(flashTimeout); };
   }, []);
 
   const tradeGap = Math.max(0, social.avgTradesPerPerson - account.tradesUsed);

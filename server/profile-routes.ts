@@ -17,7 +17,7 @@ function getAuthToken(req: Request): string | null {
 }
 
 const updateProfileSchema = z.object({
-  country: z.string().max(2).optional(),
+  country: z.string().length(2).regex(/^[A-Z]{2}$/).optional(),
   region: z.string().max(64).optional(),
   city: z.string().max(64).optional(),
   institutionId: z.number().positive().nullable().optional(),

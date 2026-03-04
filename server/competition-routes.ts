@@ -8,6 +8,12 @@ import type { CompetitionEngine } from "./competition-engine";
 import type { ArenaEngine } from "./engine";
 import * as compDb from "./competition-db";
 
+function parseIntParam(val: string): number {
+  const n = Number(val);
+  if (!Number.isInteger(n) || n <= 0) throw new Error("Invalid ID parameter");
+  return n;
+}
+
 function getAuthToken(req: Request): string | null {
   const header = req.headers.authorization;
   if (!header) return null;
@@ -179,8 +185,19 @@ export function registerCompetitionRoutes(
           prizeWon: r.prizeWon,
         })));
       } else if (comp.status === "live" && comp.matchId) {
-        // Return real-time leaderboard from ArenaEngine
-        const lb = await arenaEngine.getPublicLeaderboard(100);
+        // Return real-time leaderboard for this competition's match
+        const lb = (await arenaEngine.buildLeaderboard(comp.matchId)).slice(0, 100).map((row) => ({
+          rank: row.rank,
+          username: row.username,
+          pnlPct: row.pnlPct,
+          pnl: row.pnl,
+          weightedPnl: row.weightedPnl,
+          matchPoints: row.matchPoints,
+          prizeEligible: row.prizeEligible,
+          prizeAmount: row.prizeAmount,
+          rankTier: row.rankTier,
+          isBot: false,
+        }));
         res.json(lb);
       } else {
         res.json([]);
@@ -297,7 +314,7 @@ export function registerCompetitionRoutes(
     if (!account) { res.status(401).json({ error: "Unauthorized" }); return; }
 
     try {
-      await compDb.markNotificationRead(Number(req.params.id), account.id);
+      await compDb.markNotificationRead(parseIntParam(req.params.id), account.id);
       res.json({ ok: true });
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
@@ -392,7 +409,7 @@ export function registerCompetitionRoutes(
     try {
       const updates: any = { ...parsed.data };
       if (updates.inviteOnly !== undefined) updates.inviteOnly = updates.inviteOnly ? 1 : 0;
-      await compDb.updateCompetition(Number(req.params.id), updates);
+      await compDb.updateCompetition(parseIntParam(req.params.id), updates);
       res.json({ ok: true });
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
@@ -408,7 +425,7 @@ export function registerCompetitionRoutes(
     if (!parsed.success) { res.status(400).json({ error: "Invalid status" }); return; }
 
     try {
-      await engine.transitionStatus(Number(req.params.id), parsed.data.status, adminId);
+      await engine.transitionStatus(parseIntParam(req.params.id), parsed.data.status, adminId);
       res.json({ ok: true });
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
@@ -422,7 +439,7 @@ export function registerCompetitionRoutes(
 
     try {
       const status = req.query.status as string | undefined;
-      const regs = await compDb.listRegistrations(Number(req.params.id), status);
+      const regs = await compDb.listRegistrations(parseIntParam(req.params.id), status);
       res.json(regs);
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
@@ -438,7 +455,7 @@ export function registerCompetitionRoutes(
     if (!parsed.success) { res.status(400).json({ error: "Invalid payload" }); return; }
 
     try {
-      await engine.reviewRegistration(Number(req.params.id), parsed.data.decision, adminId);
+      await engine.reviewRegistration(parseIntParam(req.params.id), parsed.data.decision, adminId);
       res.json({ ok: true });
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
@@ -455,7 +472,7 @@ export function registerCompetitionRoutes(
 
     try {
       const count = await engine.batchReview(
-        Number(req.params.id),
+        parseIntParam(req.params.id),
         parsed.data.ids,
         parsed.data.action,
         adminId,
@@ -472,7 +489,7 @@ export function registerCompetitionRoutes(
     if (!adminId) return;
 
     try {
-      const original = await compDb.getCompetitionById(Number(req.params.id));
+      const original = await compDb.getCompetitionById(parseIntParam(req.params.id));
       if (!original) { res.status(404).json({ error: "Not found" }); return; }
 
       const id = await compDb.createCompetition({
