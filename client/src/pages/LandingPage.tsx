@@ -21,7 +21,9 @@ import {
   REGULAR_PRIZE_TABLE,
   GRAND_FINAL_PRIZE_TABLE,
   MATCH_POINTS_TABLE,
-  HOLD_DURATION_WEIGHTS,
+  HOLD_WEIGHT_SAMPLES,
+  getHoldWeight,
+  HOLD_WEIGHT_MAX,
   RANK_TIERS,
   MIN_TRADES_FOR_PRIZE,
   POINTS_DECAY_FACTOR,
@@ -363,9 +365,10 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             className="bg-[#1C2030]/40 border border-white/5 rounded-2xl p-6 max-w-2xl mx-auto mb-4"
           >
             <h3 className="text-white text-sm font-semibold mb-4 text-center">持仓时间权重表</h3>
-            <div className="grid grid-cols-6 gap-2">
-              {HOLD_DURATION_WEIGHTS.map((hw, i) => {
-                const pct = Math.round((hw.weight / 1.3) * 100);
+            <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
+              {HOLD_WEIGHT_SAMPLES.map((sample, i) => {
+                const w = getHoldWeight(sample.seconds);
+                const pct = Math.round((w / HOLD_WEIGHT_MAX) * 100);
                 return (
                   <div key={i} className="text-center">
                     <div className="h-16 bg-[#0B0E11] rounded-lg relative overflow-hidden mb-1.5">
@@ -377,10 +380,10 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                         }}
                       />
                       <span className="absolute inset-0 flex items-center justify-center text-white text-xs font-bold font-mono">
-                        {hw.weight}x
+                        {w}x
                       </span>
                     </div>
-                    <span className="text-[9px] text-[#5E6673]">{hw.label}</span>
+                    <span className="text-[9px] text-[#5E6673]">{sample.label}</span>
                   </div>
                 );
               })}

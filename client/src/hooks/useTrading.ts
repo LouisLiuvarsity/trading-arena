@@ -8,31 +8,8 @@
 
 import { useState, useCallback, useRef } from 'react';
 import type { Position, CompletedTrade, AccountState } from '@/lib/types';
-import { HOLD_DURATION_WEIGHTS, REGULAR_PRIZE_TABLE, MATCH_POINTS_TABLE, MIN_TRADES_FOR_PRIZE, getRankTier } from '@/lib/types';
+import { REGULAR_PRIZE_TABLE, MATCH_POINTS_TABLE, MIN_TRADES_FOR_PRIZE, getRankTier, getHoldWeight, HOLD_WEIGHT_MAX } from '@/lib/types';
 import { generateAccountState } from '@/lib/mockData';
-
-function getHoldWeight(seconds: number): number {
-  for (const hw of HOLD_DURATION_WEIGHTS) {
-    if (seconds >= hw.minSeconds && seconds < hw.maxSeconds) return hw.weight;
-  }
-  return 1.3;
-}
-
-function getNextWeightThresholdFn(seconds: number): { nextWeight: number; secondsNeeded: number } | null {
-  for (let i = 0; i < HOLD_DURATION_WEIGHTS.length; i++) {
-    const hw = HOLD_DURATION_WEIGHTS[i];
-    if (seconds < hw.maxSeconds) {
-      if (i < HOLD_DURATION_WEIGHTS.length - 1) {
-        return {
-          nextWeight: HOLD_DURATION_WEIGHTS[i + 1].weight,
-          secondsNeeded: hw.maxSeconds - seconds,
-        };
-      }
-      return null;
-    }
-  }
-  return null;
-}
 
 function getPrizeForRank(rank: number): number {
   for (const tier of REGULAR_PRIZE_TABLE) {
@@ -74,7 +51,7 @@ export function useTrading(currentPrice: number) {
         openTime: Date.now(),
         unrealizedPnl: 0,
         unrealizedPnlPct: 0,
-        holdDurationWeight: 0.2,
+        holdDurationWeight: getHoldWeight(0),
         tradeNumber: tradeCounterRef.current,
         takeProfit: tp ?? null,
         stopLoss: sl ?? null,
@@ -211,10 +188,6 @@ export function useTrading(currentPrice: number) {
     setPosition(updated);
   }, []);
 
-  const getNextWeightThreshold = useCallback((seconds: number) => {
-    return getNextWeightThresholdFn(seconds);
-  }, []);
-
   return {
     position,
     trades,
@@ -222,7 +195,6 @@ export function useTrading(currentPrice: number) {
     openPosition,
     closePosition,
     updatePosition,
-    getNextWeightThreshold,
     setTpSl,
   };
 }

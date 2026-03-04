@@ -360,6 +360,8 @@ export class ArenaEngine {
 
     const directionConsistency = await dbHelpers.getDirectionConsistency(arenaAccountId, active.id);
     const recentTradeVolume = await dbHelpers.getRecentTradeVolume(active.id, 5 * 60 * 1000);
+    const avgHoldWeight = await dbHelpers.getAvgHoldWeightForUser(arenaAccountId);
+    const seasonRankScore = round2(seasonPoints * (avgHoldWeight || 1));
 
     const userTrades = await dbHelpers.getTradesForUserMatch(arenaAccountId, active.id);
 
@@ -378,6 +380,8 @@ export class ArenaEngine {
         rank: myRank,
         matchPoints,
         seasonPoints,
+        avgHoldWeight: round2(avgHoldWeight),
+        seasonRankScore,
         grandFinalQualified: seasonPoints >= 200,
         grandFinalLine: 200,
         prizeEligible,

@@ -285,14 +285,30 @@ export const MATCH_POINTS_TABLE = [
   { rankMin: 301, rankMax: 1000, points: 0 },
 ] as const;
 
-// v5.0: Hold duration weights
-export const HOLD_DURATION_WEIGHTS = [
-  { minSeconds: 0, maxSeconds: 60, weight: 0.2, label: '< 1 min' },
-  { minSeconds: 60, maxSeconds: 180, weight: 0.4, label: '1-3 min' },
-  { minSeconds: 180, maxSeconds: 600, weight: 0.7, label: '3-10 min' },
-  { minSeconds: 600, maxSeconds: 1800, weight: 1.0, label: '10-30 min' },
-  { minSeconds: 1800, maxSeconds: 7200, weight: 1.15, label: '30min-2h' },
-  { minSeconds: 7200, maxSeconds: Infinity, weight: 1.3, label: '2-4h+' },
+// Log-sigmoid hold duration weight
+// weight(t) = W_MIN + (W_MAX - W_MIN) / (1 + (T_MID / t)^K)
+export const HOLD_WEIGHT_MIN = 0.5;
+export const HOLD_WEIGHT_MAX = 1.1;
+export const HOLD_WEIGHT_MID_SECONDS = 300;
+export const HOLD_WEIGHT_STEEPNESS = 1.5;
+
+export function getHoldWeight(seconds: number): number {
+  if (seconds <= 0) return HOLD_WEIGHT_MIN;
+  const ratio = Math.pow(HOLD_WEIGHT_MID_SECONDS / seconds, HOLD_WEIGHT_STEEPNESS);
+  const weight = HOLD_WEIGHT_MIN + (HOLD_WEIGHT_MAX - HOLD_WEIGHT_MIN) / (1 + ratio);
+  return Math.round(weight * 100) / 100;
+}
+
+// Sample data points for UI display
+export const HOLD_WEIGHT_SAMPLES = [
+  { seconds: 30, label: '30s' },
+  { seconds: 60, label: '1m' },
+  { seconds: 180, label: '3m' },
+  { seconds: 300, label: '5m' },
+  { seconds: 600, label: '10m' },
+  { seconds: 1800, label: '30m' },
+  { seconds: 3600, label: '1h' },
+  { seconds: 7200, label: '2h+' },
 ] as const;
 
 export interface ChatMessage {

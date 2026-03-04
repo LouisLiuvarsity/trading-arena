@@ -12,36 +12,43 @@ import {
 // ─── Constants Tests ─────────────────────────────────────────────────────────
 
 describe("constants", () => {
-  describe("getHoldWeight", () => {
-    it("returns 0.2 for trades under 60 seconds", () => {
-      expect(getHoldWeight(0)).toBe(0.2);
-      expect(getHoldWeight(30)).toBe(0.2);
-      expect(getHoldWeight(59)).toBe(0.2);
+  describe("getHoldWeight (log-sigmoid)", () => {
+    it("returns minimum weight for 0 seconds", () => {
+      expect(getHoldWeight(0)).toBe(0.5);
     });
 
-    it("returns 0.4 for trades between 60 and 180 seconds", () => {
-      expect(getHoldWeight(60)).toBe(0.4);
-      expect(getHoldWeight(120)).toBe(0.4);
+    it("returns low weight for very short trades", () => {
+      const w30 = getHoldWeight(30);
+      expect(w30).toBeGreaterThanOrEqual(0.5);
+      expect(w30).toBeLessThan(0.55);
     });
 
-    it("returns 0.7 for trades between 180 and 600 seconds", () => {
-      expect(getHoldWeight(180)).toBe(0.7);
-      expect(getHoldWeight(300)).toBe(0.7);
+    it("returns midpoint weight around 5 minutes", () => {
+      const w300 = getHoldWeight(300);
+      expect(w300).toBe(0.8); // midpoint of 0.5 and 1.1
     });
 
-    it("returns 1.0 for trades between 600 and 1800 seconds", () => {
-      expect(getHoldWeight(600)).toBe(1.0);
-      expect(getHoldWeight(1200)).toBe(1.0);
+    it("returns near-baseline weight around 10 minutes", () => {
+      const w600 = getHoldWeight(600);
+      expect(w600).toBeGreaterThanOrEqual(0.95);
+      expect(w600).toBeLessThanOrEqual(1.0);
     });
 
-    it("returns 1.15 for trades between 1800 and 7200 seconds", () => {
-      expect(getHoldWeight(1800)).toBe(1.15);
-      expect(getHoldWeight(3600)).toBe(1.15);
+    it("approaches maximum weight for long holds", () => {
+      const w7200 = getHoldWeight(7200);
+      expect(w7200).toBeGreaterThanOrEqual(1.08);
+      expect(w7200).toBeLessThanOrEqual(1.1);
     });
 
-    it("returns 1.3 for trades over 7200 seconds", () => {
-      expect(getHoldWeight(7200)).toBe(1.3);
-      expect(getHoldWeight(86400)).toBe(1.3);
+    it("is monotonically increasing", () => {
+      const times = [0, 10, 30, 60, 180, 300, 600, 1800, 3600, 7200, 86400];
+      for (let i = 1; i < times.length; i++) {
+        expect(getHoldWeight(times[i])).toBeGreaterThanOrEqual(getHoldWeight(times[i - 1]));
+      }
+    });
+
+    it("never exceeds max weight", () => {
+      expect(getHoldWeight(86400)).toBeLessThanOrEqual(1.1);
     });
   });
 

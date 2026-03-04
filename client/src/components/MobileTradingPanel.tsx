@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback, memo } from 'react';
 import { Slider } from '@/components/ui/slider';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { Position, AccountState } from '@/lib/types';
+import { HOLD_WEIGHT_MIN, HOLD_WEIGHT_MAX } from '@/lib/types';
 
 interface Props {
   account: AccountState;
@@ -16,7 +17,6 @@ interface Props {
   currentPrice: number;
   onOpenPosition: (direction: 'long' | 'short', size: number, tp?: number | null, sl?: number | null) => Promise<void> | void;
   onClosePosition: () => Promise<void> | void;
-  getNextWeightThreshold: (seconds: number) => { nextWeight: number; secondsNeeded: number } | null;
   onSetTpSl?: (tp?: number | null, sl?: number | null) => void;
   isStale?: boolean;
 }
@@ -60,7 +60,7 @@ const QUICK_PCT = [1, 2, 3, 5, 10];
 type TpSlMode = 'price' | 'pct';
 
 function MobileTradingPanel({
-  account, position, currentPrice, onOpenPosition, onClosePosition, getNextWeightThreshold, onSetTpSl, isStale
+  account, position, currentPrice, onOpenPosition, onClosePosition, onSetTpSl, isStale
 }: Props) {
   const [positionSize, setPositionSize] = useState(250);
   const [sizeUnit, setSizeUnit] = useState<'USDT' | 'SOL'>('USDT');
@@ -249,16 +249,13 @@ function MobileTradingPanel({
     }
   }, [sizeUnit, currentPrice, positionSize]);
 
-  const nextThreshold = position ? getNextWeightThreshold(holdSeconds) : null;
   const priceStep = getPriceStep(currentPrice);
   const notionalSize = Math.round(positionSize * account.tierLeverage);
 
   // ─── POSITION VIEW ───────────────────────────────────────
   if (position) {
     const isProfitable = position.unrealizedPnl >= 0;
-    const weightSteps = [0.2, 0.4, 0.7, 1.0, 1.15, 1.3];
-    const currentWeightIdx = weightSteps.indexOf(position.holdDurationWeight);
-    const weightProgress = ((currentWeightIdx + 1) / weightSteps.length) * 100;
+    const weightProgress = Math.min(100, ((position.holdDurationWeight - HOLD_WEIGHT_MIN) / (HOLD_WEIGHT_MAX - HOLD_WEIGHT_MIN)) * 100);
 
     const tpPnl = position.takeProfit
       ? (position.direction === 'long'
@@ -325,11 +322,6 @@ function MobileTradingPanel({
                 <div className="h-full bg-gradient-to-r from-[#F6465D] via-[#F0B90B] to-[#0ECB81] rounded-full transition-all duration-500"
                   style={{ width: `${weightProgress}%` }} />
               </div>
-              {nextThreshold && (
-                <span className="text-[9px] text-[#F0B90B]/80 font-mono shrink-0">
-                  {formatDuration(nextThreshold.secondsNeeded)} → {nextThreshold.nextWeight}x
-                </span>
-              )}
             </div>
 
             {/* TP — Independent editing */}

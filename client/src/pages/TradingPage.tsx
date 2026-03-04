@@ -188,21 +188,6 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
     ticker && ticker.priceChange > 0 ? "up" : ticker && ticker.priceChange < 0 ? "down" : "neutral"
   );
 
-  const getNextWeightThreshold = (seconds: number) => {
-    const levels = [
-      { max: 60, nextWeight: 0.4 },
-      { max: 180, nextWeight: 0.7 },
-      { max: 600, nextWeight: 1.0 },
-      { max: 1800, nextWeight: 1.15 },
-      { max: 7200, nextWeight: 1.3 },
-    ];
-    for (const level of levels) {
-      if (seconds < level.max) {
-        return { nextWeight: level.nextWeight, secondsNeeded: level.max - seconds };
-      }
-    }
-    return null;
-  };
 
   // ═══════════════════════════════════════════════════════════
   // MOBILE LAYOUT
@@ -360,7 +345,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
           currentPrice={currentPrice}
           onOpenPosition={openPosition}
           onClosePosition={closePosition}
-          getNextWeightThreshold={getNextWeightThreshold}
+
           onSetTpSl={handleSetTpSl}
           isStale={ticker?.stale}
         />
@@ -501,7 +486,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
           currentPrice={currentPrice}
           onOpenPosition={openPosition}
           onClosePosition={closePosition}
-          getNextWeightThreshold={getNextWeightThreshold}
+
           onSetTpSl={handleSetTpSl}
           isStale={ticker?.stale}
         />

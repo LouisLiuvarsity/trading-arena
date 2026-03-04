@@ -468,6 +468,8 @@ export async function getAllArenaAccountsWithCapital(): Promise<
   return db.select().from(arenaAccounts);
 }
 
+
+
 export async function updateSeasonPoints(
   arenaAccountId: number,
   additionalPoints: number,
@@ -565,6 +567,16 @@ export async function getDirectionConsistency(arenaAccountId: number, matchId: n
   const longCount = rows.filter((r: { direction: string }) => r.direction === "long").length;
   const shortCount = rows.length - longCount;
   return Math.round((Math.max(longCount, shortCount) / rows.length) * 100) / 100;
+}
+
+export async function getAvgHoldWeightForUser(arenaAccountId: number): Promise<number> {
+  const rows = await db
+    .select({
+      avg: sql<number>`COALESCE(AVG(${trades.holdWeight}), 0)`,
+    })
+    .from(trades)
+    .where(eq(trades.arenaAccountId, arenaAccountId));
+  return rows[0]?.avg ?? 0;
 }
 
 export async function ensureActiveMatch(): Promise<void> {

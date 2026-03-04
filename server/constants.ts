@@ -6,14 +6,12 @@ export const MATCH_DURATION_MS = 24 * 60 * 60 * 1000;
 export const CLOSE_ONLY_SECONDS = 30 * 60;
 export const FEE_RATE = 0.0005; // 0.05% per side
 
-export const HOLD_DURATION_WEIGHTS = [
-  { minSeconds: 0, maxSeconds: 60, weight: 0.2 },
-  { minSeconds: 60, maxSeconds: 180, weight: 0.4 },
-  { minSeconds: 180, maxSeconds: 600, weight: 0.7 },
-  { minSeconds: 600, maxSeconds: 1800, weight: 1.0 },
-  { minSeconds: 1800, maxSeconds: 7200, weight: 1.15 },
-  { minSeconds: 7200, maxSeconds: Number.POSITIVE_INFINITY, weight: 1.3 },
-] as const;
+// Log-sigmoid hold duration weight parameters
+// weight(t) = W_MIN + (W_MAX - W_MIN) / (1 + (T_MID / t)^K)
+export const HOLD_WEIGHT_MIN = 0.5;
+export const HOLD_WEIGHT_MAX = 1.1;
+export const HOLD_WEIGHT_MID_SECONDS = 300; // 5 minutes — midpoint
+export const HOLD_WEIGHT_STEEPNESS = 1.5;
 
 export const REGULAR_PRIZE_TABLE = [
   { rankMin: 1, rankMax: 1, prize: 55 },
@@ -46,12 +44,10 @@ export const RANK_TIERS = [
 ] as const;
 
 export function getHoldWeight(seconds: number): number {
-  for (const row of HOLD_DURATION_WEIGHTS) {
-    if (seconds >= row.minSeconds && seconds < row.maxSeconds) {
-      return row.weight;
-    }
-  }
-  return 1.3;
+  if (seconds <= 0) return HOLD_WEIGHT_MIN;
+  const ratio = Math.pow(HOLD_WEIGHT_MID_SECONDS / seconds, HOLD_WEIGHT_STEEPNESS);
+  const weight = HOLD_WEIGHT_MIN + (HOLD_WEIGHT_MAX - HOLD_WEIGHT_MIN) / (1 + ratio);
+  return Math.round(weight * 100) / 100;
 }
 
 export function getPrizeForRank(rank: number): number {
