@@ -39,6 +39,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'status.qualified': '✓ 已晋级',
     'status.notQualified': '未晋级',
     'status.prizePool': '奖金池',
+    'status.home': '主页',
 
     // ── MobileStatusBar ──
     'mstatus.eq': 'Eq',
@@ -460,6 +461,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'status.qualified': '✓ Qualified',
     'status.notQualified': 'Not Qualified',
     'status.prizePool': 'Prize Pool',
+    'status.home': 'Home',
 
     // ── MobileStatusBar ──
     'mstatus.eq': 'Eq',

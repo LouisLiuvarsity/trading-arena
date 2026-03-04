@@ -12,6 +12,7 @@ interface Props {
   account: AccountState;
   match: MatchState;
   season: SeasonState;
+  onLogout?: () => void;
 }
 
 function formatCountdown(seconds: number): string {
@@ -21,7 +22,7 @@ function formatCountdown(seconds: number): string {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
-export default function MobileStatusBar({ account, match, season }: Props) {
+export default function MobileStatusBar({ account, match, season, onLogout }: Props) {
   const { t, lang, setLang } = useT();
   const [remainingSeconds, setRemainingSeconds] = useState(match.remainingSeconds);
   const [elapsed, setElapsed] = useState(match.elapsed);
@@ -58,24 +59,7 @@ export default function MobileStatusBar({ account, match, season }: Props) {
       {/* Row 1: Logo + Match + Timer */}
       <div className="flex items-center justify-between px-2.5 py-1 text-[10px]">
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1">
-            <img
-              src="https://d2xsxph8kpxj0f.cloudfront.net/310519663325188422/dRgYLfmNL5QAGwfaYvi5WU/arena-logo-dt5Xe5xWht3o2sSpvRZR9E.webp"
-              alt="Arena"
-              className="w-3.5 h-3.5"
-            />
-            <span className="font-display font-bold text-[#F0B90B] text-[10px]">ARENA</span>
-          </div>
-          <span className="text-[#848E9C]">
-            {match.matchType === 'grand_final' ? (
-              <span className="text-[#F0B90B] font-semibold">{t('status.grandFinal')}</span>
-            ) : (
-              <>R<span className="font-mono text-[#D1D4DC] font-semibold">{match.matchNumber}</span>/15</>
-            )}
-          </span>
-          <span className="font-mono font-semibold capitalize text-[10px]" style={{ color: tierColor }}>
-            {account.rankTier}
-          </span>
+          <button onClick={onLogout} className="text-[9px] text-[#848E9C] hover:text-[#D1D4DC] px-1 py-0.5 rounded bg-white/5 font-medium">{t('status.home')}</button>
           <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} className="text-[9px] text-[#848E9C] hover:text-[#D1D4DC] px-1 py-0.5 rounded bg-white/5 font-medium">{lang === 'zh' ? 'EN' : '中'}</button>
         </div>
 

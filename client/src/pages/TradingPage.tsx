@@ -277,7 +277,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
         )}
 
         {/* Mobile Status Bar */}
-        <MobileStatusBar account={account} match={match} season={season} />
+        <MobileStatusBar account={account} match={match} season={season} onLogout={onLogout} />
 
         {/* Mobile Toolbar — Chat, Trades, Rank, Stats, News */}
         <MobileToolbar
@@ -463,7 +463,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
         </div>
       )}
 
-      <StatusBar account={account} match={match} season={season} />
+      <StatusBar account={account} match={match} season={season} onLogout={onLogout} />
       <NewsTicker news={news} />
       <CompetitionNotifications
         account={account}

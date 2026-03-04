@@ -11,6 +11,7 @@ interface Props {
   account: AccountState;
   match: MatchState;
   season: SeasonState;
+  onLogout?: () => void;
 }
 
 function formatCountdown(seconds: number): string {
@@ -20,7 +21,7 @@ function formatCountdown(seconds: number): string {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
-export default function StatusBar({ account, match, season }: Props) {
+export default function StatusBar({ account, match, season, onLogout }: Props) {
   const { t, lang, setLang } = useT();
   const [remainingSeconds, setRemainingSeconds] = useState(match.remainingSeconds);
   const [elapsed, setElapsed] = useState(match.elapsed);
@@ -64,29 +65,10 @@ export default function StatusBar({ account, match, season }: Props) {
     <div className={`${getBarBg()} border-b border-[rgba(255,255,255,0.08)] transition-colors duration-1000`}>
       {/* Main metrics row */}
       <div className="flex items-center justify-between px-3 py-1.5 text-[11px]">
-        {/* Left: Logo + Match info */}
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="flex items-center gap-1.5">
-            <img
-              src="https://d2xsxph8kpxj0f.cloudfront.net/310519663325188422/dRgYLfmNL5QAGwfaYvi5WU/arena-logo-dt5Xe5xWht3o2sSpvRZR9E.webp"
-              alt="Arena"
-              className="w-4 h-4"
-            />
-            <span className="font-display font-bold text-[#F0B90B] text-xs">ARENA</span>
-            <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} className="text-[10px] text-[#848E9C] hover:text-[#D1D4DC] px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/10 transition-colors font-medium">{lang === 'zh' ? 'EN' : '中'}</button>
-          </div>
-          <div className="h-3.5 w-px bg-white/10" />
-          <span className="text-[#848E9C]">
-            {match.matchType === 'grand_final' ? (
-              <span className="text-[#F0B90B] font-semibold">{t('status.grandFinal')}</span>
-            ) : (
-              <>{t('status.matchNum', { n: match.matchNumber })}</>
-            )}
-          </span>
-          <span className="text-[#848E9C]">
-            {t('status.tier')} <span className="font-mono font-semibold capitalize" style={{ color: tierColor }}>{account.rankTier}</span>
-            <span className="text-[#5E6673] ml-1">{account.tierLeverage}x</span>
-          </span>
+        {/* Left: Home + Language toggle */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button onClick={onLogout} className="text-[10px] text-[#848E9C] hover:text-[#D1D4DC] px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/10 transition-colors font-medium">{t('status.home')}</button>
+          <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} className="text-[10px] text-[#848E9C] hover:text-[#D1D4DC] px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/10 transition-colors font-medium">{lang === 'zh' ? 'EN' : '中'}</button>
         </div>
 
         {/* Center: Key metrics */}
