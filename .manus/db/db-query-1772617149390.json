@@ -1,0 +1,22 @@
+{
+  "query": "SELECT id, username, message, timestamp FROM chat_messages WHERE message LIKE '%习近平%' OR message LIKE '%伟大的领袖%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT id, username, message, timestamp FROM chat_messages WHERE message LIKE '%习近平%' OR message LIKE '%伟大的领袖%';",
+  "rows": [
+    {
+      "id": "chat-_ikvHiLg-mwq",
+      "username": "Rick别狗叫",
+      "message": "伟大的领袖",
+      "timestamp": "1772614544152"
+    },
+    {
+      "id": "chat-Kz7bAVhQGMWq",
+      "username": "Rick别狗叫",
+      "message": "习近平",
+      "timestamp": "1772614511510"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tusername\tmessage\ttimestamp\nchat-_ikvHiLg-mwq\tRick别狗叫\t伟大的领袖\t1772614544152\nchat-Kz7bAVhQGMWq\tRick别狗叫\t习近平\t1772614511510\n",
+  "stderr": "",
+  "execution_time_ms": 1560
+}
