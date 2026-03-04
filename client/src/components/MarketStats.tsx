@@ -1,30 +1,47 @@
 import { memo } from "react";
 import { RANK_TIERS } from "@/lib/types";
-import type { AccountState, MatchState, SocialData } from "@/lib/types";
+import type { AccountState, MatchState, SocialData, PredictionState, PollVoteData } from "@/lib/types";
+import { useT } from "@/lib/i18n";
 
 interface Props {
   social: SocialData;
   account: AccountState;
   match: MatchState;
+  prediction?: PredictionState | null;
+  pollData?: PollVoteData | null;
 }
 
-function MarketStats({ social, account, match }: Props) {
+function MarketStats({ social, account, match, prediction, pollData }: Props) {
+  const { t, lang } = useT();
   const longPct = Math.round(social.longPct * 10) / 10;
   const shortPct = Math.round(social.shortPct * 10) / 10;
   const losingPct = Math.round(social.losingPct * 10) / 10;
   const hoursElapsed = Math.floor(match.elapsed * 24);
 
+  // Poll calculations
+  const totalVotes = pollData ? pollData.longVotes + pollData.shortVotes + pollData.neutralVotes : 0;
+  const longPollPct = totalVotes > 0 ? Math.round((pollData!.longVotes / totalVotes) * 100) : 0;
+  const shortPollPct = totalVotes > 0 ? Math.round((pollData!.shortVotes / totalVotes) * 100) : 0;
+  const neutralPollPct = totalVotes > 0 ? 100 - longPollPct - shortPollPct : 0;
+
+  const voteLabel = (v: string | null) => {
+    if (v === 'long') return t('stats.pollLong');
+    if (v === 'short') return t('stats.pollShort');
+    if (v === 'neutral') return t('stats.pollNeutral');
+    return t('stats.noVote');
+  };
+
   return (
     <div className="h-full overflow-y-auto custom-scrollbar bg-[#0B0E11]">
       <div className="px-3 py-2 border-b border-[rgba(255,255,255,0.06)]">
-        <div className="text-[11px] text-[#F0B90B] font-medium">📊 全场实时统计</div>
+        <div className="text-[11px] text-[#F0B90B] font-medium">{t('stats.title')}</div>
         <div className="text-[9px] text-[#848E9C] mt-0.5">
-          比赛进行 {hoursElapsed}h / 24h · {match.participantCount} 名参赛者
+          {t('stats.matchProgress', { h: hoursElapsed, n: match.participantCount })}
         </div>
       </div>
 
       <div className="px-3 py-2.5 border-b border-[rgba(255,255,255,0.06)]">
-        <div className="text-[10px] text-[#848E9C] mb-1.5">多空比 (Long/Short)</div>
+        <div className="text-[10px] text-[#848E9C] mb-1.5">{t('stats.longShort')}</div>
         <div className="flex items-center gap-2 mb-1.5">
           <span className="text-[#0ECB81] font-mono text-sm font-bold">{longPct}%</span>
           <div className="flex-1 h-3 bg-[#F6465D]/30 rounded-full overflow-hidden relative">
@@ -33,17 +50,17 @@ function MarketStats({ social, account, match }: Props) {
           <span className="text-[#F6465D] font-mono text-sm font-bold">{shortPct}%</span>
         </div>
         <div className="flex justify-between text-[9px]">
-          <span className="text-[#0ECB81]">做多 {Math.round(match.participantCount * longPct / 100)} 人</span>
+          <span className="text-[#0ECB81]">{t('stats.longCount', { n: Math.round(match.participantCount * longPct / 100) })}</span>
           <span className={`font-mono ${social.longPctDelta > 0 ? "text-[#0ECB81]" : "text-[#F6465D]"}`}>
             5min: {social.longPctDelta > 0 ? "+" : ""}
             {social.longPctDelta.toFixed(1)}%
           </span>
-          <span className="text-[#F6465D]">做空 {Math.round(match.participantCount * shortPct / 100)} 人</span>
+          <span className="text-[#F6465D]">{t('stats.shortCount', { n: Math.round(match.participantCount * shortPct / 100) })}</span>
         </div>
       </div>
 
       <div className="px-3 py-2.5 border-b border-[rgba(255,255,255,0.06)]">
-        <div className="text-[10px] text-[#848E9C] mb-1.5">全场胜率</div>
+        <div className="text-[10px] text-[#848E9C] mb-1.5">{t('stats.winRate')}</div>
         <div className="flex items-center gap-2 mb-1">
           <span className="text-[#0ECB81] font-mono text-sm font-bold">{social.profitablePct.toFixed(1)}%</span>
           <div className="flex-1 h-3 bg-[#F6465D]/30 rounded-full overflow-hidden relative">
@@ -52,37 +69,87 @@ function MarketStats({ social, account, match }: Props) {
           <span className="text-[#F6465D] font-mono text-sm font-bold">{losingPct}%</span>
         </div>
         <div className="flex justify-between text-[9px]">
-          <span className="text-[#0ECB81]">盈利 · 平均 +{social.avgProfitPct}%</span>
-          <span className="text-[#F6465D]">亏损 · 平均 {social.avgLossPct}%</span>
+          <span className="text-[#0ECB81]">{t('stats.profitAvg', { pct: social.avgProfitPct })}</span>
+          <span className="text-[#F6465D]">{t('stats.lossAvg', { pct: social.avgLossPct })}</span>
         </div>
       </div>
 
       <div className="px-3 py-2.5 border-b border-[rgba(255,255,255,0.06)]">
-        <div className="text-[10px] text-[#848E9C] mb-1.5">交易活跃度</div>
+        <div className="text-[10px] text-[#848E9C] mb-1.5">{t('stats.tradeActivity')}</div>
         <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-          <StatItem label="全场平均交易" value={`${social.avgTradesPerPerson.toFixed(1)} 笔`} />
-          <StatItem label="你的交易次数" value={`${account.tradesUsed} / ${account.tradesMax} 笔`} />
-          <StatItem label="当前持仓中" value={`${social.activeTradersPct.toFixed(0)}% 选手`} />
-          <StatItem label="5min 成交量" value={`${social.recentTradeVolume} 笔`} />
-          <StatItem label="中位数交易" value={`${social.medianTradesPerPerson} 笔`} />
-          <StatItem label="主导方向" value={social.recentDirectionBias === "long" ? "📈 做多" : social.recentDirectionBias === "short" ? "📉 做空" : "➡️ 中性"} />
+          <StatItem label={t('stats.avgTrades')} value={t('stats.tradesUnit', { n: social.avgTradesPerPerson.toFixed(1) })} />
+          <StatItem label={t('stats.yourTrades')} value={t('stats.tradesOf', { used: account.tradesUsed, max: account.tradesMax })} />
+          <StatItem label={t('stats.holdingPct')} value={t('stats.pctTraders', { pct: social.activeTradersPct.toFixed(0) })} />
+          <StatItem label={t('stats.recentVol')} value={t('stats.tradesUnit', { n: social.recentTradeVolume })} />
+          <StatItem label={t('stats.medianTrades')} value={t('stats.tradesUnit', { n: social.medianTradesPerPerson })} />
+          <StatItem label={t('stats.dominantDir')} value={social.recentDirectionBias === "long" ? t('stats.dirLong') : social.recentDirectionBias === "short" ? t('stats.dirShort') : t('stats.dirNeutral')} />
+        </div>
+      </div>
+
+      {/* Prediction & Voting Stats */}
+      <div className="px-3 py-2.5 border-b border-[rgba(255,255,255,0.06)]">
+        <div className="text-[10px] text-[#F0B90B] mb-1.5">{t('stats.predVote')}</div>
+        {totalVotes > 0 ? (
+          <>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-[#0ECB81] font-mono text-[10px] font-bold">{longPollPct}%</span>
+              <div className="flex-1 h-2 bg-[#848E9C]/20 rounded-full overflow-hidden flex">
+                <div className="h-full bg-[#0ECB81] transition-all duration-500" style={{ width: `${longPollPct}%` }} />
+                <div className="h-full bg-[#F0B90B] transition-all duration-500" style={{ width: `${neutralPollPct}%` }} />
+                <div className="h-full bg-[#F6465D] transition-all duration-500" style={{ width: `${shortPollPct}%` }} />
+              </div>
+              <span className="text-[#F6465D] font-mono text-[10px] font-bold">{shortPollPct}%</span>
+            </div>
+            <div className="flex justify-between text-[9px] mb-1.5">
+              <span className="text-[#0ECB81]">{t('stats.pollLong')} {longPollPct}%</span>
+              <span className="text-[#F0B90B]">{t('stats.pollNeutral')} {neutralPollPct}%</span>
+              <span className="text-[#F6465D]">{t('stats.pollShort')} {shortPollPct}%</span>
+            </div>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+              <StatItem label={t('stats.totalVotes')} value={String(totalVotes)} />
+              <StatItem label={t('stats.yourVote')} value={voteLabel(pollData?.userVote ?? null)} highlight highlightColor={pollData?.userVote === 'long' ? 'green' : pollData?.userVote === 'short' ? 'red' : pollData?.userVote === 'neutral' ? 'gold' : undefined} />
+            </div>
+          </>
+        ) : (
+          <div className="text-[9px] text-[#5E6673]">{t('stats.noVoteData')}</div>
+        )}
+
+        {prediction ? (
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-2 pt-2 border-t border-[rgba(255,255,255,0.04)]">
+            <StatItem label={t('stats.predAccuracy')} value={`${prediction.stats.accuracy}%`} highlight highlightColor="gold" />
+            <StatItem label={t('stats.predCorrect')} value={`${prediction.stats.correctPredictions}/${prediction.stats.totalPredictions}`} />
+            <StatItem label={t('stats.predPending')} value={String(prediction.stats.pendingCount)} />
+            <StatItem label={t('stats.predTotal')} value={String(prediction.stats.totalPredictions)} />
+          </div>
+        ) : (
+          <div className="text-[9px] text-[#5E6673] mt-1.5">{t('stats.noPredData')}</div>
+        )}
+      </div>
+
+      {/* Extra interesting stats */}
+      <div className="px-3 py-2.5 border-b border-[rgba(255,255,255,0.06)]">
+        <div className="text-[10px] text-[#848E9C] mb-1.5">{t('stats.extraTitle')}</div>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+          <StatItem label={t('stats.lossStreak')} value={t('stats.lossStreakVal', { n: social.consecutiveLossLeader })} highlight highlightColor="red" />
+          <StatItem label={t('stats.onStreak')} value={`${social.tradersOnLosingStreak}`} />
+          <StatItem label={t('stats.avgRankChange')} value={`${social.avgRankChange30m > 0 ? '+' : ''}${social.avgRankChange30m.toFixed(1)}`} />
         </div>
       </div>
 
       <div className="px-3 py-2.5 border-b border-[rgba(255,255,255,0.06)]">
-        <div className="text-[10px] text-[#F0B90B] mb-1.5">⚡ 晋级线附近</div>
+        <div className="text-[10px] text-[#F0B90B] mb-1.5">{t('stats.promotionNear')}</div>
         <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-          <StatItem label="晋级线排名" value="#300" highlight highlightColor="gold" />
-          <StatItem label="线附近人数" value={`${social.nearPromotionCount} 人`} highlight highlightColor="gold" />
-          <StatItem label="竞争区间" value={social.nearPromotionRange} />
-          <StatItem label="10min 变化" value={`${social.nearPromotionDelta > 0 ? "+" : ""}${social.nearPromotionDelta} 人`} />
-          <StatItem label="你的排名" value={`#${account.rank}`} />
-          <StatItem label="距晋级线" value={account.rank <= 300 ? `安全 +${300 - account.rank} 名` : `差 ${account.rank - 300} 名`} />
+          <StatItem label={t('stats.promotionRank')} value="#300" highlight highlightColor="gold" />
+          <StatItem label={t('stats.nearCount')} value={t('stats.nearPeople', { n: social.nearPromotionCount })} highlight highlightColor="gold" />
+          <StatItem label={t('stats.range')} value={social.nearPromotionRange} />
+          <StatItem label={t('stats.tenMinChange')} value={`${social.nearPromotionDelta > 0 ? "+" : ""}${social.nearPromotionDelta} ${lang === 'zh' ? '人' : ''}`} />
+          <StatItem label={t('stats.yourRank')} value={`#${account.rank}`} />
+          <StatItem label={t('stats.distToPromo')} value={account.rank <= 300 ? t('stats.safe', { n: 300 - account.rank }) : t('stats.behind', { n: account.rank - 300 })} />
         </div>
       </div>
 
       <div className="px-3 py-2.5">
-        <div className="text-[10px] text-[#848E9C] mb-1.5">🏅 段位 & 奖金资格</div>
+        <div className="text-[10px] text-[#848E9C] mb-1.5">{t('stats.tierTitle')}</div>
         <div className="space-y-1">
           {RANK_TIERS.map(tier => {
             const isActive = account.rankTier === tier.tier;
@@ -96,7 +163,7 @@ function MarketStats({ social, account, match }: Props) {
               >
                 <span className="flex items-center gap-1.5">
                   <span>{tier.icon}</span>
-                  <span style={{ color: isActive ? tier.color : undefined }}>{tier.label}</span>
+                  <span style={{ color: isActive ? tier.color : undefined }}>{lang === 'zh' ? tier.label : tier.labelEn}</span>
                   <span className="text-[#5E6673]">{tier.leverage}x</span>
                 </span>
                 <span className="text-[#5E6673]">

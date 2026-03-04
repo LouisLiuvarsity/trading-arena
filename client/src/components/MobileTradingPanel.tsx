@@ -10,6 +10,7 @@ import { Slider } from '@/components/ui/slider';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { Position, AccountState } from '@/lib/types';
 import { HOLD_WEIGHT_MIN, HOLD_WEIGHT_MAX } from '@/lib/types';
+import { useT } from '@/lib/i18n';
 
 interface Props {
   account: AccountState;
@@ -62,6 +63,7 @@ type TpSlMode = 'price' | 'pct';
 function MobileTradingPanel({
   account, position, currentPrice, onOpenPosition, onClosePosition, onSetTpSl, isStale
 }: Props) {
+  const { t } = useT();
   const [positionSize, setPositionSize] = useState(250);
   const [sizeUnit, setSizeUnit] = useState<'USDT' | 'SOL'>('USDT');
   const [sizeInput, setSizeInput] = useState('250');
@@ -276,7 +278,7 @@ function MobileTradingPanel({
             <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
               position.direction === 'long' ? 'bg-[#0ECB81]/15 text-[#0ECB81]' : 'bg-[#F6465D]/15 text-[#F6465D]'
             }`}>
-              {position.direction === 'long' ? '↑ LONG' : '↓ SHORT'}
+              {position.direction === 'long' ? t('tp.long') : t('tp.short')}
             </span>
             <span className="text-[10px] text-[#848E9C] font-mono">{position.size.toFixed(0)}U</span>
           </div>
@@ -299,19 +301,19 @@ function MobileTradingPanel({
             {/* Price + Hold info */}
             <div className="grid grid-cols-4 gap-2 text-[10px]">
               <div>
-                <div className="text-[#848E9C]">Entry</div>
+                <div className="text-[#848E9C]">{t('tp.entry')}</div>
                 <div className="font-mono text-[#D1D4DC]">{formatPrice(position.entryPrice)}</div>
               </div>
               <div>
-                <div className="text-[#848E9C]">Mark</div>
+                <div className="text-[#848E9C]">{t('tp.mark')}</div>
                 <div className="font-mono text-[#D1D4DC]">{formatPrice(currentPrice)}</div>
               </div>
               <div>
-                <div className="text-[#848E9C]">Hold</div>
+                <div className="text-[#848E9C]">{t('tp.hold')}</div>
                 <div className="font-mono text-[#D1D4DC]">{formatDuration(holdSeconds)}</div>
               </div>
               <div>
-                <div className="text-[#848E9C]">Weight</div>
+                <div className="text-[#848E9C]">{t('tp.weight')}</div>
                 <div className="font-mono text-[#F0B90B] font-bold">{position.holdDurationWeight}x</div>
               </div>
             </div>
@@ -334,11 +336,11 @@ function MobileTradingPanel({
                       {tpPnl !== null && <span className="text-[9px] opacity-60 ml-1">+{tpPnl.toFixed(1)}%</span>}
                     </span>
                   ) : (
-                    <span className="text-[#848E9C]/40">Not set</span>
+                    <span className="text-[#848E9C]/40">{t('tp.notSet')}</span>
                   )}
-                  <button onClick={() => setEditingTp(true)} className="text-[#F0B90B] ml-auto">{position.takeProfit ? 'Edit' : '+ Set'}</button>
+                  <button onClick={() => setEditingTp(true)} className="text-[#F0B90B] ml-auto">{position.takeProfit ? t('tp.edit') : t('tp.set')}</button>
                   {position.takeProfit && (
-                    <button onClick={handleCancelTp} className="text-[#F6465D]/60">Cancel</button>
+                    <button onClick={handleCancelTp} className="text-[#F6465D]/60">{t('tp.cancel')}</button>
                   )}
                 </>
               ) : (
@@ -351,7 +353,7 @@ function MobileTradingPanel({
                   </div>
                   <input type="number" step={editingTpMode === 'pct' ? 0.5 : priceStep} value={editTpInput}
                     onChange={e => setEditTpInput(e.target.value)}
-                    placeholder={editingTpMode === 'pct' ? 'ROI %' : 'Price'}
+                    placeholder={editingTpMode === 'pct' ? t('tp.roiPct') : t('tp.priceLabel')}
                     className="flex-1 bg-[#0B0E11] border border-[#0ECB81]/30 rounded px-2 py-1 text-xs font-mono text-[#D1D4DC] placeholder:text-[#848E9C]/30 focus:border-[#0ECB81] focus:outline-none" />
                   {editingTpMode === 'pct' && (
                     <div className="flex gap-0.5">
@@ -361,7 +363,7 @@ function MobileTradingPanel({
                       ))}
                     </div>
                   )}
-                  <button onClick={handleSaveTp} className="text-[#0ECB81] font-medium">Save</button>
+                  <button onClick={handleSaveTp} className="text-[#0ECB81] font-medium">{t('tp.save')}</button>
                   <button onClick={() => setEditingTp(false)} className="text-[#848E9C]">×</button>
                 </div>
               )}
@@ -377,11 +379,11 @@ function MobileTradingPanel({
                       {slPnl !== null && <span className="text-[9px] opacity-60 ml-1">{slPnl.toFixed(1)}%</span>}
                     </span>
                   ) : (
-                    <span className="text-[#848E9C]/40">Not set</span>
+                    <span className="text-[#848E9C]/40">{t('tp.notSet')}</span>
                   )}
-                  <button onClick={() => setEditingSl(true)} className="text-[#F0B90B] ml-auto">{position.stopLoss ? 'Edit' : '+ Set'}</button>
+                  <button onClick={() => setEditingSl(true)} className="text-[#F0B90B] ml-auto">{position.stopLoss ? t('tp.edit') : t('tp.set')}</button>
                   {position.stopLoss && (
-                    <button onClick={handleCancelSl} className="text-[#F6465D]/60">Cancel</button>
+                    <button onClick={handleCancelSl} className="text-[#F6465D]/60">{t('tp.cancel')}</button>
                   )}
                 </>
               ) : (
@@ -394,7 +396,7 @@ function MobileTradingPanel({
                   </div>
                   <input type="number" step={editingSlMode === 'pct' ? 0.5 : priceStep} value={editSlInput}
                     onChange={e => setEditSlInput(e.target.value)}
-                    placeholder={editingSlMode === 'pct' ? 'ROI %' : 'Price'}
+                    placeholder={editingSlMode === 'pct' ? t('tp.roiPct') : t('tp.priceLabel')}
                     className="flex-1 bg-[#0B0E11] border border-[#F6465D]/30 rounded px-2 py-1 text-xs font-mono text-[#D1D4DC] placeholder:text-[#848E9C]/30 focus:border-[#F6465D] focus:outline-none" />
                   {editingSlMode === 'pct' && (
                     <div className="flex gap-0.5">
@@ -404,7 +406,7 @@ function MobileTradingPanel({
                       ))}
                     </div>
                   )}
-                  <button onClick={handleSaveSl} className="text-[#F6465D] font-medium">Save</button>
+                  <button onClick={handleSaveSl} className="text-[#F6465D] font-medium">{t('tp.save')}</button>
                   <button onClick={() => setEditingSl(false)} className="text-[#848E9C]">×</button>
                 </div>
               )}
@@ -421,16 +423,16 @@ function MobileTradingPanel({
               }`}>
               {isSubmitting
                 ? <div className="w-5 h-5 border-2 border-current/30 border-t-current rounded-full animate-spin mx-auto" />
-                : <>Close Position ({isProfitable ? '+' : ''}{position.unrealizedPnl.toFixed(2)} U)</>
+                : <>{t('tp.closePosition')} ({isProfitable ? '+' : ''}{position.unrealizedPnl.toFixed(2)} U)</>
               }
             </button>
           ) : (
             <div className="flex gap-2">
               <button onClick={confirmClose} className="flex-1 py-3 bg-[#F6465D]/20 text-[#F6465D] text-sm rounded-lg font-medium">
-                Confirm (0.2x weight)
+                {t('tp.confirmWeight')}
               </button>
               <button onClick={() => setShowCloseWarning(false)} className="flex-1 py-3 bg-white/5 text-[#D1D4DC] text-sm rounded-lg">
-                Hold
+                {t('tp.hold')}
               </button>
             </div>
           )}
@@ -445,15 +447,15 @@ function MobileTradingPanel({
       {/* Price + Balance row */}
       <div className="flex items-center justify-between px-3 py-2 text-[10px]">
         <div>
-          <span className="text-[#848E9C]">Price </span>
+          <span className="text-[#848E9C]">{t('tp.priceLabel')} </span>
           <span className="font-mono text-[#D1D4DC] font-semibold">{formatPrice(currentPrice)}</span>
         </div>
         <div>
-          <span className="text-[#848E9C]">Avail </span>
+          <span className="text-[#848E9C]">{t('tp.avail')} </span>
           <span className="font-mono text-[#D1D4DC] font-semibold">{account.equity.toFixed(1)}U</span>
         </div>
         <div>
-          <span className="text-[#848E9C]">Left </span>
+          <span className="text-[#848E9C]">{t('tp.left')} </span>
           <span className={`font-mono font-semibold ${(account.tradesMax - account.tradesUsed) <= 5 ? 'text-[#F6465D]' : 'text-[#D1D4DC]'}`}>
             {account.tradesMax - account.tradesUsed}/{account.tradesMax}
           </span>
@@ -532,14 +534,14 @@ function MobileTradingPanel({
               }`}>
                 {showTpSl && <span className="text-black text-[8px] font-bold">✓</span>}
               </span>
-              TP/SL
+              {t('tp.tpsl')}
             </button>
             {showTpSl && (
               <div className="flex rounded overflow-hidden border border-[rgba(255,255,255,0.1)]">
                 <button onClick={() => { setOrderTpSlMode('price'); setOrderTpInput(''); setOrderSlInput(''); }}
-                  className={`px-2 py-0.5 text-[10px] ${orderTpSlMode === 'price' ? 'bg-[#F0B90B]/20 text-[#F0B90B]' : 'text-[#848E9C]'}`}>Price</button>
+                  className={`px-2 py-0.5 text-[10px] ${orderTpSlMode === 'price' ? 'bg-[#F0B90B]/20 text-[#F0B90B]' : 'text-[#848E9C]'}`}>{t('tp.priceLabel')}</button>
                 <button onClick={() => { setOrderTpSlMode('pct'); setOrderTpInput(''); setOrderSlInput(''); }}
-                  className={`px-2 py-0.5 text-[10px] ${orderTpSlMode === 'pct' ? 'bg-[#F0B90B]/20 text-[#F0B90B]' : 'text-[#848E9C]'}`}>ROI %</button>
+                  className={`px-2 py-0.5 text-[10px] ${orderTpSlMode === 'pct' ? 'bg-[#F0B90B]/20 text-[#F0B90B]' : 'text-[#848E9C]'}`}>{t('tp.roiPct')}</button>
               </div>
             )}
           </div>
@@ -548,11 +550,11 @@ function MobileTradingPanel({
               <div className="flex items-center gap-2">
                 <input type="number" step={orderTpSlMode === 'pct' ? 0.5 : priceStep} value={orderTpInput}
                   onChange={e => setOrderTpInput(e.target.value)}
-                  placeholder={orderTpSlMode === 'pct' ? 'TP ROI %' : 'TP Price'}
+                  placeholder={orderTpSlMode === 'pct' ? t('tp.tpRoi') : t('tp.tpPrice')}
                   className="flex-1 bg-[#0B0E11] border border-[#0ECB81]/20 rounded px-2 py-1.5 text-xs font-mono text-[#D1D4DC] placeholder:text-[#848E9C]/30 focus:border-[#0ECB81] focus:outline-none" />
                 <input type="number" step={orderTpSlMode === 'pct' ? 0.5 : priceStep} value={orderSlInput}
                   onChange={e => setOrderSlInput(e.target.value)}
-                  placeholder={orderTpSlMode === 'pct' ? 'SL ROI %' : 'SL Price'}
+                  placeholder={orderTpSlMode === 'pct' ? t('tp.slRoi') : t('tp.slPrice')}
                   className="flex-1 bg-[#0B0E11] border border-[#F6465D]/20 rounded px-2 py-1.5 text-xs font-mono text-[#D1D4DC] placeholder:text-[#848E9C]/30 focus:border-[#F6465D] focus:outline-none" />
               </div>
               {orderTpSlMode === 'pct' && (
@@ -585,7 +587,7 @@ function MobileTradingPanel({
         >
           {isSubmitting
             ? <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin mx-auto" />
-            : <>Buy / Long<div className="text-[10px] font-normal opacity-70">{positionSize} → {notionalSize}U</div></>
+            : <>{t('tp.buyLong')}<div className="text-[10px] font-normal opacity-70">{positionSize} → {notionalSize}U</div></>
           }
         </button>
         <button
@@ -595,7 +597,7 @@ function MobileTradingPanel({
         >
           {isSubmitting
             ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
-            : <>Sell / Short<div className="text-[10px] font-normal opacity-70">{positionSize} → {notionalSize}U</div></>
+            : <>{t('tp.sellShort')}<div className="text-[10px] font-normal opacity-70">{positionSize} → {notionalSize}U</div></>
           }
         </button>
       </div>

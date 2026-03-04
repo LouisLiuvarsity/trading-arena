@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect } from 'react';
 import { X, MessageCircle, Trophy, BarChart3, Newspaper, History } from 'lucide-react';
+import { useT } from '@/lib/i18n';
 
 interface Props {
   activePanel: string | null;
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function MobileToolbarOverlay({ activePanel, onClose, children }: Props) {
+  const { t } = useT();
   // Close on escape key
   useEffect(() => {
     if (!activePanel) return;
@@ -37,11 +39,11 @@ export function MobileToolbarOverlay({ activePanel, onClose, children }: Props) 
   if (!activePanel) return null;
 
   const panelTitles: Record<string, { label: string; icon: React.ReactNode }> = {
-    chat: { label: 'Chat Room', icon: <MessageCircle className="w-4 h-4" /> },
-    trades: { label: 'Trade History', icon: <History className="w-4 h-4" /> },
-    leaderboard: { label: 'Leaderboard', icon: <Trophy className="w-4 h-4" /> },
-    stats: { label: 'Market Stats', icon: <BarChart3 className="w-4 h-4" /> },
-    news: { label: 'News Feed', icon: <Newspaper className="w-4 h-4" /> },
+    chat: { label: t('toolbar.chatRoom'), icon: <MessageCircle className="w-4 h-4" /> },
+    trades: { label: t('toolbar.tradeHistory'), icon: <History className="w-4 h-4" /> },
+    leaderboard: { label: t('toolbar.leaderboard'), icon: <Trophy className="w-4 h-4" /> },
+    stats: { label: t('toolbar.marketStats'), icon: <BarChart3 className="w-4 h-4" /> },
+    news: { label: t('toolbar.newsFeed'), icon: <Newspaper className="w-4 h-4" /> },
   };
 
   const current = panelTitles[activePanel] || { label: activePanel, icon: null };
@@ -115,11 +117,12 @@ interface MobileToolbarProps {
 }
 
 export function MobileToolbar({ activePanel, onSelectPanel, tradesCount, chatBadge }: MobileToolbarProps) {
+  const { t } = useT();
   return (
     <div className="flex items-center gap-1.5 px-2 py-1.5 overflow-x-auto no-scrollbar border-b border-[rgba(255,255,255,0.06)] bg-[#0B0E11]">
       <ToolbarButton
         icon={<MessageCircle className="w-3.5 h-3.5" />}
-        label="Chat"
+        label={t('toolbar.chat')}
         badge={chatBadge}
         badgeRed
         active={activePanel === 'chat'}
@@ -127,26 +130,26 @@ export function MobileToolbar({ activePanel, onSelectPanel, tradesCount, chatBad
       />
       <ToolbarButton
         icon={<History className="w-3.5 h-3.5" />}
-        label="Trades"
+        label={t('toolbar.trades')}
         badge={tradesCount}
         active={activePanel === 'trades'}
         onClick={() => onSelectPanel('trades')}
       />
       <ToolbarButton
         icon={<Trophy className="w-3.5 h-3.5" />}
-        label="Rank"
+        label={t('toolbar.rank')}
         active={activePanel === 'leaderboard'}
         onClick={() => onSelectPanel('leaderboard')}
       />
       <ToolbarButton
         icon={<BarChart3 className="w-3.5 h-3.5" />}
-        label="Stats"
+        label={t('toolbar.stats')}
         active={activePanel === 'stats'}
         onClick={() => onSelectPanel('stats')}
       />
       <ToolbarButton
         icon={<Newspaper className="w-3.5 h-3.5" />}
-        label="News"
+        label={t('toolbar.news')}
         active={activePanel === 'news'}
         onClick={() => onSelectPanel('news')}
       />

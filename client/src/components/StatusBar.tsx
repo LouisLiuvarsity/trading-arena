@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import type { AccountState, MatchState, SeasonState } from '@/lib/types';
+import { useT } from '@/lib/i18n';
 
 interface Props {
   account: AccountState;
@@ -20,6 +21,7 @@ function formatCountdown(seconds: number): string {
 }
 
 export default function StatusBar({ account, match, season }: Props) {
+  const { t, lang, setLang } = useT();
   const [remainingSeconds, setRemainingSeconds] = useState(match.remainingSeconds);
   const [elapsed, setElapsed] = useState(match.elapsed);
 
@@ -71,17 +73,18 @@ export default function StatusBar({ account, match, season }: Props) {
               className="w-4 h-4"
             />
             <span className="font-display font-bold text-[#F0B90B] text-xs">ARENA</span>
+            <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} className="text-[10px] text-[#848E9C] hover:text-[#D1D4DC] px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/10 transition-colors font-medium">{lang === 'zh' ? 'EN' : '中'}</button>
           </div>
           <div className="h-3.5 w-px bg-white/10" />
           <span className="text-[#848E9C]">
             {match.matchType === 'grand_final' ? (
-              <span className="text-[#F0B90B] font-semibold">总决赛</span>
+              <span className="text-[#F0B90B] font-semibold">{t('status.grandFinal')}</span>
             ) : (
-              <>第 <span className="font-mono text-[#D1D4DC] font-semibold">{match.matchNumber}</span>/15 场</>
+              <>{t('status.matchNum', { n: match.matchNumber })}</>
             )}
           </span>
           <span className="text-[#848E9C]">
-            段位 <span className="font-mono font-semibold capitalize" style={{ color: tierColor }}>{account.rankTier}</span>
+            {t('status.tier')} <span className="font-mono font-semibold capitalize" style={{ color: tierColor }}>{account.rankTier}</span>
             <span className="text-[#5E6673] ml-1">{account.tierLeverage}x</span>
           </span>
         </div>
@@ -89,39 +92,39 @@ export default function StatusBar({ account, match, season }: Props) {
         {/* Center: Key metrics */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1">
-            <span className="text-[10px] text-[#848E9C]">Equity</span>
+            <span className="text-[10px] text-[#848E9C]">{t('status.equity')}</span>
             <span className="font-mono font-semibold text-[#D1D4DC]">{account.equity.toFixed(1)}U</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-[10px] text-[#848E9C]">PnL</span>
+            <span className="text-[10px] text-[#848E9C]">{t('status.pnl')}</span>
             <span className={`font-mono font-semibold ${pnlPositive ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
               {pnlPositive ? '+' : ''}{account.pnl.toFixed(1)}U ({pnlPositive ? '+' : ''}{account.pnlPct.toFixed(1)}%)
             </span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-[10px] text-[#848E9C]">Rank</span>
+            <span className="text-[10px] text-[#848E9C]">{t('status.rank')}</span>
             <span className="font-mono font-semibold text-[#D1D4DC]">#{account.rank}</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-[10px] text-[#848E9C]">Prize</span>
+            <span className="text-[10px] text-[#848E9C]">{t('status.prize')}</span>
             <span className={`font-mono font-semibold ${account.prizeAmount > 0 ? 'text-[#F0B90B]' : 'text-[#5E6673]'}`}>
               {account.prizeAmount > 0 ? `${account.prizeAmount}U` : '—'}
             </span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-[10px] text-[#848E9C]">Points</span>
+            <span className="text-[10px] text-[#848E9C]">{t('status.points')}</span>
             <span className="font-mono font-semibold text-[#F0B90B]">+{account.matchPoints}</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-[10px] text-[#848E9C]">Eligible</span>
+            <span className="text-[10px] text-[#848E9C]">{t('status.eligible')}</span>
             {account.prizeEligible ? (
               <span className="text-[#0ECB81] font-semibold text-[10px]">✓</span>
             ) : (
-              <span className="text-[#F6465D] text-[10px]">✗ 需{5}笔</span>
+              <span className="text-[#F6465D] text-[10px]">{t('status.needTrades', { n: 5 })}</span>
             )}
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-[10px] text-[#848E9C]">Trades</span>
+            <span className="text-[10px] text-[#848E9C]">{t('status.trades')}</span>
             <span className="font-mono text-[#D1D4DC]">{account.tradesUsed}/{account.tradesMax}</span>
           </div>
         </div>
@@ -130,7 +133,7 @@ export default function StatusBar({ account, match, season }: Props) {
         <div className="flex items-center gap-2 shrink-0">
           {match.isCloseOnly && (
             <span className="text-[9px] bg-[#F6465D]/20 text-[#F6465D] px-1.5 py-0.5 rounded font-semibold animate-pulse">
-              平仓模式
+              {t('status.closeOnly')}
             </span>
           )}
           <div className="w-16 h-1 bg-white/10 rounded-full overflow-hidden">
@@ -171,18 +174,18 @@ export default function StatusBar({ account, match, season }: Props) {
         {season.matches.length > 8 && <span className="text-[#5E6673]">...</span>}
         <div className="h-2.5 w-px bg-white/10" />
         <span className="text-[#848E9C]">
-          赛季积分: <span className="font-mono text-[#F0B90B] font-semibold">{season.totalPoints}</span>
+          {t('status.seasonPoints')} <span className="font-mono text-[#F0B90B] font-semibold">{season.totalPoints}</span>
         </span>
         <div className="h-2.5 w-px bg-white/10" />
         <span className="text-[#848E9C]">
-          已赛: <span className="font-mono text-[#D1D4DC]">{season.matchesPlayed}/15</span>
+          {t('status.matchesPlayed')} <span className="font-mono text-[#D1D4DC]">{season.matchesPlayed}/15</span>
         </span>
         <div className="h-2.5 w-px bg-white/10" />
         <span className={season.grandFinalQualified ? 'text-[#0ECB81]' : 'text-[#848E9C]'}>
-          总决赛: {season.grandFinalQualified ? '✓ 已晋级' : '未晋级'}
+          {t('status.grandFinalLabel')} {season.grandFinalQualified ? t('status.qualified') : t('status.notQualified')}
         </span>
         <div className="h-2.5 w-px bg-white/10" />
-        <span className="text-[#F0B90B] text-[9px]">奖金池 {match.prizePool}U</span>
+        <span className="text-[#F0B90B] text-[9px]">{t('status.prizePool')} {match.prizePool}U</span>
       </div>
     </div>
   );

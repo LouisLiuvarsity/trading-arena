@@ -7,12 +7,14 @@
 
 import { useEffect, useRef, useState, memo } from 'react';
 import type { NewsItem } from '@/lib/types';
+import { useT } from '@/lib/i18n';
 
 interface Props {
   news: NewsItem[];
 }
 
 function NewsTicker({ news }: Props) {
+  const { t } = useT();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isPaused, setIsPaused] = useState(false);
 
@@ -58,7 +60,7 @@ function NewsTicker({ news }: Props) {
               {/* Breaking badge */}
               {isBreaking && (
                 <span className="text-[8px] font-bold text-[#F6465D] bg-[#F6465D]/15 px-1 py-0.5 rounded-sm animate-pulse tracking-wider">
-                  BREAKING
+                  {t('news.breaking')}
                 </span>
               )}
 

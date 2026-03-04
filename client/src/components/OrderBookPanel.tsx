@@ -5,6 +5,7 @@
 // ============================================================
 
 import type { OrderBook } from '@/lib/types';
+import { useT } from '@/lib/i18n';
 
 interface Props {
   orderBook: OrderBook;
@@ -31,21 +32,22 @@ function formatTotal(total: number): string {
 }
 
 export default function OrderBookPanel({ orderBook, lastPrice, priceDirection }: Props) {
+  const { t } = useT();
   const maxAskTotal = orderBook.asks.length > 0 ? orderBook.asks[orderBook.asks.length - 1].total : 1;
   const maxBidTotal = orderBook.bids.length > 0 ? orderBook.bids[orderBook.bids.length - 1].total : 1;
 
   return (
     <div className="flex flex-col h-full text-[11px] font-mono">
       <div className="panel-header flex justify-between">
-        <span>ORDER BOOK</span>
-        <span className="text-[#848E9C]">SOLUSDT</span>
+        <span>{t('orderbook.title')}</span>
+        <span className="text-[#848E9C]">{t('common.solusdt')}</span>
       </div>
 
       {/* Column headers — use grid for fixed column widths */}
       <div className="grid grid-cols-3 px-2 py-1 text-[10px] text-[#848E9C]">
-        <span className="text-left">Price</span>
-        <span className="text-right">Qty</span>
-        <span className="text-right">Total</span>
+        <span className="text-left">{t('common.price')}</span>
+        <span className="text-right">{t('common.qty')}</span>
+        <span className="text-right">{t('common.total')}</span>
       </div>
 
       {/* Asks (reversed so lowest ask is at bottom) */}
@@ -73,7 +75,7 @@ export default function OrderBookPanel({ orderBook, lastPrice, priceDirection }:
         </span>
         {orderBook.asks.length > 0 && orderBook.bids.length > 0 && (
           <span className="ml-2 text-[10px] text-[#848E9C]">
-            Spread: {(orderBook.asks[0].price - orderBook.bids[0].price).toFixed(2)}
+            {t('common.spread')}: {(orderBook.asks[0].price - orderBook.bids[0].price).toFixed(2)}
           </span>
         )}
       </div>

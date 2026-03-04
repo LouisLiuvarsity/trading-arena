@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import type { AccountState, MatchState, SeasonState } from '@/lib/types';
+import { useT } from '@/lib/i18n';
 
 interface Props {
   account: AccountState;
@@ -21,6 +22,7 @@ function formatCountdown(seconds: number): string {
 }
 
 export default function MobileStatusBar({ account, match, season }: Props) {
+  const { t, lang, setLang } = useT();
   const [remainingSeconds, setRemainingSeconds] = useState(match.remainingSeconds);
   const [elapsed, setElapsed] = useState(match.elapsed);
 
@@ -66,7 +68,7 @@ export default function MobileStatusBar({ account, match, season }: Props) {
           </div>
           <span className="text-[#848E9C]">
             {match.matchType === 'grand_final' ? (
-              <span className="text-[#F0B90B] font-semibold">总决赛</span>
+              <span className="text-[#F0B90B] font-semibold">{t('status.grandFinal')}</span>
             ) : (
               <>R<span className="font-mono text-[#D1D4DC] font-semibold">{match.matchNumber}</span>/15</>
             )}
@@ -74,12 +76,13 @@ export default function MobileStatusBar({ account, match, season }: Props) {
           <span className="font-mono font-semibold capitalize text-[10px]" style={{ color: tierColor }}>
             {account.rankTier}
           </span>
+          <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} className="text-[9px] text-[#848E9C] hover:text-[#D1D4DC] px-1 py-0.5 rounded bg-white/5 font-medium">{lang === 'zh' ? 'EN' : '中'}</button>
         </div>
 
         <div className="flex items-center gap-1.5">
           {match.isCloseOnly && (
             <span className="text-[8px] bg-[#F6465D]/20 text-[#F6465D] px-1 py-0.5 rounded font-semibold animate-pulse">
-              平仓
+              {t('status.closeOnlyShort')}
             </span>
           )}
           <div className="w-10 h-1 bg-white/10 rounded-full overflow-hidden">
@@ -102,11 +105,11 @@ export default function MobileStatusBar({ account, match, season }: Props) {
       {/* Row 2: Key metrics */}
       <div className="flex items-center justify-between px-2.5 py-1 border-t border-[rgba(255,255,255,0.04)] text-[10px]">
         <div className="flex items-center gap-1">
-          <span className="text-[#848E9C]">Eq</span>
+          <span className="text-[#848E9C]">{t('mstatus.eq')}</span>
           <span className="font-mono font-semibold text-[#D1D4DC]">{account.equity.toFixed(1)}</span>
         </div>
         <div className="flex items-center gap-1">
-          <span className="text-[#848E9C]">PnL</span>
+          <span className="text-[#848E9C]">{t('status.pnl')}</span>
           <span className={`font-mono font-semibold ${pnlPositive ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
             {pnlPositive ? '+' : ''}{account.pnl.toFixed(1)} ({pnlPositive ? '+' : ''}{account.pnlPct.toFixed(1)}%)
           </span>
@@ -116,11 +119,11 @@ export default function MobileStatusBar({ account, match, season }: Props) {
           <span className="font-mono font-semibold text-[#D1D4DC]">{account.rank}</span>
         </div>
         <div className="flex items-center gap-1">
-          <span className="text-[#848E9C]">Tr</span>
+          <span className="text-[#848E9C]">{t('mstatus.tr')}</span>
           <span className="font-mono text-[#D1D4DC]">{account.tradesUsed}/{account.tradesMax}</span>
         </div>
         <div className="flex items-center gap-1">
-          <span className="text-[#848E9C]">Pts</span>
+          <span className="text-[#848E9C]">{t('mstatus.pts')}</span>
           <span className="font-mono text-[#F0B90B]">+{account.matchPoints}</span>
         </div>
       </div>

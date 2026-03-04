@@ -7,6 +7,7 @@
 import { useState, useEffect, memo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { NewsItem } from '@/lib/types';
+import { useT } from '@/lib/i18n';
 
 interface Props {
   news: NewsItem[];
@@ -42,6 +43,7 @@ const IMPACT_CONFIG = {
 };
 
 function NewsFeed({ news }: Props) {
+  const { t } = useT();
   const [flashIndex, setFlashIndex] = useState<number | null>(null);
 
   // Simulate a "breaking news" flash effect periodically
@@ -64,11 +66,11 @@ function NewsFeed({ news }: Props) {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-3 py-1 border-b border-[rgba(255,255,255,0.04)]">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-[#848E9C] uppercase tracking-wider font-semibold">News Feed</span>
+          <span className="text-[10px] text-[#848E9C] uppercase tracking-wider font-semibold">{t('news.title')}</span>
           <span className="w-1.5 h-1.5 rounded-full bg-[#0ECB81] animate-pulse" />
-          <span className="text-[9px] text-[#0ECB81]">LIVE</span>
+          <span className="text-[9px] text-[#0ECB81]">{t('common.live')}</span>
         </div>
-        <span className="text-[9px] text-[#848E9C]">Binance News</span>
+        <span className="text-[9px] text-[#848E9C]">{t('news.source')}</span>
       </div>
 
       <ScrollArea className="flex-1">
@@ -124,7 +126,7 @@ function NewsFeed({ news }: Props) {
                             item.sentiment === 'bearish' ? 'text-[#F6465D]' :
                             'text-[#848E9C]'
                           }`}>
-                            {item.sentiment === 'bullish' ? '↑ Bullish' : item.sentiment === 'bearish' ? '↓ Bearish' : 'Neutral'}
+                            {item.sentiment === 'bullish' ? t('news.bullish') : item.sentiment === 'bearish' ? t('news.bearish') : t('news.neutral')}
                           </span>
                         </>
                       )}

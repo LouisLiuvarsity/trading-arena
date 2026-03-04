@@ -5,6 +5,7 @@
 
 import { useEffect, useRef } from 'react';
 import type { TickerData } from '@/lib/types';
+import { useT } from '@/lib/i18n';
 
 interface Props {
   ticker: TickerData | null;
@@ -31,6 +32,7 @@ function formatPrice(price: number): string {
 }
 
 export default function TickerBar({ ticker, priceDirection }: Props) {
+  const { t } = useT();
   const priceRef = useRef<HTMLSpanElement>(null);
 
   // Flash effect on price change
@@ -46,10 +48,10 @@ export default function TickerBar({ ticker, priceDirection }: Props) {
     return (
       <div className="flex items-center gap-6 px-3 py-2.5 border-b border-[rgba(255,255,255,0.06)] text-xs">
         <div className="flex items-center gap-2">
-          <span className="font-display font-bold text-white text-sm">SOLUSDT</span>
-          <span className="text-[10px] text-[#848E9C] bg-white/5 px-1.5 py-0.5 rounded">Perp</span>
+          <span className="font-display font-bold text-white text-sm">{t('common.solusdt')}</span>
+          <span className="text-[10px] text-[#848E9C] bg-white/5 px-1.5 py-0.5 rounded">{t('common.perp')}</span>
         </div>
-        <span className="text-[#848E9C] animate-pulse">Connecting...</span>
+        <span className="text-[#848E9C] animate-pulse">{t('common.connecting')}</span>
       </div>
     );
   }
@@ -60,8 +62,8 @@ export default function TickerBar({ ticker, priceDirection }: Props) {
     <div className="flex items-center gap-5 px-3 py-2 border-b border-[rgba(255,255,255,0.06)] text-xs">
       {/* Symbol + Price */}
       <div className="flex items-center gap-2">
-        <span className="font-display font-bold text-white text-sm tracking-wide">SOLUSDT</span>
-        <span className="text-[10px] text-[#848E9C] bg-white/5 px-1.5 py-0.5 rounded">Perp</span>
+        <span className="font-display font-bold text-white text-sm tracking-wide">{t('common.solusdt')}</span>
+        <span className="text-[10px] text-[#848E9C] bg-white/5 px-1.5 py-0.5 rounded">{t('common.perp')}</span>
       </div>
 
       <span
@@ -77,7 +79,7 @@ export default function TickerBar({ ticker, priceDirection }: Props) {
 
       {/* 24h Change */}
       <div className="text-center">
-        <div className="text-[10px] text-[#848E9C]">24h Change</div>
+        <div className="text-[10px] text-[#848E9C]">{t('ticker.24hChange')}</div>
         <div className={`font-mono tabular-nums ${isPositive ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
           {isPositive ? '+' : ''}{ticker.priceChangePct.toFixed(2)}%
         </div>
@@ -85,31 +87,31 @@ export default function TickerBar({ ticker, priceDirection }: Props) {
 
       {/* 24h High */}
       <div className="text-center">
-        <div className="text-[10px] text-[#848E9C]">24h High</div>
+        <div className="text-[10px] text-[#848E9C]">{t('ticker.24hHigh')}</div>
         <div className="font-mono tabular-nums text-[#D1D4DC]">{formatPrice(ticker.high24h)}</div>
       </div>
 
       {/* 24h Low */}
       <div className="text-center">
-        <div className="text-[10px] text-[#848E9C]">24h Low</div>
+        <div className="text-[10px] text-[#848E9C]">{t('ticker.24hLow')}</div>
         <div className="font-mono tabular-nums text-[#D1D4DC]">{formatPrice(ticker.low24h)}</div>
       </div>
 
       {/* Volume */}
       <div className="text-center">
-        <div className="text-[10px] text-[#848E9C]">24h Vol(USDT)</div>
+        <div className="text-[10px] text-[#848E9C]">{t('ticker.24hVol')}</div>
         <div className="font-mono tabular-nums text-[#D1D4DC]">{formatVolume(ticker.volume24h)}</div>
       </div>
 
       {/* Mark Price */}
       <div className="text-center">
-        <div className="text-[10px] text-[#848E9C]">Mark</div>
+        <div className="text-[10px] text-[#848E9C]">{t('ticker.mark')}</div>
         <div className="font-mono tabular-nums text-[#D1D4DC]">{formatPrice(ticker.markPrice)}</div>
       </div>
 
       {/* Funding Rate */}
       <div className="text-center">
-        <div className="text-[10px] text-[#848E9C]">Funding</div>
+        <div className="text-[10px] text-[#848E9C]">{t('ticker.funding')}</div>
         <div className={`font-mono tabular-nums ${ticker.fundingRate >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
           {formatFundingRate(ticker.fundingRate)}
         </div>

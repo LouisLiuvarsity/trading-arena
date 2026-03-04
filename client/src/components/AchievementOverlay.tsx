@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Achievement } from '@/hooks/useAchievements';
+import { useT } from '@/lib/i18n';
 
 interface Props {
   achievements: Achievement[];
@@ -8,6 +9,7 @@ interface Props {
 
 // ─── Gold Particle Burst: consecutive 3 profits ─────────────────────
 function GoldParticleBurst() {
+  const { t } = useT();
   const particles = useMemo(() =>
     Array.from({ length: 15 }, (_, i) => ({
       id: i,
@@ -31,7 +33,7 @@ function GoldParticleBurst() {
         transition={{ duration: 2, times: [0, 0.3, 1] }}
         className="text-[#F0B90B] text-4xl font-bold drop-shadow-[0_0_20px_rgba(240,185,11,0.6)]"
       >
-        3 in a Row!
+        {t('ach.threeInRow')}
       </motion.div>
       {particles.map(p => (
         <motion.div
@@ -54,6 +56,7 @@ function GoldParticleBurst() {
 
 // ─── Welcome Text: first trade ──────────────────────────────────────
 function WelcomeText() {
+  const { t } = useT();
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.8 }}
@@ -63,9 +66,9 @@ function WelcomeText() {
     >
       <div className="text-center">
         <div className="text-[#F0B90B] text-3xl md:text-5xl font-bold tracking-wide drop-shadow-[0_0_30px_rgba(240,185,11,0.4)]">
-          Welcome to the Arena
+          {t('ach.welcome')}
         </div>
-        <div className="text-[#848E9C] text-sm mt-2">First trade opened</div>
+        <div className="text-[#848E9C] text-sm mt-2">{t('ach.firstTrade')}</div>
       </div>
     </motion.div>
   );
@@ -110,6 +113,7 @@ function RedFlash() {
 
 // ─── Gold Rank Crown: enter TOP 10 ──────────────────────────────────
 function GoldRankCrown({ rank }: { rank?: unknown }) {
+  const { t } = useT();
   const rankNum = typeof rank === 'number' ? rank : '?';
   return (
     <motion.div
@@ -129,7 +133,7 @@ function GoldRankCrown({ rank }: { rank?: unknown }) {
         <div className="text-[#F0B90B] text-4xl font-bold animate-pulse-gold drop-shadow-[0_0_20px_rgba(240,185,11,0.5)]">
           #{rankNum}
         </div>
-        <div className="text-[#F0B90B]/70 text-sm mt-1">TOP 10!</div>
+        <div className="text-[#F0B90B]/70 text-sm mt-1">{t('ach.top10')}</div>
       </div>
     </motion.div>
   );

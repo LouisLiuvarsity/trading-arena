@@ -8,6 +8,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, GripHorizontal, Bell, BellOff } from 'lucide-react';
 import type { AccountState, MatchState, PredictionState, SocialData } from '@/lib/types';
+import { useT } from '@/lib/i18n';
 
 interface Props {
   account: AccountState;
@@ -28,67 +29,20 @@ interface NotificationItem {
 interface ScheduledNotification {
   triggerElapsedPct: number;
   id: string;
-  getMessage: (account: AccountState, remainingHours: number) => { title: string; description: string; urgency: 'info' | 'warning' | 'critical' };
+  getKey: () => { titleKey: string; descKey: string; urgency: 'info' | 'warning' | 'critical' };
 }
 
 const NOTIFICATIONS: ScheduledNotification[] = [
-  {
-    triggerElapsedPct: 0.25,
-    id: 'quarter',
-    getMessage: (a) => ({
-      title: `📊 比赛已过 1/4！`,
-      description: `排名 #${a.rank} | 收益 ${a.pnl >= 0 ? '+' : ''}${a.pnl.toFixed(1)} USDT | 积分 +${a.matchPoints} | 交易 ${a.tradesUsed}/${a.tradesMax}`,
-      urgency: 'info',
-    }),
-  },
-  {
-    triggerElapsedPct: 0.5,
-    id: 'half',
-    getMessage: (a) => ({
-      title: `📈 半程报告 — 预计奖金 ${a.prizeAmount}U`,
-      description: `排名 #${a.rank} | 积分 +${a.matchPoints} | ${a.prizeEligible ? '✓有奖金资格' : `✗需至少5笔交易 (当前${a.tradesUsed})`}`,
-      urgency: 'info',
-    }),
-  },
-  {
-    triggerElapsedPct: 0.75,
-    id: 'last6h',
-    getMessage: (a) => ({
-      title: `⚡ 最后6小时！`,
-      description: `排名 #${a.rank} | 预计奖金 ${a.prizeAmount}U | 积分 +${a.matchPoints} | ${a.tradesMax - a.tradesUsed} 笔交易机会剩余`,
-      urgency: 'warning',
-    }),
-  },
-  {
-    triggerElapsedPct: 0.833,
-    id: 'last4h',
-    getMessage: (a) => ({
-      title: `🔥 最后4小时！倒计时变色中...`,
-      description: `排名 #${a.rank} | 预计奖金 ${a.prizeAmount}U | 积分 +${a.matchPoints} | 交易 ${a.tradesUsed}/${a.tradesMax}`,
-      urgency: 'warning',
-    }),
-  },
-  {
-    triggerElapsedPct: 0.917,
-    id: 'last2h',
-    getMessage: (a) => ({
-      title: `🚨 最终结算倒计时！结果将在 02:00:00 后锁定`,
-      description: `排名 #${a.rank} | 预计奖金 ${a.prizeAmount}U | 积分 +${a.matchPoints}`,
-      urgency: 'critical',
-    }),
-  },
-  {
-    triggerElapsedPct: 0.958,
-    id: 'last1h',
-    getMessage: (a) => ({
-      title: `⏰ 最后1小时！最终冲刺！`,
-      description: `排名 #${a.rank} | 积分 +${a.matchPoints} | 每5分钟更新排名`,
-      urgency: 'critical',
-    }),
-  },
+  { triggerElapsedPct: 0.25, id: 'quarter', getKey: () => ({ titleKey: 'notif.quarter', descKey: 'notif.quarterDesc', urgency: 'info' }) },
+  { triggerElapsedPct: 0.5, id: 'half', getKey: () => ({ titleKey: 'notif.half', descKey: 'notif.halfDesc', urgency: 'info' }) },
+  { triggerElapsedPct: 0.75, id: 'last6h', getKey: () => ({ titleKey: 'notif.last6h', descKey: 'notif.last6hDesc', urgency: 'warning' }) },
+  { triggerElapsedPct: 0.833, id: 'last4h', getKey: () => ({ titleKey: 'notif.last4h', descKey: 'notif.last4hDesc', urgency: 'warning' }) },
+  { triggerElapsedPct: 0.917, id: 'last2h', getKey: () => ({ titleKey: 'notif.last2h', descKey: 'notif.last2hDesc', urgency: 'critical' }) },
+  { triggerElapsedPct: 0.958, id: 'last1h', getKey: () => ({ titleKey: 'notif.last1h', descKey: 'notif.last1hDesc', urgency: 'critical' }) },
 ];
 
 export default function CompetitionNotifications({ account, match, social, prediction, onSubmitPrediction }: Props) {
+  const { t } = useT();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isVisible, setIsVisible] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
@@ -107,7 +61,6 @@ export default function CompetitionNotifications({ account, match, social, predi
       const next = [{ id, message, borderColor, timestamp: Date.now() }, ...prev];
       return next.slice(0, maxNotifications);
     });
-    // Auto-show panel when new notification arrives
     setIsVisible(true);
   }, [isMuted]);
 
@@ -120,22 +73,36 @@ export default function CompetitionNotifications({ account, match, social, predi
     return Math.min(1, (now - match.startTime) / (match.endTime - match.startTime));
   }, [match]);
 
+  // Build notification vars from account
+  const buildVars = useCallback((a: AccountState) => ({
+    rank: a.rank,
+    pnl: `${a.pnl >= 0 ? '+' : ''}${a.pnl.toFixed(1)}`,
+    pts: a.matchPoints,
+    used: a.tradesUsed,
+    max: a.tradesMax,
+    prize: a.prizeAmount,
+    left: a.tradesMax - a.tradesUsed,
+    eligible: a.prizeEligible ? t('notif.halfEligible') : t('notif.halfNotEligible', { n: a.tradesUsed }),
+  }), [t]);
+
   // Scheduled notifications
   useEffect(() => {
     const interval = setInterval(() => {
       const elapsed = getElapsedPct();
+      const vars = buildVars(account);
       NOTIFICATIONS.forEach(notif => {
         if (elapsed >= notif.triggerElapsedPct && !firedRef.current.has(notif.id)) {
           firedRef.current.add(notif.id);
-          const remainingHours = (1 - elapsed) * 24;
-          const { title, description, urgency } = notif.getMessage(account, remainingHours);
+          const { titleKey, descKey, urgency } = notif.getKey();
+          const title = t(titleKey, vars);
+          const description = t(descKey, vars);
           const borderColor = urgency === 'critical' ? '#F6465D' : urgency === 'warning' ? '#F0B90B' : '#0ECB81';
           addNotification(`${title}\n${description}`, borderColor);
         }
       });
     }, 5000);
     return () => clearInterval(interval);
-  }, [account, match, getElapsedPct, addNotification]);
+  }, [account, match, getElapsedPct, addNotification, t, buildVars]);
 
   // Emotional pressure notifications
   useEffect(() => {
@@ -148,37 +115,37 @@ export default function CompetitionNotifications({ account, match, social, predi
 
       if (social && social.tradersOvertakenYou > 0) {
         messages.push({
-          msg: `📉 过去30分钟有 ${social.tradersOvertakenYou} 人超越了你！排名 #${account.rank}`,
+          msg: t('notif.overtaken', { n: social.tradersOvertakenYou, rank: account.rank }),
           border: '#F6465D',
         });
       }
       if (social && social.avgTradesPerPerson > account.tradesUsed + 2) {
         messages.push({
-          msg: `📊 全场平均已交易 ${social.avgTradesPerPerson.toFixed(0)} 笔，你才 ${account.tradesUsed} 笔`,
+          msg: t('notif.tradePace', { avg: social.avgTradesPerPerson.toFixed(0), yours: account.tradesUsed }),
           border: '#F0B90B',
         });
       }
       if (!account.prizeEligible) {
         messages.push({
-          msg: `🎯 还需 ${5 - account.tradesUsed} 笔交易才有奖金资格（当前 ${account.tradesUsed}/5）`,
+          msg: t('notif.eligibility', { n: 5 - account.tradesUsed, used: account.tradesUsed }),
           border: '#F0B90B',
         });
       }
       if (elapsed > 0.7 && account.prizeAmount > 0) {
         messages.push({
-          msg: `💰 当前预计奖金 ${account.prizeAmount} USDT — 保住排名还是冲击更高？`,
+          msg: t('notif.currentPrize', { prize: account.prizeAmount }),
           border: '#F0B90B',
         });
       }
       if (social && social.losingPct > 55) {
         messages.push({
-          msg: `📊 全场 ${social.losingPct}% 选手亏损中 | 平均亏损 ${social.avgLossPct}%`,
+          msg: t('notif.fieldLosing', { pct: social.losingPct, avgLoss: social.avgLossPct }),
           border: '#F6465D',
         });
       }
       if (account.tradesMax - account.tradesUsed <= 10 && account.tradesMax - account.tradesUsed > 0) {
         messages.push({
-          msg: `⚠️ 仅剩 ${account.tradesMax - account.tradesUsed} 笔交易机会！每一笔都很关键`,
+          msg: t('notif.tradesRemaining', { n: account.tradesMax - account.tradesUsed }),
           border: '#F6465D',
         });
       }
@@ -190,11 +157,19 @@ export default function CompetitionNotifications({ account, match, social, predi
     }, 20000 + Math.random() * 15000);
 
     return () => clearInterval(emotionalInterval);
-  }, [account, social, getElapsedPct, addNotification]);
+  }, [account, social, getElapsedPct, addNotification, t]);
 
   // Prediction window notifications — trigger on the hour, stay 5 minutes
   const predictionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
+    const makePredMessage = () => {
+      const stats = prediction?.stats;
+      const accuracyText = stats
+        ? t('notif.predAccuracy', { pct: stats.accuracy, correct: stats.correctPredictions, total: stats.totalPredictions })
+        : '';
+      return `${t('notif.prediction')}\n${accuracyText}`;
+    };
+
     const scheduleNextHour = () => {
       const now = new Date();
       const nextHour = new Date(now);
@@ -207,13 +182,9 @@ export default function CompetitionNotifications({ account, match, social, predi
           const id = hourKey;
           setNotifications(prev => {
             if (prev.some(n => n.id === id)) return prev;
-            const stats = prediction?.stats;
-            const accuracyText = stats
-              ? `准确率: ${stats.accuracy}% (${stats.correctPredictions}/${stats.totalPredictions})`
-              : '';
             const next = [{
               id,
-              message: `🔮 整点预测！5分钟后SOL会涨还是跌？\n${accuracyText}`,
+              message: makePredMessage(),
               borderColor: '#F0B90B',
               timestamp: Date.now(),
               type: "prediction" as const,
@@ -221,33 +192,25 @@ export default function CompetitionNotifications({ account, match, social, predi
             return next.slice(0, maxNotifications);
           });
           setIsVisible(true);
-
-          // Auto-remove prediction notification after 5 minutes
           setTimeout(() => {
             setNotifications(prev => prev.filter(n => n.id !== id));
           }, 5 * 60 * 1000);
         }
-        // Schedule next one
         scheduleNextHour();
       }, msUntilNextHour);
     };
 
-    // Also check if we're within the first 5 minutes of the current hour (show immediately)
     const now = new Date();
     if (now.getMinutes() < 5) {
       const hourKey = `pred-hourly-${now.getHours()}`;
       if (!firedRef.current.has(hourKey) && !isMuted) {
         firedRef.current.add(hourKey);
-        const stats = prediction?.stats;
-        const accuracyText = stats
-          ? `准确率: ${stats.accuracy}% (${stats.correctPredictions}/${stats.totalPredictions})`
-          : '';
         const id = hourKey;
         setNotifications(prev => {
           if (prev.some(n => n.id === id)) return prev;
           const next = [{
             id,
-            message: `🔮 整点预测！5分钟后SOL会涨还是跌？\n${accuracyText}`,
+            message: makePredMessage(),
             borderColor: '#F0B90B',
             timestamp: Date.now(),
             type: "prediction" as const,
@@ -255,8 +218,6 @@ export default function CompetitionNotifications({ account, match, social, predi
           return next.slice(0, maxNotifications);
         });
         setIsVisible(true);
-
-        // Auto-remove after remaining time in the 5-min window
         const remainMs = (5 - now.getMinutes()) * 60 * 1000 - now.getSeconds() * 1000;
         setTimeout(() => {
           setNotifications(prev => prev.filter(n => n.id !== id));
@@ -268,7 +229,7 @@ export default function CompetitionNotifications({ account, match, social, predi
     return () => {
       if (predictionTimerRef.current) clearTimeout(predictionTimerRef.current);
     };
-  }, [prediction, isMuted]);
+  }, [prediction, isMuted, t]);
 
   // Auto-remove old notifications after 15 seconds (except prediction type which has its own 5-min timer)
   useEffect(() => {
@@ -319,7 +280,7 @@ export default function CompetitionNotifications({ account, match, social, predi
         onClick={() => setIsVisible(true)}
         className="fixed z-[9999] w-8 h-8 rounded-full bg-[#1C2030] border border-[rgba(255,255,255,0.15)] flex items-center justify-center hover:bg-[rgba(255,255,255,0.1)] transition-colors cursor-pointer"
         style={{ left: position.x, top: position.y }}
-        title="显示通知"
+        title={t('notif.showNotif')}
       >
         <Bell className="w-3.5 h-3.5 text-[#F0B90B]" />
         {notifications.length > 0 && (
@@ -349,7 +310,7 @@ export default function CompetitionNotifications({ account, match, social, predi
         <div className="flex items-center gap-1.5">
           <GripHorizontal className="w-3.5 h-3.5 text-[#5E6673]" />
           <Bell className="w-3 h-3 text-[#F0B90B]" />
-          <span className="text-[10px] text-[#848E9C] font-medium">通知</span>
+          <span className="text-[10px] text-[#848E9C] font-medium">{t('notif.title')}</span>
           {notifications.length > 0 && (
             <span className="text-[9px] bg-[#F0B90B]/20 text-[#F0B90B] px-1.5 py-0.5 rounded-full font-bold">{notifications.length}</span>
           )}
@@ -358,7 +319,7 @@ export default function CompetitionNotifications({ account, match, social, predi
           <button
             onClick={() => setIsMuted(!isMuted)}
             className="p-1 rounded hover:bg-[rgba(255,255,255,0.08)] transition-colors"
-            title={isMuted ? '取消静音' : '静音通知'}
+            title={isMuted ? t('notif.unmute') : t('notif.mute')}
           >
             {isMuted ? (
               <BellOff className="w-3 h-3 text-[#F6465D]" />
@@ -369,7 +330,7 @@ export default function CompetitionNotifications({ account, match, social, predi
           <button
             onClick={() => setIsVisible(false)}
             className="p-1 rounded hover:bg-[rgba(255,255,255,0.08)] transition-colors"
-            title="关闭通知面板"
+            title={t('notif.closePanel')}
           >
             <X className="w-3 h-3 text-[#848E9C] hover:text-white" />
           </button>
@@ -380,7 +341,7 @@ export default function CompetitionNotifications({ account, match, social, predi
       <div className="flex-1 overflow-y-auto bg-[#0B0E11]/95 border-x border-b border-[rgba(255,255,255,0.08)] rounded-b-lg backdrop-blur-sm">
         {notifications.length === 0 ? (
           <div className="py-4 text-center text-[#5E6673] text-[10px]">
-            {isMuted ? '通知已静音' : '暂无新通知'}
+            {isMuted ? t('notif.muted') : t('notif.empty')}
           </div>
         ) : (
           <div className="p-1.5 space-y-1">
@@ -410,13 +371,13 @@ export default function CompetitionNotifications({ account, match, social, predi
                       onClick={() => onSubmitPrediction?.("up", 3)}
                       className="flex-1 py-1.5 bg-[#0ECB81]/20 text-[#0ECB81] text-[10px] font-bold rounded hover:bg-[#0ECB81]/30 transition-colors"
                     >
-                      ↑ UP
+                      {t('notif.up')}
                     </button>
                     <button
                       onClick={() => onSubmitPrediction?.("down", 3)}
                       className="flex-1 py-1.5 bg-[#F6465D]/20 text-[#F6465D] text-[10px] font-bold rounded hover:bg-[#F6465D]/30 transition-colors"
                     >
-                      ↓ DOWN
+                      {t('notif.down')}
                     </button>
                     <span className="text-[9px] text-[#848E9C] tabular-nums font-mono shrink-0">
                       {prediction.windowClosesIn}s
@@ -425,7 +386,7 @@ export default function CompetitionNotifications({ account, match, social, predi
                 )}
                 {notif.type === 'prediction' && prediction?.alreadySubmitted && (
                   <div className="mt-1.5 text-[10px] text-[#F0B90B] font-medium">
-                    已提交: {prediction.submittedDirection === 'up' ? '↑ UP' : '↓ DOWN'} — 等待结算
+                    {t('notif.predSubmitted', { dir: prediction.submittedDirection === 'up' ? t('notif.up') : t('notif.down') })}
                   </div>
                 )}
                 <div className="text-[8px] text-[#5E6673] mt-1">

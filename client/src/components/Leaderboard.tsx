@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Bot } from "lucide-react";
 import type { LeaderboardEntry } from "@/lib/types";
+import { useT } from "@/lib/i18n";
 
 interface Props {
   entries: LeaderboardEntry[];
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export default function Leaderboard({ entries, myRank, promotionLineRank }: Props) {
+  const { t } = useT();
   const [viewMode, setViewMode] = useState<"top" | "around">("around");
 
   const displayEntries = useMemo(() => {
@@ -28,7 +30,7 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
     <div className="flex flex-col h-full">
       <div className="panel-header flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span>排行榜</span>
+          <span>{t('lb.title')}</span>
           <span className="text-[9px] text-[#848E9C] bg-white/5 px-1.5 py-0.5 rounded">LIVE</span>
         </div>
         <div className="flex gap-1">
@@ -36,13 +38,13 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
             onClick={() => setViewMode("top")}
             className={`px-2 py-0.5 text-[10px] rounded ${viewMode === "top" ? "bg-white/10 text-white" : "text-[#848E9C]"}`}
           >
-            Top
+            {t('lb.top')}
           </button>
           <button
             onClick={() => setViewMode("around")}
             className={`px-2 py-0.5 text-[10px] rounded ${viewMode === "around" ? "bg-white/10 text-white" : "text-[#848E9C]"}`}
           >
-            Around Me
+            {t('lb.aroundMe')}
           </button>
         </div>
       </div>
@@ -51,18 +53,18 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
       <div className="px-4 py-3 bg-gradient-to-r from-[#F0B90B]/5 via-[#F0B90B]/10 to-[#F0B90B]/5 border-b border-[#F0B90B]/20">
         <div className="flex items-center justify-center gap-2 text-[12px]">
           <span className="text-[#F0B90B]/60">📢</span>
-          <span className="text-[#F0B90B]/80 font-medium tracking-wide">广告位招租</span>
+          <span className="text-[#F0B90B]/80 font-medium tracking-wide">{t('lb.adSpace')}</span>
           <span className="text-[#F0B90B]/60">📢</span>
         </div>
-        <div className="text-[9px] text-[#848E9C]/60 text-center mt-0.5">Contact us for advertising opportunities</div>
+        <div className="text-[9px] text-[#848E9C]/60 text-center mt-0.5">{t('lb.adSub')}</div>
       </div>
 
       <div className="flex items-center px-3 py-1.5 text-[10px] text-[#848E9C] border-b border-[rgba(255,255,255,0.04)]">
         <span className="w-12">#</span>
-        <span className="flex-1">选手</span>
-        <span className="w-20 text-right">收益%</span>
-        <span className="w-16 text-right">奖金</span>
-        <span className="w-12 text-right">积分</span>
+        <span className="flex-1">{t('lb.player')}</span>
+        <span className="w-20 text-right">{t('lb.return')}</span>
+        <span className="w-16 text-right">{t('lb.prizeCol')}</span>
+        <span className="w-12 text-right">{t('lb.pointsCol')}</span>
       </div>
 
       <div className="flex-1 overflow-y-auto min-h-0">
@@ -78,7 +80,7 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
                       <div className="w-full border-t border-[#F0B90B] animate-pulse-gold" />
                     </div>
                     <div className="relative flex justify-center">
-                      <span className="bg-[#0B0E11] px-2 text-[9px] text-[#F0B90B] font-semibold">═ 奖金线 ═</span>
+                      <span className="bg-[#0B0E11] px-2 text-[9px] text-[#F0B90B] font-semibold">{t('lb.promotionLine')}</span>
                     </div>
                   </div>
                 )}
@@ -107,7 +109,7 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
                       </span>
                     )}
                     {entry.username}
-                    {!entry.prizeEligible && <span className="text-[7px] text-[#F6465D]/60 ml-0.5">未达5笔</span>}
+                    {!entry.prizeEligible && <span className="text-[7px] text-[#F6465D]/60 ml-0.5">{t('lb.notEligible')}</span>}
                   </span>
 
                   <span className={`w-20 text-right ${entry.pnlPct >= 0 ? "text-[#0ECB81]" : "text-[#F6465D]"}`}>

@@ -25,6 +25,7 @@ import MobileTradingPanel from "@/components/MobileTradingPanel";
 import MobileOrderBook from "@/components/MobileOrderBook";
 import { MobileToolbar, MobileToolbarOverlay } from "@/components/MobileToolbarOverlay";
 import type { TimeframeKey } from "@/lib/types";
+import { useT } from "@/lib/i18n";
 
 // ─── Resizable divider hook (desktop only) ──────────────────
 function useResizable(initial: number, min: number, max: number, direction: 'horizontal' | 'vertical') {
@@ -81,6 +82,7 @@ interface TradingPageProps {
 }
 
 export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
+  const { t } = useT();
   const isMobile = useIsMobile();
   const [timeframe, setTimeframe] = useState<TimeframeKey>("1m");
   const [rightTab, setRightTab] = useState<string>("chat");
@@ -92,7 +94,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
 
   // Resizable panels (desktop only)
   const orderBookResize = useResizable(200, 120, 360, 'horizontal');
-  const rightPanelResize = useResizable(320, 220, 500, 'horizontal');
+  const rightPanelResize = useResizable(400, 220, 500, 'horizontal');
 
   const {
     loading,
@@ -136,10 +138,23 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
     prevChatCountRef.current = newCount;
   }, [chatMessages.length, rightTab, mobilePanel, isMobile]);
 
-  // Clear unread when switching to chat
+  // Chat highlight: track the index from which messages are "new" when entering chat
+  const [chatHighlightFrom, setChatHighlightFrom] = useState<number | undefined>(undefined);
+  const lastSeenChatCountRef = useRef(chatMessages.length);
+
+  // Clear unread when switching to chat, and set highlight index
   useEffect(() => {
     const isOnChat = isMobile ? mobilePanel === 'chat' : rightTab === 'chat';
-    if (isOnChat) setChatUnread(0);
+    if (isOnChat) {
+      if (chatUnread > 0) {
+        setChatHighlightFrom(lastSeenChatCountRef.current);
+      }
+      setChatUnread(0);
+      lastSeenChatCountRef.current = chatMessages.length;
+    } else {
+      setChatHighlightFrom(undefined);
+      lastSeenChatCountRef.current = chatMessages.length;
+    }
   }, [rightTab, mobilePanel, isMobile]);
 
   // Screen shake on big loss
@@ -176,7 +191,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
     try {
       await apiClosePosition();
       await trackEvent("close_position");
-      toast("Position closed", { description: "Server-side settlement complete" });
+      toast(t('page.positionClosed'), { description: t('page.settleDone') });
     } catch (err) {
       toast.error((err as Error).message);
     }
@@ -209,7 +224,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
   if (!authToken) {
     return (
       <div className="h-screen w-screen bg-[#0B0E11] flex items-center justify-center text-[#848E9C]">
-        Please login first.
+        {t('page.loginFirst')}
       </div>
     );
   }
@@ -217,7 +232,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
   if (loading && leaderboard.length === 0) {
     return (
       <div className="h-screen w-screen bg-[#0B0E11] flex items-center justify-center text-[#848E9C]">
-        Loading arena state...
+        {t('page.loading')}
       </div>
     );
   }
@@ -243,7 +258,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
             try {
               await submitPrediction(direction, confidence);
               await trackEvent("prediction_submit", { direction, confidence });
-              toast(`Prediction: ${direction.toUpperCase()}`, { description: "Result in 5 minutes" });
+              toast(t('page.predResult', { dir: direction.toUpperCase() }), { description: t('page.predDesc') });
             } catch (err) {
               toast.error((err as Error).message);
             }
@@ -256,7 +271,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
         )}
         {ticker?.stale && (
           <div className="px-2 py-1 text-[10px] text-[#F6465D] border-b border-[#F6465D]/20 bg-[#F6465D]/10 animate-pulse">
-            Market data stale
+            {t('page.staleData')}
           </div>
         )}
 
@@ -281,7 +296,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
                 : 'text-[#848E9C] hover:text-[#D1D4DC]'
             }`}
           >
-            Chart
+            {t('page.chart')}
           </button>
           <button
             onClick={() => setMobileContentTab("orderbook")}
@@ -291,7 +306,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
                 : 'text-[#848E9C] hover:text-[#D1D4DC]'
             }`}
           >
-            OrderBook
+            {t('page.orderbook')}
           </button>
           <button
             onClick={() => setMobileContentTab("info")}
@@ -301,7 +316,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
                 : 'text-[#848E9C] hover:text-[#D1D4DC]'
             }`}
           >
-            Info
+            {t('page.info')}
           </button>
 
           {/* Compact ticker on the right */}
@@ -345,31 +360,31 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
               {/* Compact ticker info */}
               <div className="grid grid-cols-3 gap-2 text-[10px]">
                 <div className="bg-white/[0.02] rounded p-2">
-                  <div className="text-[#848E9C]">24h High</div>
+                  <div className="text-[#848E9C]">{t('page.24hHigh')}</div>
                   <div className="font-mono text-[#D1D4DC]">{ticker?.high24h?.toFixed(2) ?? '—'}</div>
                 </div>
                 <div className="bg-white/[0.02] rounded p-2">
-                  <div className="text-[#848E9C]">24h Low</div>
+                  <div className="text-[#848E9C]">{t('page.24hLow')}</div>
                   <div className="font-mono text-[#D1D4DC]">{ticker?.low24h?.toFixed(2) ?? '—'}</div>
                 </div>
                 <div className="bg-white/[0.02] rounded p-2">
-                  <div className="text-[#848E9C]">Mark</div>
+                  <div className="text-[#848E9C]">{t('page.mark')}</div>
                   <div className="font-mono text-[#D1D4DC]">{ticker?.markPrice?.toFixed(2) ?? '—'}</div>
                 </div>
                 <div className="bg-white/[0.02] rounded p-2">
-                  <div className="text-[#848E9C]">Funding</div>
+                  <div className="text-[#848E9C]">{t('page.funding')}</div>
                   <div className={`font-mono ${(ticker?.fundingRate ?? 0) >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
                     {ticker?.fundingRate ? (ticker.fundingRate * 100).toFixed(4) + '%' : '—'}
                   </div>
                 </div>
                 <div className="bg-white/[0.02] rounded p-2">
-                  <div className="text-[#848E9C]">24h Vol</div>
+                  <div className="text-[#848E9C]">{t('page.24hVol')}</div>
                   <div className="font-mono text-[#D1D4DC]">
                     {ticker?.volume24h ? (ticker.volume24h >= 1e6 ? (ticker.volume24h / 1e6).toFixed(1) + 'M' : (ticker.volume24h / 1e3).toFixed(1) + 'K') : '—'}
                   </div>
                 </div>
                 <div className="bg-white/[0.02] rounded p-2">
-                  <div className="text-[#848E9C]">Prize Pool</div>
+                  <div className="text-[#848E9C]">{t('page.prizePool')}</div>
                   <div className="font-mono text-[#F0B90B]">{match.prizePool}U</div>
                 </div>
               </div>
@@ -378,15 +393,15 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-[#848E9C] font-semibold">Rank #{account.rank}</span>
                   {account.rank <= 300 ? (
-                    <span className="text-[#0ECB81]">Safe +{300 - account.rank}</span>
+                    <span className="text-[#0ECB81]">{t('page.safe', { n: 300 - account.rank })}</span>
                   ) : (
-                    <span className="text-[#F6465D]">Need {account.rank - 300} more</span>
+                    <span className="text-[#F6465D]">{t('page.need', { n: account.rank - 300 })}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-3 text-[9px] text-[#848E9C]">
-                  <span>被超 <span className={social.tradersOvertakenYou > 0 ? 'text-[#F6465D]' : ''}>{social.tradersOvertakenYou}</span></span>
-                  <span>超越 <span className={social.youOvertook > 0 ? 'text-[#0ECB81]' : ''}>{social.youOvertook}</span></span>
-                  <span>线附近 {social.nearPromotionCount} 人</span>
+                  <span>{t('page.overtakenBy')} <span className={social.tradersOvertakenYou > 0 ? 'text-[#F6465D]' : ''}>{social.tradersOvertakenYou}</span></span>
+                  <span>{t('page.youOvertook')} <span className={social.youOvertook > 0 ? 'text-[#0ECB81]' : ''}>{social.youOvertook}</span></span>
+                  <span>{t('page.nearLine', { n: social.nearPromotionCount })}</span>
                 </div>
               </div>
             </div>
@@ -408,7 +423,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
         {/* Overlay panels for Chat, Rank, Stats, News, Trades */}
         <MobileToolbarOverlay activePanel={mobilePanel} onClose={() => setMobilePanel(null)}>
           {mobilePanel === 'chat' && (
-            <ChatRoom messages={chatMessages} onSendMessage={handleSendMessage} />
+            <ChatRoom messages={chatMessages} onSendMessage={handleSendMessage} highlightFromIndex={chatHighlightFrom} />
           )}
           {mobilePanel === 'trades' && (
             <TradeHistory trades={trades} />
@@ -417,7 +432,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
             <Leaderboard entries={leaderboard} myRank={account.rank} promotionLineRank={300} />
           )}
           {mobilePanel === 'stats' && (
-            <MarketStats social={social} account={account} match={match} />
+            <MarketStats social={social} account={account} match={match} prediction={prediction} pollData={pollData} />
           )}
           {mobilePanel === 'news' && (
             <NewsFeed news={news} />
@@ -443,7 +458,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
       )}
       {ticker?.stale && (
         <div className="px-3 py-1 text-xs text-[#F6465D] border-b border-[#F6465D]/20 bg-[#F6465D]/10 animate-pulse">
-          Market data is stale — trading temporarily disabled
+          {t('page.staleDataLong')}
         </div>
       )}
 
@@ -458,7 +473,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
           try {
             await submitPrediction(direction, confidence);
             await trackEvent("prediction_submit", { direction, confidence });
-            toast(`Prediction: ${direction.toUpperCase()}`, { description: "Result in 5 minutes" });
+            toast(t('page.predResult', { dir: direction.toUpperCase() }), { description: t('page.predDesc') });
           } catch (err) {
             toast.error((err as Error).message);
           }
@@ -506,7 +521,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
           >
             <TabsList className="bg-[rgba(255,255,255,0.02)] border-b border-[rgba(255,255,255,0.08)] rounded-none h-8 px-1.5 gap-0 justify-start w-full shrink-0 items-center">
               <TabsTrigger value="chat" className={`${tabTriggerClass} relative`}>
-                Chat
+                {t('toolbar.chat')}
                 {chatUnread > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-[#F6465D] text-white text-[9px] font-bold rounded-full flex items-center justify-center">
                     {chatUnread > 99 ? '99+' : chatUnread}
@@ -514,16 +529,16 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
                 )}
               </TabsTrigger>
               <TabsTrigger value="trades" className={tabTriggerClass}>
-                Trades
+                {t('toolbar.trades')}
                 {trades.length > 0 && <span className="ml-1 text-[9px] text-[#848E9C]">({trades.length})</span>}
               </TabsTrigger>
-              <TabsTrigger value="leaderboard" className={tabTriggerClass}>Rank</TabsTrigger>
-              <TabsTrigger value="stats" className={tabTriggerClass}>Stats</TabsTrigger>
-              <TabsTrigger value="news" className={tabTriggerClass}>News</TabsTrigger>
+              <TabsTrigger value="leaderboard" className={tabTriggerClass}>{t('toolbar.rank')}</TabsTrigger>
+              <TabsTrigger value="stats" className={tabTriggerClass}>{t('toolbar.stats')}</TabsTrigger>
+              <TabsTrigger value="news" className={tabTriggerClass}>{t('toolbar.news')}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="chat" className="flex-1 overflow-hidden mt-0">
-              <ChatRoom messages={chatMessages} onSendMessage={handleSendMessage} />
+              <ChatRoom messages={chatMessages} onSendMessage={handleSendMessage} highlightFromIndex={chatHighlightFrom} />
             </TabsContent>
             <TabsContent value="trades" className="flex-1 overflow-hidden mt-0">
               <TradeHistory trades={trades} />
@@ -532,7 +547,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
               <Leaderboard entries={leaderboard} myRank={account.rank} promotionLineRank={300} />
             </TabsContent>
             <TabsContent value="stats" className="flex-1 overflow-hidden mt-0">
-              <MarketStats social={social} account={account} match={match} />
+              <MarketStats social={social} account={account} match={match} prediction={prediction} pollData={pollData} />
             </TabsContent>
             <TabsContent value="news" className="flex-1 overflow-hidden mt-0">
               <NewsFeed news={news} />

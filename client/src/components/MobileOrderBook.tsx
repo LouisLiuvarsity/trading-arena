@@ -4,6 +4,7 @@
 // ============================================================
 
 import type { OrderBook } from '@/lib/types';
+import { useT } from '@/lib/i18n';
 
 interface Props {
   orderBook: OrderBook;
@@ -20,6 +21,7 @@ function formatQty(qty: number): string {
 }
 
 export default function MobileOrderBook({ orderBook, lastPrice, priceDirection }: Props) {
+  const { t } = useT();
   const asks = orderBook.asks.slice(0, 7).reverse();
   const bids = orderBook.bids.slice(0, 7);
   const maxAskQty = asks.reduce((m, a) => Math.max(m, a.quantity), 1);
@@ -29,7 +31,7 @@ export default function MobileOrderBook({ orderBook, lastPrice, priceDirection }
     <div className="text-[10px] font-mono">
       {/* Header */}
       <div className="flex items-center justify-between px-2 py-1 border-b border-[rgba(255,255,255,0.06)]">
-        <span className="text-[#848E9C] text-[9px] font-semibold uppercase tracking-wider">Order Book</span>
+        <span className="text-[#848E9C] text-[9px] font-semibold uppercase tracking-wider">{t('orderbook.orderBook')}</span>
         <span className={`text-xs font-semibold ${
           priceDirection === 'up' ? 'text-[#0ECB81]' : priceDirection === 'down' ? 'text-[#F6465D]' : 'text-[#D1D4DC]'
         }`}>
@@ -43,8 +45,8 @@ export default function MobileOrderBook({ orderBook, lastPrice, priceDirection }
         {/* Asks (sell side) */}
         <div className="flex-1 border-r border-[rgba(255,255,255,0.04)]">
           <div className="flex justify-between px-1.5 py-0.5 text-[9px] text-[#848E9C]">
-            <span>Price</span>
-            <span>Qty</span>
+            <span>{t('common.price')}</span>
+            <span>{t('common.qty')}</span>
           </div>
           {asks.map((ask, i) => (
             <div key={`ask-${i}`} className="relative flex justify-between px-1.5 py-[1.5px]">
@@ -61,8 +63,8 @@ export default function MobileOrderBook({ orderBook, lastPrice, priceDirection }
         {/* Bids (buy side) */}
         <div className="flex-1">
           <div className="flex justify-between px-1.5 py-0.5 text-[9px] text-[#848E9C]">
-            <span>Price</span>
-            <span>Qty</span>
+            <span>{t('common.price')}</span>
+            <span>{t('common.qty')}</span>
           </div>
           {bids.map((bid, i) => (
             <div key={`bid-${i}`} className="relative flex justify-between px-1.5 py-[1.5px]">

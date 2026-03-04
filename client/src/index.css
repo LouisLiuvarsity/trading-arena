@@ -228,6 +228,12 @@
   }
   .animate-screen-shake { animation: screen-shake 0.5s ease-in-out; }
 
+  @keyframes message-highlight {
+    0% { background-color: oklch(0.82 0.16 85 / 0.25); }
+    100% { background-color: transparent; }
+  }
+  .animate-message-highlight { animation: message-highlight 1.5s ease-out forwards; }
+
   /* Tab content transitions */
   [data-state="active"][role="tabpanel"] {
     animation: fade-in-up 0.15s ease-out;
