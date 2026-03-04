@@ -65,9 +65,9 @@ function ResizeHandle({ direction, onMouseDown }: { direction: 'horizontal' | 'v
   return (
     <div
       onMouseDown={onMouseDown}
-      className={`${isH ? 'w-[5px] cursor-col-resize hover:bg-[#F0B90B]/30' : 'h-[5px] cursor-row-resize hover:bg-[#F0B90B]/30'} bg-transparent transition-colors shrink-0 flex items-center justify-center group`}
+      className={`${isH ? 'w-[6px] cursor-col-resize hover:bg-[#F0B90B]/20' : 'h-[6px] cursor-row-resize hover:bg-[#F0B90B]/20'} bg-transparent transition-colors shrink-0 flex items-center justify-center group`}
     >
-      <div className={`${isH ? 'w-[1px] h-6' : 'h-[1px] w-6'} bg-[rgba(255,255,255,0.08)] group-hover:bg-[#F0B90B]/50 transition-colors`} />
+      <div className={`${isH ? 'w-[2px] h-8' : 'h-[2px] w-8'} bg-[rgba(255,255,255,0.15)] group-hover:bg-[#F0B90B]/60 transition-colors rounded-full`} />
     </div>
   );
 }
@@ -439,7 +439,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
 
         {/* Right panel resize handle + panel */}
         <ResizeHandle direction="horizontal" onMouseDown={rightPanelResize.onMouseDown} />
-        <div style={{ width: rightPanelResize.size }} className="shrink-0 flex flex-col overflow-hidden">
+        <div style={{ width: rightPanelResize.size }} className="shrink-0 flex flex-col overflow-hidden bg-[#0D1017] border-l border-[rgba(255,255,255,0.1)]">
           <Tabs
             value={rightTab}
             onValueChange={async value => {
