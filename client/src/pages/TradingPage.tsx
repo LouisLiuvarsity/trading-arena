@@ -120,6 +120,28 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
 
   const achievements = useAchievements(account, trades, position);
 
+  // Chat unread message tracking
+  const [chatUnread, setChatUnread] = useState(0);
+  const prevChatCountRef = useRef(chatMessages.length);
+  useEffect(() => {
+    const newCount = chatMessages.length;
+    if (newCount > prevChatCountRef.current) {
+      const diff = newCount - prevChatCountRef.current;
+      // Desktop: not on chat tab; Mobile: not on chat panel
+      const isOnChat = isMobile ? mobilePanel === 'chat' : rightTab === 'chat';
+      if (!isOnChat) {
+        setChatUnread(prev => prev + diff);
+      }
+    }
+    prevChatCountRef.current = newCount;
+  }, [chatMessages.length, rightTab, mobilePanel, isMobile]);
+
+  // Clear unread when switching to chat
+  useEffect(() => {
+    const isOnChat = isMobile ? mobilePanel === 'chat' : rightTab === 'chat';
+    if (isOnChat) setChatUnread(0);
+  }, [rightTab, mobilePanel, isMobile]);
+
   // Screen shake on big loss
   const [isShaking, setIsShaking] = useState(false);
   useEffect(() => {
@@ -212,6 +234,21 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
     return (
       <div className={`h-[100dvh] flex flex-col bg-[#0B0E11] overflow-hidden select-none ${isShaking ? 'animate-screen-shake' : ''}`}>
         <AchievementOverlay achievements={achievements} />
+        <CompetitionNotifications
+          account={account}
+          match={match}
+          social={social}
+          prediction={prediction}
+          onSubmitPrediction={async (direction, confidence) => {
+            try {
+              await submitPrediction(direction, confidence);
+              await trackEvent("prediction_submit", { direction, confidence });
+              toast(`Prediction: ${direction.toUpperCase()}`, { description: "Result in 5 minutes" });
+            } catch (err) {
+              toast.error((err as Error).message);
+            }
+          }}
+        />
         {error && (
           <div className="px-2 py-1 text-[10px] text-[#F6465D] border-b border-[#F6465D]/20 bg-[#F6465D]/10">
             {error}
@@ -231,6 +268,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
           activePanel={mobilePanel}
           onSelectPanel={(panel) => setMobilePanel(panel)}
           tradesCount={trades.length}
+          chatBadge={chatUnread}
         />
 
         {/* Content tabs: Chart / OrderBook */}
@@ -370,7 +408,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
         {/* Overlay panels for Chat, Rank, Stats, News, Trades */}
         <MobileToolbarOverlay activePanel={mobilePanel} onClose={() => setMobilePanel(null)}>
           {mobilePanel === 'chat' && (
-            <ChatRoom messages={chatMessages} onSendMessage={handleSendMessage} social={social} pollData={pollData} onPollVote={submitPollVote} />
+            <ChatRoom messages={chatMessages} onSendMessage={handleSendMessage} />
           )}
           {mobilePanel === 'trades' && (
             <TradeHistory trades={trades} />
@@ -467,7 +505,14 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
             className="flex flex-col h-full"
           >
             <TabsList className="bg-[rgba(255,255,255,0.02)] border-b border-[rgba(255,255,255,0.08)] rounded-none h-8 px-1.5 gap-0 justify-start w-full shrink-0 items-center">
-              <TabsTrigger value="chat" className={tabTriggerClass}>Chat</TabsTrigger>
+              <TabsTrigger value="chat" className={`${tabTriggerClass} relative`}>
+                Chat
+                {chatUnread > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-[#F6465D] text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {chatUnread > 99 ? '99+' : chatUnread}
+                  </span>
+                )}
+              </TabsTrigger>
               <TabsTrigger value="trades" className={tabTriggerClass}>
                 Trades
                 {trades.length > 0 && <span className="ml-1 text-[9px] text-[#848E9C]">({trades.length})</span>}
@@ -478,7 +523,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
             </TabsList>
 
             <TabsContent value="chat" className="flex-1 overflow-hidden mt-0">
-              <ChatRoom messages={chatMessages} onSendMessage={handleSendMessage} social={social} pollData={pollData} onPollVote={submitPollVote} />
+              <ChatRoom messages={chatMessages} onSendMessage={handleSendMessage} />
             </TabsContent>
             <TabsContent value="trades" className="flex-1 overflow-hidden mt-0">
               <TradeHistory trades={trades} />

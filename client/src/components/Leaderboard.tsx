@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Bot } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { LeaderboardEntry } from "@/lib/types";
 
 interface Props {
@@ -11,11 +10,6 @@ interface Props {
 
 export default function Leaderboard({ entries, myRank, promotionLineRank }: Props) {
   const [viewMode, setViewMode] = useState<"top" | "around">("around");
-
-  const currentMyRank = useMemo(() => {
-    const me = entries.find(entry => entry.isYou);
-    return me?.rank ?? myRank;
-  }, [entries, myRank]);
 
   const displayEntries = useMemo(() => {
     if (viewMode === "top") {
@@ -29,11 +23,6 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
     const end = Math.min(entries.length, myIndex + 11);
     return entries.slice(start, end);
   }, [entries, viewMode]);
-
-  const promotionEntry = entries.find(entry => entry.rank === promotionLineRank);
-  const promotionPnlPct = promotionEntry?.pnlPct ?? 0;
-  const myEntry = entries.find(entry => entry.isYou);
-  const gapToPromotion = myEntry ? (promotionPnlPct - myEntry.pnlPct).toFixed(2) : "?";
 
   return (
     <div className="flex flex-col h-full">
@@ -58,27 +47,25 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
         </div>
       </div>
 
-      <div className="px-3 py-2 bg-[#F0B90B]/5 border-b border-[#F0B90B]/20">
-        <div className="flex items-center justify-between text-[10px]">
-          <span className="text-[#F0B90B] font-semibold">⚡ 奖金线 #{promotionLineRank}</span>
-          <span className="text-[#F0B90B] font-mono">+{promotionPnlPct.toFixed(2)}%</span>
+      {/* Ad space */}
+      <div className="px-4 py-3 bg-gradient-to-r from-[#F0B90B]/5 via-[#F0B90B]/10 to-[#F0B90B]/5 border-b border-[#F0B90B]/20">
+        <div className="flex items-center justify-center gap-2 text-[12px]">
+          <span className="text-[#F0B90B]/60">📢</span>
+          <span className="text-[#F0B90B]/80 font-medium tracking-wide">广告位招租</span>
+          <span className="text-[#F0B90B]/60">📢</span>
         </div>
-        {currentMyRank > promotionLineRank ? (
-          <div className="text-[10px] text-[#F6465D] mt-0.5">还需 +{gapToPromotion}% 才能进入奖金区</div>
-        ) : (
-          <div className="text-[10px] text-[#0ECB81] mt-0.5">✓ 你在奖金线以上</div>
-        )}
+        <div className="text-[9px] text-[#848E9C]/60 text-center mt-0.5">Contact us for advertising opportunities</div>
       </div>
 
-      <div className="flex items-center px-3 py-1 text-[10px] text-[#848E9C] border-b border-[rgba(255,255,255,0.04)]">
-        <span className="w-10">#</span>
+      <div className="flex items-center px-3 py-1.5 text-[10px] text-[#848E9C] border-b border-[rgba(255,255,255,0.04)]">
+        <span className="w-12">#</span>
         <span className="flex-1">选手</span>
-        <span className="w-16 text-right">收益%</span>
-        <span className="w-14 text-right">奖金</span>
-        <span className="w-10 text-right">积分</span>
+        <span className="w-20 text-right">收益%</span>
+        <span className="w-16 text-right">奖金</span>
+        <span className="w-12 text-right">积分</span>
       </div>
 
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-y-auto min-h-0">
         <div className="px-1">
           {displayEntries.map(entry => {
             const isPromotionLine = entry.rank === promotionLineRank;
@@ -97,7 +84,7 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
                 )}
 
                 <div
-                  className={`flex items-center px-2 py-[3px] text-[11px] font-mono rounded ${
+                  className={`flex items-center px-3 py-1.5 text-[11px] font-mono rounded mb-0.5 ${
                     isMe
                       ? "bg-[#F0B90B]/10 border border-[#F0B90B]/30"
                       : entry.isBot
@@ -105,32 +92,32 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
                         : "hover:bg-white/3"
                   }`}
                 >
-                  <span className={`w-10 ${entry.rank <= 3 ? "text-[#F0B90B] font-bold" : "text-[#848E9C]"}`}>
+                  <span className={`w-12 ${entry.rank <= 3 ? "text-[#F0B90B] font-bold" : "text-[#848E9C]"}`}>
                     {entry.rank <= 3 ? ["🥇", "🥈", "🥉"][entry.rank - 1] : entry.rank}
                   </span>
 
                   <span
-                    className={`flex-1 truncate flex items-center gap-1 ${
+                    className={`flex-1 truncate flex items-center gap-1.5 ${
                       isMe ? "text-[#F0B90B] font-semibold" : entry.isBot ? "text-[#A78BFA]" : "text-[#D1D4DC]"
                     }`}
                   >
                     {entry.isBot && (
-                      <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded bg-[#8B5CF6]/20 border border-[#8B5CF6]/40 shrink-0">
-                        <Bot className="w-2.5 h-2.5 text-[#A78BFA]" />
+                      <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-[#8B5CF6]/20 border border-[#8B5CF6]/40 shrink-0">
+                        <Bot className="w-3 h-3 text-[#A78BFA]" />
                       </span>
                     )}
                     {entry.username}
                     {!entry.prizeEligible && <span className="text-[7px] text-[#F6465D]/60 ml-0.5">未达5笔</span>}
                   </span>
 
-                  <span className={`w-16 text-right ${entry.pnlPct >= 0 ? "text-[#0ECB81]" : "text-[#F6465D]"}`}>
+                  <span className={`w-20 text-right ${entry.pnlPct >= 0 ? "text-[#0ECB81]" : "text-[#F6465D]"}`}>
                     {entry.pnlPct >= 0 ? "+" : ""}
                     {entry.pnlPct.toFixed(2)}%
                   </span>
-                  <span className={`w-14 text-right ${entry.prizeAmount > 0 ? "text-[#F0B90B] font-semibold" : "text-[#5E6673]"}`}>
+                  <span className={`w-16 text-right ${entry.prizeAmount > 0 ? "text-[#F0B90B] font-semibold" : "text-[#5E6673]"}`}>
                     {entry.prizeAmount > 0 ? `${entry.prizeAmount}U` : "—"}
                   </span>
-                  <span className={`w-10 text-right ${entry.matchPoints > 0 ? "text-[#F0B90B]" : "text-[#5E6673]"}`}>
+                  <span className={`w-12 text-right ${entry.matchPoints > 0 ? "text-[#F0B90B]" : "text-[#5E6673]"}`}>
                     {entry.matchPoints > 0 ? `+${entry.matchPoints}` : "0"}
                   </span>
                 </div>
@@ -138,7 +125,7 @@ export default function Leaderboard({ entries, myRank, promotionLineRank }: Prop
             );
           })}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

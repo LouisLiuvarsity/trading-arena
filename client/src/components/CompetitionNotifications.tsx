@@ -192,21 +192,28 @@ export default function CompetitionNotifications({ account, match, social, predi
     return () => clearInterval(emotionalInterval);
   }, [account, social, getElapsedPct, addNotification]);
 
-  // Prediction window notifications
+  // Prediction window notifications — trigger on the hour, stay 5 minutes
+  const predictionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (!prediction) return;
-    const interval = setInterval(() => {
-      if (prediction.isWindowOpen && !prediction.alreadySubmitted) {
-        const roundId = `pred-${prediction.currentRoundKey}`;
-        if (!firedRef.current.has(roundId)) {
-          firedRef.current.add(roundId);
-          if (isMuted) return;
-          const id = roundId;
+    const scheduleNextHour = () => {
+      const now = new Date();
+      const nextHour = new Date(now);
+      nextHour.setHours(now.getHours() + 1, 0, 0, 0);
+      const msUntilNextHour = nextHour.getTime() - now.getTime();
+
+      predictionTimerRef.current = setTimeout(() => {
+        if (!isMuted) {
+          const hourKey = `pred-hourly-${nextHour.getHours()}`;
+          const id = hourKey;
           setNotifications(prev => {
             if (prev.some(n => n.id === id)) return prev;
+            const stats = prediction?.stats;
+            const accuracyText = stats
+              ? `准确率: ${stats.accuracy}% (${stats.correctPredictions}/${stats.totalPredictions})`
+              : '';
             const next = [{
               id,
-              message: `🔮 价格预测投票！5分钟后SOL会涨还是跌？\n准确率: ${prediction.stats.accuracy}% (${prediction.stats.correctPredictions}/${prediction.stats.totalPredictions})`,
+              message: `🔮 整点预测！5分钟后SOL会涨还是跌？\n${accuracyText}`,
               borderColor: '#F0B90B',
               timestamp: Date.now(),
               type: "prediction" as const,
@@ -214,17 +221,60 @@ export default function CompetitionNotifications({ account, match, social, predi
             return next.slice(0, maxNotifications);
           });
           setIsVisible(true);
+
+          // Auto-remove prediction notification after 5 minutes
+          setTimeout(() => {
+            setNotifications(prev => prev.filter(n => n.id !== id));
+          }, 5 * 60 * 1000);
         }
+        // Schedule next one
+        scheduleNextHour();
+      }, msUntilNextHour);
+    };
+
+    // Also check if we're within the first 5 minutes of the current hour (show immediately)
+    const now = new Date();
+    if (now.getMinutes() < 5) {
+      const hourKey = `pred-hourly-${now.getHours()}`;
+      if (!firedRef.current.has(hourKey) && !isMuted) {
+        firedRef.current.add(hourKey);
+        const stats = prediction?.stats;
+        const accuracyText = stats
+          ? `准确率: ${stats.accuracy}% (${stats.correctPredictions}/${stats.totalPredictions})`
+          : '';
+        const id = hourKey;
+        setNotifications(prev => {
+          if (prev.some(n => n.id === id)) return prev;
+          const next = [{
+            id,
+            message: `🔮 整点预测！5分钟后SOL会涨还是跌？\n${accuracyText}`,
+            borderColor: '#F0B90B',
+            timestamp: Date.now(),
+            type: "prediction" as const,
+          }, ...prev];
+          return next.slice(0, maxNotifications);
+        });
+        setIsVisible(true);
+
+        // Auto-remove after remaining time in the 5-min window
+        const remainMs = (5 - now.getMinutes()) * 60 * 1000 - now.getSeconds() * 1000;
+        setTimeout(() => {
+          setNotifications(prev => prev.filter(n => n.id !== id));
+        }, remainMs);
       }
-    }, 2000);
-    return () => clearInterval(interval);
+    }
+
+    scheduleNextHour();
+    return () => {
+      if (predictionTimerRef.current) clearTimeout(predictionTimerRef.current);
+    };
   }, [prediction, isMuted]);
 
-  // Auto-remove old notifications after 15 seconds
+  // Auto-remove old notifications after 15 seconds (except prediction type which has its own 5-min timer)
   useEffect(() => {
     const cleanup = setInterval(() => {
       const now = Date.now();
-      setNotifications(prev => prev.filter(n => now - n.timestamp < 15000));
+      setNotifications(prev => prev.filter(n => n.type === 'prediction' || now - n.timestamp < 15000));
     }, 3000);
     return () => clearInterval(cleanup);
   }, []);

@@ -75,15 +75,16 @@ interface ToolbarButtonProps {
   icon: React.ReactNode;
   label: string;
   badge?: string | number;
+  badgeRed?: boolean;
   active?: boolean;
   onClick: () => void;
 }
 
-function ToolbarButton({ icon, label, badge, active, onClick }: ToolbarButtonProps) {
+function ToolbarButton({ icon, label, badge, badgeRed, active, onClick }: ToolbarButtonProps) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] transition-colors ${
+      className={`relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] transition-colors ${
         active
           ? 'bg-[#F0B90B]/15 text-[#F0B90B] border border-[#F0B90B]/30'
           : 'bg-white/[0.03] text-[#848E9C] border border-[rgba(255,255,255,0.08)] hover:bg-white/[0.06] hover:text-[#D1D4DC]'
@@ -92,9 +93,15 @@ function ToolbarButton({ icon, label, badge, active, onClick }: ToolbarButtonPro
       {icon}
       <span className="font-medium">{label}</span>
       {badge !== undefined && badge !== 0 && (
-        <span className="ml-0.5 px-1 py-0 text-[9px] bg-[#F0B90B]/20 text-[#F0B90B] rounded-full font-mono">
-          {badge}
-        </span>
+        badgeRed ? (
+          <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-[#F6465D] text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+            {Number(badge) > 99 ? '99+' : badge}
+          </span>
+        ) : (
+          <span className="ml-0.5 px-1 py-0 text-[9px] bg-[#F0B90B]/20 text-[#F0B90B] rounded-full font-mono">
+            {badge}
+          </span>
+        )
       )}
     </button>
   );
@@ -104,14 +111,17 @@ interface MobileToolbarProps {
   activePanel: string | null;
   onSelectPanel: (panel: string) => void;
   tradesCount?: number;
+  chatBadge?: number;
 }
 
-export function MobileToolbar({ activePanel, onSelectPanel, tradesCount }: MobileToolbarProps) {
+export function MobileToolbar({ activePanel, onSelectPanel, tradesCount, chatBadge }: MobileToolbarProps) {
   return (
     <div className="flex items-center gap-1.5 px-2 py-1.5 overflow-x-auto no-scrollbar border-b border-[rgba(255,255,255,0.06)] bg-[#0B0E11]">
       <ToolbarButton
         icon={<MessageCircle className="w-3.5 h-3.5" />}
         label="Chat"
+        badge={chatBadge}
+        badgeRed
         active={activePanel === 'chat'}
         onClick={() => onSelectPanel('chat')}
       />
