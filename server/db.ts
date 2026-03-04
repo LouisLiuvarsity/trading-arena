@@ -583,25 +583,24 @@ export async function getPollVoteAggregation(
   lookbackMs: number = 60 * 60 * 1000,
 ): Promise<{ long: number; short: number; neutral: number }> {
   const cutoff = Date.now() - lookbackMs;
-  const rows = await db
-    .select({
-      direction: sql<string>`JSON_UNQUOTE(JSON_EXTRACT(${behaviorEvents.payload}, '$.direction'))`,
-      count: sql<number>`COUNT(*)`,
-    })
-    .from(behaviorEvents)
-    .where(
-      and(
-        eq(behaviorEvents.eventType, "poll_vote"),
-        sql`${behaviorEvents.timestamp} >= ${cutoff}`,
-      ),
-    )
-    .groupBy(sql`1`);
+  // Use raw SQL to avoid Drizzle's column reference mismatch with MySQL only_full_group_by
+  const rows = await db.execute(
+    sql`SELECT JSON_UNQUOTE(JSON_EXTRACT(payload, '$.direction')) AS direction, COUNT(*) AS cnt
+        FROM behavior_events
+        WHERE eventType = 'poll_vote' AND timestamp >= ${cutoff}
+        GROUP BY direction`,
+  );
 
   let long = 0, short = 0, neutral = 0;
-  for (const row of rows) {
-    if (row.direction === "long") long = row.count;
-    else if (row.direction === "short") short = row.count;
-    else if (row.direction === "neutral") neutral = row.count;
+  const resultRows = (rows as any)[0] ?? rows;
+  if (Array.isArray(resultRows)) {
+    for (const row of resultRows) {
+      const dir = (row as any).direction;
+      const count = Number((row as any).cnt ?? 0);
+      if (dir === "long") long = count;
+      else if (dir === "short") short = count;
+      else if (dir === "neutral") neutral = count;
+    }
   }
   return { long, short, neutral };
 }

@@ -1,0 +1,19 @@
+{
+  "query": "SELECT COUNT(*) as total FROM behavior_events; SELECT COUNT(*) as poll_total FROM behavior_events WHERE eventType = 'poll_vote';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT COUNT(*) as total FROM behavior_events; SELECT COUNT(*) as poll_total FROM behavior_events WHERE eventType = 'poll_vote';",
+  "rows": [
+    {
+      "total": "1553"
+    },
+    {
+      "total": "poll_total"
+    },
+    {
+      "total": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\n1553\npoll_total\n0\n",
+  "stderr": "",
+  "execution_time_ms": 1732
+}

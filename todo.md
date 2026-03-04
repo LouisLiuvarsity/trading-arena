@@ -80,3 +80,9 @@
 - [x] Frontend: Wire up data flow in TradingPage (desktop + mobile)
 - [x] Frontend: Update MobileTradingPanel with same TP/SL improvements
 - [x] Test all flows: tsc 0 errors, vitest 20 passed
+
+## Fix Trading Page Errors
+- [x] Investigate all error sources (logs, TS, browser console)
+- [x] Fix poll query SQL error (MySQL only_full_group_by + Drizzle column reference mismatch)
+- [x] Fix identified errors - switched to raw db.execute() for poll aggregation
+- [x] Run tests and verify fixes (21 tests passed, 0 red error banner on trading page)

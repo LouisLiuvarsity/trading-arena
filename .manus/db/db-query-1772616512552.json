@@ -1,0 +1,9 @@
+{
+  "query": "SELECT id, arenaAccountId, eventType, payload, timestamp FROM behavior_events WHERE eventType = 'poll_vote' ORDER BY timestamp DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT id, arenaAccountId, eventType, payload, timestamp FROM behavior_events WHERE eventType = 'poll_vote' ORDER BY timestamp DESC LIMIT 10;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1602
+}

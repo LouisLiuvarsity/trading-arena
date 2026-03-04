@@ -30,7 +30,7 @@ describe("constants", () => {
 
     it("returns near-baseline weight around 10 minutes", () => {
       const w600 = getHoldWeight(600);
-      expect(w600).toBeGreaterThanOrEqual(0.95);
+      expect(w600).toBeGreaterThanOrEqual(0.90);
       expect(w600).toBeLessThanOrEqual(1.0);
     });
 

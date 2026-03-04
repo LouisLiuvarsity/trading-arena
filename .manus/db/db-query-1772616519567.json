@@ -1,0 +1,40 @@
+{
+  "query": "SELECT id, eventType, payload, timestamp FROM behavior_events ORDER BY timestamp DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT id, eventType, payload, timestamp FROM behavior_events ORDER BY timestamp DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "1553",
+      "eventType": "close_position",
+      "payload": "{}",
+      "timestamp": "1772615650017"
+    },
+    {
+      "id": "1552",
+      "eventType": "order_close",
+      "payload": "{\"tradeId\":\"trade-8IzkzSHUgkiF\"}",
+      "timestamp": "1772615649702"
+    },
+    {
+      "id": "1551",
+      "eventType": "tab_change",
+      "payload": "{\"tab\":\"leaderboard\"}",
+      "timestamp": "1772615646327"
+    },
+    {
+      "id": "1550",
+      "eventType": "tab_change",
+      "payload": "{\"tab\":\"chat\"}",
+      "timestamp": "1772615508088"
+    },
+    {
+      "id": "1549",
+      "eventType": "tab_change",
+      "payload": "{\"tab\":\"stats\"}",
+      "timestamp": "1772615507404"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\teventType\tpayload\ttimestamp\n1553\tclose_position\t{}\t1772615650017\n1552\torder_close\t{\"tradeId\":\"trade-8IzkzSHUgkiF\"}\t1772615649702\n1551\ttab_change\t{\"tab\":\"leaderboard\"}\t1772615646327\n1550\ttab_change\t{\"tab\":\"chat\"}\t1772615508088\n1549\ttab_change\t{\"tab\":\"stats\"}\t1772615507404\n",
+  "stderr": "",
+  "execution_time_ms": 1536
+}
