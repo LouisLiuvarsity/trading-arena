@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Trophy, Zap, TrendingUp, Shield, ChevronRight, UserPlus, LogIn } from 'lucide-react';
+import { useT } from '@/lib/i18n';
 
 interface LoginPageProps {
   onLogin: (inviteCode: string, username: string) => Promise<void>;
@@ -7,6 +8,7 @@ interface LoginPageProps {
 }
 
 export default function LoginPage({ onLogin, onQuickLogin }: LoginPageProps) {
+  const { t, lang, setLang } = useT();
   const [mode, setMode] = useState<'register' | 'quick'>(() =>
     localStorage.getItem("arena_username") ? 'quick' : 'register'
   );
@@ -65,37 +67,41 @@ export default function LoginPage({ onLogin, onQuickLogin }: LoginPageProps) {
       />
 
       <div className="relative z-10 w-full max-w-[440px] mx-4">
+        {/* Language toggle */}
+        <div className="absolute -top-12 right-0">
+          <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} className="text-[10px] text-[#848E9C] hover:text-[#D1D4DC] px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition-colors font-medium">{lang === 'zh' ? 'EN' : '中'}</button>
+        </div>
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#F0B90B]/20 to-[#F0B90B]/5 border border-[#F0B90B]/20 mb-4">
             <Trophy className="w-8 h-8 text-[#F0B90B]" />
           </div>
           <h1 className="text-3xl font-bold text-white tracking-tight" style={{ fontFamily: "'DM Mono', monospace" }}>
-            Trading Arena
+            {t('login.title')}
           </h1>
-          <p className="text-[#848E9C] text-sm mt-2">24H Crypto Trading Competition</p>
+          <p className="text-[#848E9C] text-sm mt-2">{t('login.subtitle')}</p>
         </div>
 
         {/* Stats */}
         <div className="flex items-center justify-center gap-6 mb-8">
           <div className="text-center">
             <div className="text-[#F0B90B] text-lg font-bold" style={{ fontFamily: "'DM Mono', monospace" }}>5,000</div>
-            <div className="text-[#5E6673] text-[10px] uppercase tracking-wider">USDT Capital</div>
+            <div className="text-[#5E6673] text-[10px] uppercase tracking-wider">{t('login.capital')}</div>
           </div>
           <div className="w-px h-8 bg-[rgba(255,255,255,0.06)]" />
           <div className="text-center">
             <div className="text-white text-lg font-bold" style={{ fontFamily: "'DM Mono', monospace" }}>SOL</div>
-            <div className="text-[#5E6673] text-[10px] uppercase tracking-wider">Trading Pair</div>
+            <div className="text-[#5E6673] text-[10px] uppercase tracking-wider">{t('login.pair')}</div>
           </div>
           <div className="w-px h-8 bg-[rgba(255,255,255,0.06)]" />
           <div className="text-center">
             <div className="text-white text-lg font-bold" style={{ fontFamily: "'DM Mono', monospace" }}>24H</div>
-            <div className="text-[#5E6673] text-[10px] uppercase tracking-wider">Duration</div>
+            <div className="text-[#5E6673] text-[10px] uppercase tracking-wider">{t('login.duration')}</div>
           </div>
           <div className="w-px h-8 bg-[rgba(255,255,255,0.06)]" />
           <div className="text-center">
             <div className="text-[#0ECB81] text-lg font-bold" style={{ fontFamily: "'DM Mono', monospace" }}>500U</div>
-            <div className="text-[#5E6673] text-[10px] uppercase tracking-wider">Prize Pool</div>
+            <div className="text-[#5E6673] text-[10px] uppercase tracking-wider">{t('login.pool')}</div>
           </div>
         </div>
 
@@ -105,11 +111,11 @@ export default function LoginPage({ onLogin, onQuickLogin }: LoginPageProps) {
           <div className="flex border-b border-[rgba(255,255,255,0.06)]">
             <button className={tabClass(mode === 'register')} onClick={() => { setMode('register'); setError(null); }}>
               <UserPlus className="w-3.5 h-3.5" />
-              New Player
+              {t('login.tabNew')}
             </button>
             <button className={tabClass(mode === 'quick')} onClick={() => { setMode('quick'); setError(null); }}>
               <LogIn className="w-3.5 h-3.5" />
-              Returning Player
+              {t('login.tabReturn')}
             </button>
           </div>
 
@@ -117,13 +123,13 @@ export default function LoginPage({ onLogin, onQuickLogin }: LoginPageProps) {
             {mode === 'register' ? (
               <form onSubmit={handleRegister}>
                 <label className="block text-[#848E9C] text-xs uppercase tracking-wider mb-2">
-                  Invite Code
+                  {t('login.inviteCode')}
                 </label>
                 <input
                   type="text"
                   value={inviteCode}
                   onChange={(e) => setInviteCode(e.target.value)}
-                  placeholder="Enter your invite code..."
+                  placeholder={t('login.invitePlaceholder')}
                   maxLength={32}
                   className="w-full bg-[#0B0E11] border border-[rgba(255,255,255,0.1)] rounded-lg px-4 py-3 text-white placeholder:text-[#5E6673] focus:outline-none focus:border-[#F0B90B]/50 transition-colors text-sm"
                   style={{ fontFamily: "'DM Mono', monospace" }}
@@ -131,13 +137,13 @@ export default function LoginPage({ onLogin, onQuickLogin }: LoginPageProps) {
                 />
 
                 <label className="block text-[#848E9C] text-xs uppercase tracking-wider mb-2 mt-4">
-                  Set Username
+                  {t('login.setUsername')}
                 </label>
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Choose your trading alias..."
+                  placeholder={t('login.usernamePlaceholder')}
                   maxLength={20}
                   className="w-full bg-[#0B0E11] border border-[rgba(255,255,255,0.1)] rounded-lg px-4 py-3 text-white placeholder:text-[#5E6673] focus:outline-none focus:border-[#F0B90B]/50 transition-colors text-sm"
                   style={{ fontFamily: "'DM Mono', monospace" }}
@@ -152,7 +158,7 @@ export default function LoginPage({ onLogin, onQuickLogin }: LoginPageProps) {
                     <div className="w-5 h-5 border-2 border-[#0B0E11]/30 border-t-[#0B0E11] rounded-full animate-spin" />
                   ) : (
                     <>
-                      Register & Enter
+                      {t('login.register')}
                       <ChevronRight className="w-4 h-4" />
                     </>
                   )}
@@ -161,19 +167,19 @@ export default function LoginPage({ onLogin, onQuickLogin }: LoginPageProps) {
                 {error && <p className="mt-3 text-[#F6465D] text-xs text-center">{error}</p>}
 
                 <p className="text-center text-[#5E6673] text-[10px] mt-3">
-                  First time? Enter your invite code and pick a username.
+                  {t('login.registerHint')}
                 </p>
               </form>
             ) : (
               <form onSubmit={handleQuickLogin}>
                 <label className="block text-[#848E9C] text-xs uppercase tracking-wider mb-2">
-                  Username
+                  {t('login.username')}
                 </label>
                 <input
                   type="text"
                   value={quickUsername}
                   onChange={(e) => setQuickUsername(e.target.value)}
-                  placeholder="Enter your username..."
+                  placeholder={t('login.quickPlaceholder')}
                   maxLength={20}
                   className="w-full bg-[#0B0E11] border border-[rgba(255,255,255,0.1)] rounded-lg px-4 py-3 text-white placeholder:text-[#5E6673] focus:outline-none focus:border-[#F0B90B]/50 transition-colors text-sm"
                   style={{ fontFamily: "'DM Mono', monospace" }}
@@ -189,7 +195,7 @@ export default function LoginPage({ onLogin, onQuickLogin }: LoginPageProps) {
                     <div className="w-5 h-5 border-2 border-[#0B0E11]/30 border-t-[#0B0E11] rounded-full animate-spin" />
                   ) : (
                     <>
-                      Enter Arena
+                      {t('login.enter')}
                       <ChevronRight className="w-4 h-4" />
                     </>
                   )}
@@ -198,7 +204,7 @@ export default function LoginPage({ onLogin, onQuickLogin }: LoginPageProps) {
                 {error && <p className="mt-3 text-[#F6465D] text-xs text-center">{error}</p>}
 
                 <p className="text-center text-[#5E6673] text-[10px] mt-3">
-                  Already registered? Enter your username to rejoin.
+                  {t('login.returnHint')}
                 </p>
               </form>
             )}
@@ -210,29 +216,29 @@ export default function LoginPage({ onLogin, onQuickLogin }: LoginPageProps) {
           <div className="bg-[#1C2030]/40 border border-[rgba(255,255,255,0.04)] rounded-lg p-3 flex items-start gap-2.5">
             <Zap className="w-4 h-4 text-[#F0B90B] shrink-0 mt-0.5" />
             <div>
-              <div className="text-white text-xs font-medium">Real-Time Market</div>
-              <div className="text-[#5E6673] text-[10px] mt-0.5">Live SOLUSDT data</div>
+              <div className="text-white text-xs font-medium">{t('login.feat1.title')}</div>
+              <div className="text-[#5E6673] text-[10px] mt-0.5">{t('login.feat1.desc')}</div>
             </div>
           </div>
           <div className="bg-[#1C2030]/40 border border-[rgba(255,255,255,0.04)] rounded-lg p-3 flex items-start gap-2.5">
             <TrendingUp className="w-4 h-4 text-[#0ECB81] shrink-0 mt-0.5" />
             <div>
-              <div className="text-white text-xs font-medium">Rank System</div>
-              <div className="text-[#5E6673] text-[10px] mt-0.5">Compete for prizes</div>
+              <div className="text-white text-xs font-medium">{t('login.feat2.title')}</div>
+              <div className="text-[#5E6673] text-[10px] mt-0.5">{t('login.feat2.desc')}</div>
             </div>
           </div>
           <div className="bg-[#1C2030]/40 border border-[rgba(255,255,255,0.04)] rounded-lg p-3 flex items-start gap-2.5">
             <Trophy className="w-4 h-4 text-[#F0B90B] shrink-0 mt-0.5" />
             <div>
-              <div className="text-white text-xs font-medium">500 USDT Pool</div>
-              <div className="text-[#5E6673] text-[10px] mt-0.5">Top 100 win prizes</div>
+              <div className="text-white text-xs font-medium">{t('login.feat3.title')}</div>
+              <div className="text-[#5E6673] text-[10px] mt-0.5">{t('login.feat3.desc')}</div>
             </div>
           </div>
           <div className="bg-[#1C2030]/40 border border-[rgba(255,255,255,0.04)] rounded-lg p-3 flex items-start gap-2.5">
             <Shield className="w-4 h-4 text-[#848E9C] shrink-0 mt-0.5" />
             <div>
-              <div className="text-white text-xs font-medium">Zero Risk</div>
-              <div className="text-[#5E6673] text-[10px] mt-0.5">Simulated capital only</div>
+              <div className="text-white text-xs font-medium">{t('login.feat4.title')}</div>
+              <div className="text-[#5E6673] text-[10px] mt-0.5">{t('login.feat4.desc')}</div>
             </div>
           </div>
         </div>

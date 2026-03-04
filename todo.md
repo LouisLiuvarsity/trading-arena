@@ -86,3 +86,12 @@
 - [x] Fix poll query SQL error (MySQL only_full_group_by + Drizzle column reference mismatch)
 - [x] Fix identified errors - switched to raw db.execute() for poll aggregation
 - [x] Run tests and verify fixes (21 tests passed, 0 red error banner on trading page)
+
+## Follow-up Tasks After GitHub Sync
+- [x] Fix dev server crash (added try-catch for DB timeout in WebSocket + /api/state handlers)
+- [x] Add i18n translations for LandingPage (~80 text replacements: hero, rules, prizes, leaderboard, quant bots, CTA, footer)
+- [x] Add i18n translations for LoginPage (tabs, inputs, buttons, features, hints)
+- [x] Add i18n translations for RulesPage (heading, 6 rules, notice, agree, enter, skip)
+- [x] Language preference persistence already built into i18n system (localStorage)
+- [x] Added language toggle button (EN/中) to LandingPage nav, LoginPage, and RulesPage
+- [x] Run tests: vitest 21 passed, only pre-existing server/db.ts fee TS error remains

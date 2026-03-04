@@ -134,14 +134,19 @@ export async function registerArenaRoutes(app: Express) {
       return;
     }
     const token = getAuthToken(req);
-    const account = await engine.getAccountByToken(token);
-    if (!account) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
+    try {
+      const account = await engine.getAccountByToken(token);
+      if (!account) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      (req as any).arenaAccountId = account.id;
+      (req as any).arenaUsername = account.username;
+      next();
+    } catch (error) {
+      console.error("[arenaAuth] DB error:", (error as Error).message);
+      res.status(503).json({ error: "Service temporarily unavailable" });
     }
-    (req as any).arenaAccountId = account.id;
-    (req as any).arenaUsername = account.username;
-    next();
   };
 
   app.use(arenaAuth);
@@ -275,21 +280,29 @@ export async function registerArenaRoutes(app: Express) {
 
   app.get("/api/state", async (req: Request, res: Response) => {
     const token = getAuthToken(req);
-    const account = await engine.getAccountByToken(token);
-    if (!account) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
     try {
+      const account = await engine.getAccountByToken(token);
+      if (!account) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
       res.json(await engine.getStateForUser(account.id));
     } catch (error) {
+      console.error("[/api/state]", (error as Error).message);
       res.status(500).json({ error: (error as Error).message });
     }
   });
 
   app.post("/api/trade/open", async (req: Request, res: Response) => {
     const token = getAuthToken(req);
-    const account = await engine.getAccountByToken(token);
+    let account;
+    try {
+      account = await engine.getAccountByToken(token);
+    } catch (error) {
+      console.error("[/api/trade/open] auth error:", (error as Error).message);
+      res.status(503).json({ error: "Service temporarily unavailable" });
+      return;
+    }
     if (!account) {
       res.status(401).json({ error: "Unauthorized" });
       return;
@@ -310,7 +323,14 @@ export async function registerArenaRoutes(app: Express) {
 
   app.post("/api/trade/close", async (req: Request, res: Response) => {
     const token = getAuthToken(req);
-    const account = await engine.getAccountByToken(token);
+    let account;
+    try {
+      account = await engine.getAccountByToken(token);
+    } catch (error) {
+      console.error("[/api/trade/close] auth error:", (error as Error).message);
+      res.status(503).json({ error: "Service temporarily unavailable" });
+      return;
+    }
     if (!account) {
       res.status(401).json({ error: "Unauthorized" });
       return;
@@ -326,7 +346,14 @@ export async function registerArenaRoutes(app: Express) {
 
   app.post("/api/trade/tpsl", async (req: Request, res: Response) => {
     const token = getAuthToken(req);
-    const account = await engine.getAccountByToken(token);
+    let account;
+    try {
+      account = await engine.getAccountByToken(token);
+    } catch (error) {
+      console.error("[/api/trade/tpsl] auth error:", (error as Error).message);
+      res.status(503).json({ error: "Service temporarily unavailable" });
+      return;
+    }
     if (!account) {
       res.status(401).json({ error: "Unauthorized" });
       return;
@@ -347,7 +374,14 @@ export async function registerArenaRoutes(app: Express) {
 
   app.post("/api/chat", async (req: Request, res: Response) => {
     const token = getAuthToken(req);
-    const account = await engine.getAccountByToken(token);
+    let account;
+    try {
+      account = await engine.getAccountByToken(token);
+    } catch (error) {
+      console.error("[/api/chat] auth error:", (error as Error).message);
+      res.status(503).json({ error: "Service temporarily unavailable" });
+      return;
+    }
     if (!account) {
       res.status(401).json({ error: "Unauthorized" });
       return;
@@ -368,7 +402,14 @@ export async function registerArenaRoutes(app: Express) {
 
   app.post("/api/events", async (req: Request, res: Response) => {
     const token = getAuthToken(req);
-    const account = await engine.getAccountByToken(token);
+    let account;
+    try {
+      account = await engine.getAccountByToken(token);
+    } catch (error) {
+      console.error("[/api/events] auth error:", (error as Error).message);
+      res.status(503).json({ error: "Service temporarily unavailable" });
+      return;
+    }
     if (!account) {
       res.status(401).json({ error: "Unauthorized" });
       return;
@@ -393,7 +434,14 @@ export async function registerArenaRoutes(app: Express) {
 
   app.post("/api/prediction", async (req: Request, res: Response) => {
     const token = getAuthToken(req);
-    const account = await engine.getAccountByToken(token);
+    let account;
+    try {
+      account = await engine.getAccountByToken(token);
+    } catch (error) {
+      console.error("[/api/prediction] auth error:", (error as Error).message);
+      res.status(503).json({ error: "Service temporarily unavailable" });
+      return;
+    }
     if (!account) {
       res.status(401).json({ error: "Unauthorized" });
       return;

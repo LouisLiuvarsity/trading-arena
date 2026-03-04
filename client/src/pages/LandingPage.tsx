@@ -5,6 +5,7 @@
 // ============================================================
 
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { useT } from '@/lib/i18n';
 import { motion, useInView } from 'framer-motion';
 import {
   Trophy, Zap, Clock, TrendingUp, Bot, ChevronRight,
@@ -155,6 +156,7 @@ function EquityChart({ data }: { data: Array<{ time: number; equity: number }> }
 
 // ─── Main Landing Page ────────────────────────────────────────
 export default function LandingPage({ onEnterArena }: LandingPageProps) {
+  const { t, lang, setLang } = useT();
   const [leaderboard, setLeaderboard] = useState(() => generateLeaderboard(285));
   const [allTimeLeaderboard] = useState(() => generateAllTimeLeaderboard());
   const [botStats] = useState(() => generateQuantBotStats());
@@ -197,17 +199,20 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             </span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-xs text-[#848E9C]">
-            <a href="#rules" className="hover:text-white transition-colors">规则</a>
-            <a href="#prizes" className="hover:text-white transition-colors">奖金</a>
-            <a href="#leaderboard" className="hover:text-white transition-colors">排行榜</a>
-            <a href="#bot" className="hover:text-white transition-colors">量化程序</a>
+            <a href="#rules" className="hover:text-white transition-colors">{t('land.nav.rules')}</a>
+            <a href="#prizes" className="hover:text-white transition-colors">{t('land.nav.prizes')}</a>
+            <a href="#leaderboard" className="hover:text-white transition-colors">{t('land.nav.leaderboard')}</a>
+            <a href="#bot" className="hover:text-white transition-colors">{t('land.nav.bot')}</a>
           </div>
-          <button
-            onClick={onEnterArena}
-            className="bg-[#F0B90B] text-[#0B0E11] text-xs font-bold px-4 py-2 rounded-lg hover:bg-[#F0B90B]/90 transition-colors"
-          >
-            进入竞技场
-          </button>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} className="text-[10px] text-[#848E9C] hover:text-[#D1D4DC] px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition-colors font-medium">{lang === 'zh' ? 'EN' : '中'}</button>
+            <button
+              onClick={onEnterArena}
+              className="bg-[#F0B90B] text-[#0B0E11] text-xs font-bold px-4 py-2 rounded-lg hover:bg-[#F0B90B]/90 transition-colors"
+            >
+              {t('land.nav.enter')}
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -231,18 +236,18 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
           >
             <div className="inline-flex items-center gap-2 bg-[#0ECB81]/10 border border-[#0ECB81]/20 rounded-full px-4 py-1.5 mb-6">
               <div className="w-2 h-2 rounded-full bg-[#0ECB81] animate-pulse" />
-              <span className="text-[#0ECB81] text-xs font-medium">第 5 场比赛进行中 — 847/1000 人已加入</span>
+              <span className="text-[#0ECB81] text-xs font-medium">{t('land.hero.badge')}</span>
             </div>
 
             <h1 className="text-4xl md:text-6xl font-bold mb-4 leading-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              24小时加密货币
+              {t('land.hero.title1')}
               <br />
-              <span className="text-[#F0B90B]">交易竞技场</span>
+              <span className="text-[#F0B90B]">{t('land.hero.title2')}</span>
             </h1>
             <p className="text-[#848E9C] text-base md:text-lg mb-8 max-w-xl mx-auto leading-relaxed">
-              每月 15 场常规赛 + 总决赛，固定奖金池 500 USDT/场。
+              {t('land.hero.desc')}
               <br />
-              <span className="text-white/70">积分制晋级总决赛，量化程序同场对决。</span>
+              <span className="text-white/70">{t('land.hero.desc2')}</span>
             </p>
 
             <div className="flex items-center justify-center gap-4 mb-10">
@@ -250,14 +255,14 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                 onClick={onEnterArena}
                 className="bg-gradient-to-r from-[#F0B90B] to-[#F0B90B]/85 text-[#0B0E11] font-bold px-8 py-3.5 rounded-xl text-sm hover:shadow-[0_0_30px_rgba(240,185,11,0.3)] transition-all duration-300 flex items-center gap-2"
               >
-                立即参赛
+                {t('land.hero.cta')}
                 <ChevronRight className="w-4 h-4" />
               </button>
               <a
                 href="#rules"
                 className="border border-white/10 text-white/70 font-medium px-6 py-3.5 rounded-xl text-sm hover:border-white/20 hover:text-white transition-all"
               >
-                了解规则
+                {t('land.hero.rules')}
               </a>
             </div>
           </motion.div>
@@ -269,10 +274,10 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-lg mx-auto"
           >
             {[
-              { value: '5,000', label: 'USDT 本金', color: '#F0B90B' },
-              { value: '500', label: 'USDT 奖金/场', color: '#0ECB81' },
-              { value: '15+1', label: '月赛+总决赛', color: '#D1D4DC' },
-              { value: '24H', label: '比赛时长', color: '#D1D4DC' },
+              { value: '5,000', label: t('land.hero.stat1'), color: '#F0B90B' },
+              { value: '500', label: t('land.hero.stat2'), color: '#0ECB81' },
+              { value: '15+1', label: t('land.hero.stat3'), color: '#D1D4DC' },
+              { value: '24H', label: t('land.hero.stat4'), color: '#D1D4DC' },
             ].map((stat, i) => (
               <div key={i} className="bg-[#1C2030]/50 border border-white/5 rounded-xl p-3 text-center">
                 <div className="text-lg font-bold font-mono" style={{ color: stat.color }}>{stat.value}</div>
@@ -295,45 +300,45 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
       {/* ─── Rules Section ───────────────────────────────── */}
       <Section id="rules" className="py-20 px-4">
         <div className="max-w-5xl mx-auto">
-          <SectionTitle icon={Target} title="比赛规则" subtitle="简单透明的规则，让每个人都能快速上手" />
+          <SectionTitle icon={Target} title={t('land.rules.title')} subtitle={t('land.rules.subtitle')} />
 
           {/* Core rules - 6 cards */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
             {[
               {
                 icon: Shield,
-                title: '5,000U 模拟资金',
-                desc: '所有段位本金相同，无爆仓风险。晋级解锁更高杠杆 (1x→3x)，更快拉开收益差距。',
+                title: t('land.rules.card1.title'),
+                desc: t('land.rules.card1.desc'),
                 accent: '#F0B90B',
               },
               {
                 icon: Activity,
-                title: '最多 40 笔交易',
-                desc: '每场比赛限制 40 笔交易，鼓励深思熟虑的决策。最后 30 分钟禁止开新仓，只能平仓。',
+                title: t('land.rules.card2.title'),
+                desc: t('land.rules.card2.desc'),
                 accent: '#3B82F6',
               },
               {
                 icon: Clock,
-                title: '持仓时间权重',
-                desc: '持仓越久权重越高（0.2x→1.3x）。快进快出只算 20%，鼓励有理由的持仓。',
+                title: t('land.rules.card3.title'),
+                desc: t('land.rules.card3.desc'),
                 accent: '#8B5CF6',
               },
               {
                 icon: DollarSign,
-                title: '固定奖金池',
-                desc: '每场常规赛 500 USDT，总决赛 2,500 USDT。冠军独享 55U（常规）/ 300U（总决赛）。',
+                title: t('land.rules.card4.title'),
+                desc: t('land.rules.card4.desc'),
                 accent: '#0ECB81',
               },
               {
                 icon: Star,
-                title: '积分制总决赛',
-                desc: '每场比赛按排名获得积分（冠军100分），月末累计积分前500名进入总决赛争夺大奖。',
+                title: t('land.rules.card5.title'),
+                desc: t('land.rules.card5.desc'),
                 accent: '#F59E0B',
               },
               {
                 icon: Medal,
-                title: '最低 5 笔交易',
-                desc: `每场比赛至少完成 ${MIN_TRADES_FOR_PRIZE} 笔交易才有奖金资格。简单明了，确保每位选手认真参与。`,
+                title: t('land.rules.card6.title', { n: MIN_TRADES_FOR_PRIZE }),
+                desc: t('land.rules.card6.desc', { n: MIN_TRADES_FOR_PRIZE }),
                 accent: '#F6465D',
               },
             ].map((rule, i) => (
@@ -364,7 +369,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             viewport={{ once: true }}
             className="bg-[#1C2030]/40 border border-white/5 rounded-2xl p-6 max-w-2xl mx-auto mb-4"
           >
-            <h3 className="text-white text-sm font-semibold mb-4 text-center">持仓时间权重表</h3>
+            <h3 className="text-white text-sm font-semibold mb-4 text-center">{t('land.rules.holdTable')}</h3>
             <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
               {HOLD_WEIGHT_SAMPLES.map((sample, i) => {
                 const w = getHoldWeight(sample.seconds);
@@ -397,18 +402,18 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             viewport={{ once: true }}
             className="bg-[#1C2030]/40 border border-white/5 rounded-2xl p-6 max-w-2xl mx-auto"
           >
-            <h3 className="text-white text-sm font-semibold mb-2 text-center">奖金资格 & 段位体系</h3>
+            <h3 className="text-white text-sm font-semibold mb-2 text-center">{t('land.rules.eligTitle')}</h3>
             <p className="text-[10px] text-[#848E9C] text-center mb-4">
-              每场至少完成 {MIN_TRADES_FOR_PRIZE} 笔交易即可获得奖金资格 · 累计赛季积分决定段位 · 每月积分 ×{POINTS_DECAY_FACTOR} 衰减
+              {t('land.rules.eligDesc', { n: MIN_TRADES_FOR_PRIZE, decay: POINTS_DECAY_FACTOR })}
             </p>
             <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-              {RANK_TIERS.map((t, i) => (
+              {RANK_TIERS.map((tier, i) => (
                 <div key={i} className="text-center bg-[#0B0E11]/60 rounded-xl p-3 border border-white/5 hover:border-white/10 transition-all">
-                  <div className="text-xl mb-1">{t.icon}</div>
-                  <div className="text-xs font-bold mb-0.5" style={{ color: t.color }}>{t.label}</div>
-                  <div className="text-[9px] text-[#5E6673] mb-1">{t.minPoints}{t.maxPoints === Infinity ? '+' : `-${t.maxPoints}`} 分</div>
-                  <div className="text-[10px] font-mono font-bold" style={{ color: t.color }}>{t.leverage}x</div>
-                  <div className="text-[8px] text-[#5E6673] mt-0.5">杠杆</div>
+                  <div className="text-xl mb-1">{tier.icon}</div>
+                  <div className="text-xs font-bold mb-0.5" style={{ color: tier.color }}>{tier.label}</div>
+                  <div className="text-[9px] text-[#5E6673] mb-1">{tier.minPoints}{tier.maxPoints === Infinity ? '+' : `-${tier.maxPoints}`} {t('land.rules.pts')}</div>
+                  <div className="text-[10px] font-mono font-bold" style={{ color: tier.color }}>{tier.leverage}x</div>
+                  <div className="text-[8px] text-[#5E6673] mt-0.5">{t('land.rules.leverage')}</div>
                 </div>
               ))}
             </div>
@@ -419,7 +424,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
       {/* ─── Prize Section ───────────────────────────────── */}
       <Section id="prizes" className="py-20 px-4 bg-[#0D1117]">
         <div className="max-w-5xl mx-auto">
-          <SectionTitle icon={DollarSign} title="奖金分配" subtitle="固定奖金池，排名越高奖金越多" />
+          <SectionTitle icon={DollarSign} title={t('land.prize.title')} subtitle={t('land.prize.subtitle')} />
 
           {/* Tab switcher */}
           <div className="flex items-center justify-center gap-2 mb-6">
@@ -429,7 +434,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                 activePrize === 'regular' ? 'bg-[#F0B90B] text-[#0B0E11]' : 'bg-white/5 text-[#848E9C] hover:text-white'
               }`}
             >
-              常规赛 · 500 USDT
+              {t('land.prize.regular')}
             </button>
             <button
               onClick={() => setActivePrize('grand')}
@@ -437,7 +442,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                 activePrize === 'grand' ? 'bg-[#F0B90B] text-[#0B0E11]' : 'bg-white/5 text-[#848E9C] hover:text-white'
               }`}
             >
-              总决赛 · 2,500 USDT
+              {t('land.prize.grand')}
             </button>
           </div>
 
@@ -451,32 +456,32 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             >
               <div className="px-5 py-3 border-b border-white/5">
                 <span className="text-white text-sm font-semibold">
-                  {activePrize === 'regular' ? '常规赛奖金表' : '总决赛奖金表'}
+                  {activePrize === 'regular' ? t('land.prize.regularTable') : t('land.prize.grandTable')}
                 </span>
                 <span className="text-[#F0B90B] text-xs ml-2 font-mono">
                   {activePrize === 'regular' ? '500 USDT' : '2,500 USDT'}
                 </span>
               </div>
               <div className="grid grid-cols-[60px_1fr_80px_80px] px-5 py-2 text-[10px] text-[#5E6673] uppercase tracking-wider border-b border-white/5">
-                <span>排名</span>
-                <span>人数</span>
-                <span className="text-right">单人奖金</span>
-                <span className="text-right">小计</span>
+                <span>{t('land.prize.rank')}</span>
+                <span>{t('land.prize.count')}</span>
+                <span className="text-right">{t('land.prize.perPerson')}</span>
+                <span className="text-right">{t('land.prize.subtotal')}</span>
               </div>
               {(activePrize === 'regular' ? REGULAR_PRIZE_TABLE : GRAND_FINAL_PRIZE_TABLE).map((tier, i) => (
                 <div key={i} className="grid grid-cols-[60px_1fr_80px_80px] px-5 py-2.5 text-xs font-mono border-b border-white/[0.03] hover:bg-white/[0.02]">
                   <span className={i < 3 ? 'text-[#F0B90B] font-bold' : 'text-[#848E9C]'}>
                     {tier.rankMin === tier.rankMax ? `#${tier.rankMin}` : `#${tier.rankMin}-${tier.rankMax}`}
                   </span>
-                  <span className="text-[#848E9C]">{tier.rankMax - tier.rankMin + 1} 人</span>
+                  <span className="text-[#848E9C]">{t('land.prize.people', { n: tier.rankMax - tier.rankMin + 1 })}</span>
                   <span className="text-right text-[#0ECB81] font-semibold">{tier.prize} U</span>
                   <span className="text-right text-[#D1D4DC]">{tier.prize * (tier.rankMax - tier.rankMin + 1)} U</span>
                 </div>
               ))}
               <div className="px-5 py-3 border-t border-white/5 flex justify-between text-xs">
-                <span className="text-[#848E9C]">前 100 名均有奖金</span>
+                <span className="text-[#848E9C]">{t('land.prize.top100')}</span>
                 <span className="text-[#F0B90B] font-bold font-mono">
-                  共 {activePrize === 'regular' ? '500' : '2,500'} USDT
+                  {t('land.prize.total', { n: activePrize === 'regular' ? '500' : '2,500' })}
                 </span>
               </div>
             </motion.div>
@@ -491,27 +496,27 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                 className="bg-[#1C2030]/60 border border-white/5 rounded-2xl overflow-hidden"
               >
                 <div className="px-5 py-3 border-b border-white/5">
-                  <span className="text-white text-sm font-semibold">积分规则</span>
-                  <span className="text-[#848E9C] text-xs ml-2">每场常规赛按排名获得积分</span>
+                  <span className="text-white text-sm font-semibold">{t('land.points.title')}</span>
+                  <span className="text-[#848E9C] text-xs ml-2">{t('land.points.subtitle')}</span>
                 </div>
                 <div className="grid grid-cols-[80px_1fr_80px] px-5 py-2 text-[10px] text-[#5E6673] uppercase tracking-wider border-b border-white/5">
-                  <span>排名</span>
-                  <span>人数</span>
-                  <span className="text-right">积分</span>
+                  <span>{t('land.points.rank')}</span>
+                  <span>{t('land.points.count')}</span>
+                  <span className="text-right">{t('land.points.points')}</span>
                 </div>
                 {MATCH_POINTS_TABLE.map((tier, i) => (
                   <div key={i} className="grid grid-cols-[80px_1fr_80px] px-5 py-2 text-xs font-mono border-b border-white/[0.03]">
                     <span className={tier.points >= 50 ? 'text-[#F0B90B]' : 'text-[#848E9C]'}>
                       {tier.rankMin === tier.rankMax ? `#${tier.rankMin}` : `#${tier.rankMin}-${tier.rankMax}`}
                     </span>
-                    <span className="text-[#848E9C]">{tier.rankMax - tier.rankMin + 1} 人</span>
+                    <span className="text-[#848E9C]">{t('land.prize.people', { n: tier.rankMax - tier.rankMin + 1 })}</span>
                     <span className={`text-right font-semibold ${tier.points > 0 ? 'text-[#F0B90B]' : 'text-[#5E6673]'}`}>
                       {tier.points > 0 ? `+${tier.points}` : '0'}
                     </span>
                   </div>
                 ))}
                 <div className="px-5 py-2.5 text-[10px] text-[#848E9C] border-t border-white/5">
-                  月末累计积分前 500 名进入总决赛
+                  {t('land.points.footer')}
                 </div>
               </motion.div>
 
@@ -524,10 +529,10 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
               >
                 <h3 className="text-white text-sm font-semibold mb-3 flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-[#F0B90B]" />
-                  段位晋级体系
+                  {t('land.tier.title')}
                 </h3>
                 <p className="text-[10px] text-[#848E9C] mb-3 leading-relaxed">
-                  段位由累计赛季积分决定。所有段位本金相同（5,000 USDT），高段位解锁更高杠杆。每月积分 ×{POINTS_DECAY_FACTOR} 衰减，不参赛会自然降级。
+                  {t('land.tier.desc', { decay: POINTS_DECAY_FACTOR })}
                 </p>
                 <div className="space-y-2">
                   {RANK_TIERS.map((tier, i) => (
@@ -536,10 +541,10 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                         <div className="flex items-center gap-3">
                           <span className="text-lg">{tier.icon}</span>
                           <span className="text-xs font-bold" style={{ color: tier.color }}>{tier.label} {tier.labelEn}</span>
-                          <span className="text-white text-xs font-bold">{tier.leverage}x 杠杆</span>
+                          <span className="text-white text-xs font-bold">{t('land.tier.leverage', { n: tier.leverage })}</span>
                         </div>
                         <span className="text-[10px] text-[#5E6673] font-mono">
-                          {tier.minPoints}{tier.maxPoints === Infinity ? '+' : `–${tier.maxPoints}`} 分
+                          {tier.minPoints}{tier.maxPoints === Infinity ? '+' : `–${tier.maxPoints}`} {t('land.rules.pts')}
                         </span>
                       </div>
                     </div>
@@ -554,7 +559,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
       {/* ─── Leaderboard Section ─────────────────────────── */}
       <Section id="leaderboard" className="py-20 px-4">
         <div className="max-w-5xl mx-auto">
-          <SectionTitle icon={Award} title="排行榜" subtitle="单场按加权收益率排名，总榜按累计积分排名" />
+          <SectionTitle icon={Award} title={t('land.lb.title')} subtitle={t('land.lb.subtitle')} />
 
           <div className="flex items-center justify-center gap-2 mb-6">
             <button
@@ -563,7 +568,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                 activeLeaderboard === 'current' ? 'bg-[#F0B90B] text-[#0B0E11]' : 'bg-white/5 text-[#848E9C] hover:text-white'
               }`}
             >
-              当前比赛 · 收益率
+              {t('land.lb.current')}
             </button>
             <button
               onClick={() => setActiveLeaderboard('alltime')}
@@ -571,7 +576,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                 activeLeaderboard === 'alltime' ? 'bg-[#F0B90B] text-[#0B0E11]' : 'bg-white/5 text-[#848E9C] hover:text-white'
               }`}
             >
-              赛季总榜 · 积分
+              {t('land.lb.alltime')}
             </button>
           </div>
 
@@ -584,18 +589,18 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             >
               <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-white text-sm font-semibold">第 5 场 · SOLUSDT</span>
+                  <span className="text-white text-sm font-semibold">{t('land.lb.matchLabel')}</span>
                   <span className="text-[9px] bg-[#0ECB81]/20 text-[#0ECB81] px-2 py-0.5 rounded-full font-medium">LIVE</span>
                 </div>
-                <span className="text-[#848E9C] text-xs">奖金池 500 USDT · 847 名选手</span>
+                <span className="text-[#848E9C] text-xs">{t('land.lb.prizePool')}</span>
               </div>
               <div className="grid grid-cols-[50px_1fr_80px_80px_60px_60px] px-5 py-2 text-[10px] text-[#5E6673] uppercase tracking-wider border-b border-white/5">
                 <span>#</span>
-                <span>选手</span>
-                <span className="text-right">加权收益</span>
-                <span className="text-right">盈亏</span>
-                <span className="text-right">奖金</span>
-                <span className="text-right">积分</span>
+                <span>{t('land.lb.player')}</span>
+                <span className="text-right">{t('land.lb.weightedReturn')}</span>
+                <span className="text-right">{t('land.lb.pnl')}</span>
+                <span className="text-right">{t('land.lb.prize')}</span>
+                <span className="text-right">{t('land.lb.points')}</span>
               </div>
               <div className="max-h-[400px] overflow-y-auto">
                 {leaderboard.slice(0, 50).map((entry) => (
@@ -614,7 +619,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                         {entry.username}
                       </span>
                       {entry.isYou && <span className="text-[8px] bg-[#F0B90B]/20 text-[#F0B90B] px-1.5 py-0.5 rounded font-semibold">YOU</span>}
-                      {!entry.prizeEligible && <span className="text-[8px] text-[#F6465D]/60">未达5笔</span>}
+                      {!entry.prizeEligible && <span className="text-[8px] text-[#F6465D]/60">{t('land.lb.notEligible')}</span>}
                     </span>
                     <span className={`text-right ${entry.pnlPct >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
                       {entry.pnlPct >= 0 ? '+' : ''}{entry.pnlPct.toFixed(2)}%
@@ -632,7 +637,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                 ))}
               </div>
               <div className="px-5 py-3 border-t border-white/5 text-center">
-                <span className="text-[#5E6673] text-xs">显示前 50 名 · 进入竞技场查看完整排名</span>
+                <span className="text-[#5E6673] text-xs">{t('land.lb.showTop50')}</span>
               </div>
             </motion.div>
           )}
@@ -645,17 +650,17 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
               className="bg-[#1C2030]/60 border border-white/5 rounded-2xl overflow-hidden"
             >
               <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
-                <span className="text-white text-sm font-semibold">2026年3月 · 赛季总榜</span>
-                <span className="text-[#848E9C] text-xs">按累计积分排名 · 前500名进总决赛</span>
+                <span className="text-white text-sm font-semibold">{t('land.lb.seasonLabel')}</span>
+                <span className="text-[#848E9C] text-xs">{t('land.lb.seasonSub')}</span>
               </div>
               <div className="grid grid-cols-[50px_1fr_70px_60px_70px_60px_70px] px-5 py-2 text-[10px] text-[#5E6673] uppercase tracking-wider border-b border-white/5">
                 <span>#</span>
-                <span>选手</span>
-                <span className="text-right">积分</span>
-                <span className="text-right">场次</span>
-                <span className="text-right">胜率</span>
-                <span className="text-right">段位</span>
-                <span className="text-right">总决赛</span>
+                <span>{t('land.lb.player')}</span>
+                <span className="text-right">{t('land.lb.seasonPts')}</span>
+                <span className="text-right">{t('land.lb.matches')}</span>
+                <span className="text-right">{t('land.lb.winRate')}</span>
+                <span className="text-right">{t('land.lb.tier')}</span>
+                <span className="text-right">{t('land.lb.grandFinal')}</span>
               </div>
               <div className="max-h-[400px] overflow-y-auto">
                 {allTimeLeaderboard.map((entry) => (
@@ -682,7 +687,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                     </span>
                     <span className="text-right">
                       {entry.grandFinalQualified ? (
-                        <span className="text-[9px] bg-[#0ECB81]/15 text-[#0ECB81] px-1.5 py-0.5 rounded font-semibold">已晋级</span>
+                        <span className="text-[9px] bg-[#0ECB81]/15 text-[#0ECB81] px-1.5 py-0.5 rounded font-semibold">{t('land.lb.qualified')}</span>
                       ) : (
                         <span className="text-[9px] text-[#5E6673]">—</span>
                       )}
@@ -698,14 +703,14 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
       {/* ─── Quant Bot Showcase ───────────────────────────── */}
       <Section id="bot" className="py-20 px-4 bg-[#0D1117]">
         <div className="max-w-5xl mx-auto">
-          <SectionTitle icon={Bot} title="量化程序对决" subtitle="官方量化策略 AlphaEngine v3 同场竞技，实时公开所有交易数据" />
+          <SectionTitle icon={Bot} title={t('land.bot.title')} subtitle={t('land.bot.subtitle')} />
 
           <div className="grid md:grid-cols-4 gap-4 mb-8">
             {[
-              { label: '当前收益', value: `${botStats.totalReturn >= 0 ? '+' : ''}${botStats.totalReturn.toFixed(1)}U`, sub: `${botStats.totalReturnPct >= 0 ? '+' : ''}${botStats.totalReturnPct.toFixed(2)}%`, color: botStats.totalReturn >= 0 ? '#0ECB81' : '#F6465D' },
-              { label: '胜率', value: `${botStats.winRate}%`, sub: `${botStats.totalTrades} 笔交易`, color: '#F0B90B' },
-              { label: '最大回撤', value: `${botStats.maxDrawdown}%`, sub: '风控严格', color: '#F6465D' },
-              { label: 'Sharpe Ratio', value: botStats.sharpeRatio.toFixed(2), sub: '风险调整收益', color: '#8B5CF6' },
+              { label: t('land.bot.return'), value: `${botStats.totalReturn >= 0 ? '+' : ''}${botStats.totalReturn.toFixed(1)}U`, sub: `${botStats.totalReturnPct >= 0 ? '+' : ''}${botStats.totalReturnPct.toFixed(2)}%`, color: botStats.totalReturn >= 0 ? '#0ECB81' : '#F6465D' },
+              { label: t('land.bot.winRate'), value: `${botStats.winRate}%`, sub: t('land.bot.trades', { n: botStats.totalTrades }), color: '#F0B90B' },
+              { label: t('land.bot.maxDD'), value: `${botStats.maxDrawdown}%`, sub: t('land.bot.riskCtrl'), color: '#F6465D' },
+              { label: t('land.bot.sharpe'), value: botStats.sharpeRatio.toFixed(2), sub: t('land.bot.riskAdj'), color: '#8B5CF6' },
             ].map((card, i) => (
               <motion.div
                 key={i}
@@ -732,7 +737,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <BotBadge size="md" />
-                <span className="text-white text-sm font-semibold">AlphaEngine v3 · 权益曲线</span>
+                <span className="text-white text-sm font-semibold">{t('land.bot.equity')}</span>
               </div>
               {botStats.currentPosition && (
                 <div className={`flex items-center gap-1.5 text-xs px-3 py-1 rounded-full ${
@@ -759,13 +764,13 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             >
               <h3 className="text-white text-sm font-semibold mb-4 flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-[#F0B90B]" />
-                量化 vs 人类选手
+                {t('land.bot.vsTitle')}
               </h3>
               <div className="space-y-3">
                 {[
-                  { label: '收益率', bot: `${botStats.vsHumans.botReturnPct >= 0 ? '+' : ''}${botStats.vsHumans.botReturnPct.toFixed(2)}%`, human: `+${botStats.vsHumans.avgHumanReturnPct}%`, top: `+${botStats.vsHumans.topHumanReturnPct}%` },
-                  { label: '胜率', bot: `${botStats.vsHumans.botWinRate}%`, human: `${botStats.vsHumans.avgHumanWinRate}%`, top: null },
-                  { label: '最大回撤', bot: `${botStats.vsHumans.botMaxDrawdown}%`, human: `${botStats.vsHumans.avgHumanMaxDrawdown}%`, top: null },
+                  { label: t('land.bot.returnRate'), bot: `${botStats.vsHumans.botReturnPct >= 0 ? '+' : ''}${botStats.vsHumans.botReturnPct.toFixed(2)}%`, human: `+${botStats.vsHumans.avgHumanReturnPct}%`, top: `+${botStats.vsHumans.topHumanReturnPct}%` },
+                  { label: t('land.bot.winRate'), bot: `${botStats.vsHumans.botWinRate}%`, human: `${botStats.vsHumans.avgHumanWinRate}%`, top: null },
+                  { label: t('land.bot.maxDD'), bot: `${botStats.vsHumans.botMaxDrawdown}%`, human: `${botStats.vsHumans.avgHumanMaxDrawdown}%`, top: null },
                   { label: 'Sharpe', bot: `${botStats.vsHumans.botSharpe}`, human: `${botStats.vsHumans.avgHumanSharpe}`, top: null },
                 ].map((row, i) => (
                   <div key={i} className="grid grid-cols-[80px_1fr_1fr_1fr] items-center text-xs gap-2">
@@ -776,13 +781,13 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                     </div>
                     <div className="text-center">
                       <div className="text-[#D1D4DC] font-mono">{row.human}</div>
-                      <div className="text-[8px] text-[#5E6673]">人类均值</div>
+                      <div className="text-[8px] text-[#5E6673]">{t('land.bot.humanAvg')}</div>
                     </div>
                     <div className="text-center">
                       {row.top ? (
                         <>
                           <div className="text-[#F0B90B] font-mono">{row.top}</div>
-                          <div className="text-[8px] text-[#5E6673]">人类最佳</div>
+                          <div className="text-[8px] text-[#5E6673]">{t('land.bot.humanBest')}</div>
                         </>
                       ) : (
                         <span className="text-[#5E6673]">—</span>
@@ -801,7 +806,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             >
               <h3 className="text-white text-sm font-semibold mb-4 flex items-center gap-2">
                 <Activity className="w-4 h-4 text-[#0ECB81]" />
-                最近交易记录
+                {t('land.bot.recentTrades')}
               </h3>
               <div className="space-y-2">
                 {botStats.recentTrades.map((trade) => (
@@ -837,16 +842,16 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             <Zap className="w-8 h-8 text-[#F0B90B]" />
           </div>
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-3" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            准备好挑战了吗？
+            {t('land.cta.title')}
           </h2>
           <p className="text-[#848E9C] text-sm mb-8 max-w-md mx-auto">
-            免费参赛，零风险。每月 15 场常规赛 + 总决赛，与千名交易者和量化程序同台竞技。
+            {t('land.cta.desc')}
           </p>
           <button
             onClick={onEnterArena}
             className="bg-gradient-to-r from-[#F0B90B] to-[#F0B90B]/85 text-[#0B0E11] font-bold px-10 py-4 rounded-xl text-sm hover:shadow-[0_0_40px_rgba(240,185,11,0.3)] transition-all duration-300 flex items-center gap-2 mx-auto"
           >
-            立即进入竞技场
+            {t('land.cta.btn')}
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>
@@ -860,7 +865,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             <span>Varsity Tech © 2026</span>
           </div>
           <div>
-            模拟交易 · 无真实资金风险
+            {t('land.footer.sim')}
           </div>
         </div>
       </footer>
