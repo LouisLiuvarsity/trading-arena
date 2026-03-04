@@ -7,6 +7,7 @@ import type {
   LeaderboardEntry,
   MatchState,
   OrderBook,
+  PollVoteData,
   Position,
   PredictionState,
   SeasonState,
@@ -26,6 +27,7 @@ type ArenaState = {
   ticker: TickerData | null;
   orderBook: OrderBook;
   prediction: PredictionState | null;
+  pollData: PollVoteData | null;
 };
 
 const emptyState: ArenaState = {
@@ -103,6 +105,7 @@ const emptyState: ArenaState = {
   ticker: null,
   orderBook: { bids: [], asks: [] },
   prediction: null,
+  pollData: null,
 };
 
 export function useArena(token: string | null, onAuthError?: () => void) {
@@ -217,6 +220,23 @@ export function useArena(token: string | null, onAuthError?: () => void) {
     [token, refresh],
   );
 
+  const submitPollVote = useCallback(
+    async (direction: "long" | "short" | "neutral") => {
+      if (!token) return;
+      try {
+        await apiRequest("/api/arena/poll", {
+          method: "POST",
+          token,
+          body: { direction },
+        });
+        void refresh();
+      } catch {
+        // Poll failure is non-critical
+      }
+    },
+    [token, refresh],
+  );
+
   return useMemo(
     () => ({
       ...state,
@@ -229,7 +249,8 @@ export function useArena(token: string | null, onAuthError?: () => void) {
       sendChatMessage,
       trackEvent,
       submitPrediction,
+      submitPollVote,
     }),
-    [state, loading, error, refresh, openPosition, closePosition, setTpSl, sendChatMessage, trackEvent, submitPrediction],
+    [state, loading, error, refresh, openPosition, closePosition, setTpSl, sendChatMessage, trackEvent, submitPrediction, submitPollVote],
   );
 }

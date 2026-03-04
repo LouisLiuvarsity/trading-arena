@@ -18,6 +18,8 @@ import { useBinanceKline, useBinanceTicker, useBinanceDepth } from "@/hooks/useB
 import { useArena } from "@/hooks/useArena";
 import { generateNewsItems } from "@/lib/mockData";
 import { useIsMobile } from "@/hooks/useMobile";
+import { useAchievements } from "@/hooks/useAchievements";
+import AchievementOverlay from "@/components/AchievementOverlay";
 import MobileStatusBar from "@/components/MobileStatusBar";
 import MobileTradingPanel from "@/components/MobileTradingPanel";
 import MobileOrderBook from "@/components/MobileOrderBook";
@@ -106,13 +108,27 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
     ticker: serverTicker,
     orderBook: _serverOrderBook,
     prediction,
+    pollData,
     openPosition: apiOpenPosition,
     closePosition: apiClosePosition,
     setTpSl,
     sendChatMessage,
     trackEvent,
     submitPrediction,
+    submitPollVote,
   } = useArena(authToken, onLogout);
+
+  const achievements = useAchievements(account, trades, position);
+
+  // Screen shake on big loss
+  const [isShaking, setIsShaking] = useState(false);
+  useEffect(() => {
+    if (achievements.some(a => a.type === 'big_loss')) {
+      setIsShaking(true);
+      const timer = setTimeout(() => setIsShaking(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [achievements]);
 
   const news = useMemo(() => generateNewsItems(), []);
   const ticker = wsTicker ?? serverTicker;
@@ -194,7 +210,8 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
   // ═══════════════════════════════════════════════════════════
   if (isMobile) {
     return (
-      <div className="h-[100dvh] flex flex-col bg-[#0B0E11] overflow-hidden select-none">
+      <div className={`h-[100dvh] flex flex-col bg-[#0B0E11] overflow-hidden select-none ${isShaking ? 'animate-screen-shake' : ''}`}>
+        <AchievementOverlay achievements={achievements} />
         {error && (
           <div className="px-2 py-1 text-[10px] text-[#F6465D] border-b border-[#F6465D]/20 bg-[#F6465D]/10">
             {error}
@@ -353,7 +370,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
         {/* Overlay panels for Chat, Rank, Stats, News, Trades */}
         <MobileToolbarOverlay activePanel={mobilePanel} onClose={() => setMobilePanel(null)}>
           {mobilePanel === 'chat' && (
-            <ChatRoom messages={chatMessages} onSendMessage={handleSendMessage} />
+            <ChatRoom messages={chatMessages} onSendMessage={handleSendMessage} social={social} pollData={pollData} onPollVote={submitPollVote} />
           )}
           {mobilePanel === 'trades' && (
             <TradeHistory trades={trades} />
@@ -379,7 +396,8 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
     "data-[state=active]:bg-[#F0B90B]/10 data-[state=active]:text-[#F0B90B] data-[state=active]:border-[#F0B90B]/60 data-[state=active]:shadow-none border border-[rgba(255,255,255,0.12)] text-[#848E9C] hover:text-[#D1D4DC] hover:border-[rgba(255,255,255,0.25)] hover:bg-white/[0.03] text-[10px] h-6 px-2.5 rounded-md mx-0.5 transition-all duration-200";
 
   return (
-    <div className="h-screen flex flex-col bg-[#0B0E11] overflow-hidden select-none">
+    <div className={`h-screen flex flex-col bg-[#0B0E11] overflow-hidden select-none ${isShaking ? 'animate-screen-shake' : ''}`}>
+      <AchievementOverlay achievements={achievements} />
       {error && (
         <div className="px-3 py-1 text-xs text-[#F6465D] border-b border-[#F6465D]/20 bg-[#F6465D]/10">
           {error}
@@ -460,7 +478,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
             </TabsList>
 
             <TabsContent value="chat" className="flex-1 overflow-hidden mt-0">
-              <ChatRoom messages={chatMessages} onSendMessage={handleSendMessage} />
+              <ChatRoom messages={chatMessages} onSendMessage={handleSendMessage} social={social} pollData={pollData} onPollVote={submitPollVote} />
             </TabsContent>
             <TabsContent value="trades" className="flex-1 overflow-hidden mt-0">
               <TradeHistory trades={trades} />

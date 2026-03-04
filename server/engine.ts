@@ -490,6 +490,22 @@ export class ArenaEngine {
       ticker: this.market.getTicker(),
       orderBook: this.market.getOrderBook(),
       prediction: predictionState,
+      pollData: await this.getPollData(arenaAccountId),
+    };
+  }
+
+  async submitPollVote(arenaAccountId: number, direction: "long" | "short" | "neutral") {
+    await this.recordBehaviorEvent(arenaAccountId, "poll_vote", { direction });
+  }
+
+  private async getPollData(arenaAccountId: number) {
+    const agg = await dbHelpers.getPollVoteAggregation();
+    const userVote = await dbHelpers.getUserLatestPollVote(arenaAccountId);
+    return {
+      longVotes: agg.long,
+      shortVotes: agg.short,
+      neutralVotes: agg.neutral,
+      userVote,
     };
   }
 

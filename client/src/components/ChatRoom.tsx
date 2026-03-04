@@ -6,11 +6,15 @@
 // ============================================================
 
 import { useState, useRef, useEffect, memo } from 'react';
-import type { ChatMessage } from '@/lib/types';
+import type { ChatMessage, SocialData, PollVoteData } from '@/lib/types';
+import PollWidget from '@/components/PollWidget';
 
 interface Props {
   messages: ChatMessage[];
   onSendMessage: (message: string) => void;
+  social?: SocialData;
+  pollData?: PollVoteData | null;
+  onPollVote?: (direction: 'long' | 'short' | 'neutral') => void;
 }
 
 function formatTime(ts: number): string {
@@ -27,7 +31,7 @@ const MESSAGE_STYLES: Record<string, { bg: string; nameColor: string; textColor:
   fomo: { bg: 'bg-[#F0B90B]/[0.03]', nameColor: 'text-[#F0B90B]/80', textColor: 'text-[#D1D4DC]/90', icon: '🔥' },
 };
 
-function ChatRoom({ messages, onSendMessage }: Props) {
+function ChatRoom({ messages, onSendMessage, social, pollData, onPollVote }: Props) {
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isAutoScroll, setIsAutoScroll] = useState(true);
@@ -65,6 +69,11 @@ function ChatRoom({ messages, onSendMessage }: Props) {
         </div>
         <span className="text-[9px] text-[#0ECB81]">● {onlineCount} online</span>
       </div>
+
+      {/* Poll */}
+      {social && onPollVote && (
+        <PollWidget social={social} pollData={pollData ?? null} onVote={onPollVote} />
+      )}
 
       {/* Messages */}
       <div

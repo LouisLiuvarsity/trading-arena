@@ -217,6 +217,17 @@
   .animate-fade-in-up { animation: fade-in-up 0.3s ease-out; }
   .animate-rank-pulse { animation: rank-pulse 0.5s ease-in-out; }
 
+  @keyframes screen-shake {
+    0%, 100% { transform: translateX(0); }
+    10% { transform: translateX(-4px); }
+    20% { transform: translateX(4px); }
+    30% { transform: translateX(-3px); }
+    40% { transform: translateX(3px); }
+    50% { transform: translateX(-2px); }
+    60% { transform: translateX(2px); }
+  }
+  .animate-screen-shake { animation: screen-shake 0.5s ease-in-out; }
+
   /* Tab content transitions */
   [data-state="active"][role="tabpanel"] {
     animation: fade-in-up 0.15s ease-out;

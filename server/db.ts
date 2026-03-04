@@ -579,6 +579,58 @@ export async function getAvgHoldWeightForUser(arenaAccountId: number): Promise<n
   return rows[0]?.avg ?? 0;
 }
 
+export async function getPollVoteAggregation(
+  lookbackMs: number = 60 * 60 * 1000,
+): Promise<{ long: number; short: number; neutral: number }> {
+  const cutoff = Date.now() - lookbackMs;
+  const rows = await db
+    .select({
+      direction: sql<string>`JSON_UNQUOTE(JSON_EXTRACT(${behaviorEvents.payload}, '$.direction'))`,
+      count: sql<number>`COUNT(*)`,
+    })
+    .from(behaviorEvents)
+    .where(
+      and(
+        eq(behaviorEvents.eventType, "poll_vote"),
+        sql`${behaviorEvents.timestamp} >= ${cutoff}`,
+      ),
+    )
+    .groupBy(sql`JSON_UNQUOTE(JSON_EXTRACT(${behaviorEvents.payload}, '$.direction'))`);
+
+  let long = 0, short = 0, neutral = 0;
+  for (const row of rows) {
+    if (row.direction === "long") long = row.count;
+    else if (row.direction === "short") short = row.count;
+    else if (row.direction === "neutral") neutral = row.count;
+  }
+  return { long, short, neutral };
+}
+
+export async function getUserLatestPollVote(
+  arenaAccountId: number,
+  lookbackMs: number = 60 * 60 * 1000,
+): Promise<"long" | "short" | "neutral" | null> {
+  const cutoff = Date.now() - lookbackMs;
+  const rows = await db
+    .select({
+      direction: sql<string>`JSON_UNQUOTE(JSON_EXTRACT(${behaviorEvents.payload}, '$.direction'))`,
+    })
+    .from(behaviorEvents)
+    .where(
+      and(
+        eq(behaviorEvents.arenaAccountId, arenaAccountId),
+        eq(behaviorEvents.eventType, "poll_vote"),
+        sql`${behaviorEvents.timestamp} >= ${cutoff}`,
+      ),
+    )
+    .orderBy(desc(behaviorEvents.timestamp))
+    .limit(1);
+
+  const dir = rows[0]?.direction;
+  if (dir === "long" || dir === "short" || dir === "neutral") return dir;
+  return null;
+}
+
 export async function ensureActiveMatch(): Promise<void> {
   const active = await getActiveMatch();
   if (!active) {

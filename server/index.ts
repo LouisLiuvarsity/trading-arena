@@ -252,6 +252,25 @@ export async function registerArenaRoutes(app: Express) {
     }
   });
 
+  const pollSchema = z.object({
+    direction: z.enum(["long", "short", "neutral"]),
+  });
+
+  app.post("/api/arena/poll", async (req: Request, res: Response) => {
+    const parsed = pollSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid poll payload" });
+      return;
+    }
+    try {
+      const arenaAccountId = (req as any).arenaAccountId as number;
+      await engine.submitPollVote(arenaAccountId, parsed.data.direction);
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+    }
+  });
+
   // ─── Legacy API compatibility ──────────────────────────────────────────────
 
   app.get("/api/state", async (req: Request, res: Response) => {

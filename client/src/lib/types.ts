@@ -353,4 +353,11 @@ export interface SocialData {
   youOvertook: number;
 }
 
+export interface PollVoteData {
+  longVotes: number;
+  shortVotes: number;
+  neutralVotes: number;
+  userVote: 'long' | 'short' | 'neutral' | null;
+}
+
 export type TimeframeKey = '1m' | '5m' | '15m' | '1h' | '4h';
