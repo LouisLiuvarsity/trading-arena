@@ -95,3 +95,14 @@
 - [x] Language preference persistence already built into i18n system (localStorage)
 - [x] Added language toggle button (EN/中) to LandingPage nav, LoginPage, and RulesPage
 - [x] Run tests: vitest 21 passed, only pre-existing server/db.ts fee TS error remains
+
+## Fix Post-Sync Issues
+- [x] expiresAt and fee fields already in schema from GitHub sync (TS errors were stale cache)
+- [x] Run pnpm db:push to sync schema to database (no changes needed)
+- [x] Remove better-sqlite3 and @types/better-sqlite3 dependencies (fixed deployment failure)
+- [x] Install express-rate-limit (new dependency from GitHub)
+- [x] Add trust proxy setting to fix X-Forwarded-For warning
+- [x] Fix sameSite cookie test assertions (none → lax)
+- [x] Restart dev server and verify: tsc 0 errors, server running
+- [x] Run vitest tests: 21 passed
+- [x] Save checkpoint

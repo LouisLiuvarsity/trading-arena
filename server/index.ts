@@ -95,6 +95,9 @@ export async function registerArenaRoutes(app: Express) {
   process.on("SIGTERM", shutdown);
   process.on("SIGINT", shutdown);
 
+  // Trust proxy (behind reverse proxy in production)
+  app.set('trust proxy', 1);
+
   // Rate limiters
   const authLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, message: { error: "Too many login attempts, try again later" } });
   const tradeLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { error: "Too many trade requests, slow down" } });
