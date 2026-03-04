@@ -595,7 +595,7 @@ export async function getPollVoteAggregation(
         sql`${behaviorEvents.timestamp} >= ${cutoff}`,
       ),
     )
-    .groupBy(sql`JSON_UNQUOTE(JSON_EXTRACT(${behaviorEvents.payload}, '$.direction'))`);
+    .groupBy(sql`1`);
 
   let long = 0, short = 0, neutral = 0;
   for (const row of rows) {
