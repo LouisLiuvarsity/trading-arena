@@ -1,4 +1,8 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react';
+import { TRADING_PAIR } from '@shared/tradingPair';
+
+const SYM = TRADING_PAIR.symbol;
+const BASE = TRADING_PAIR.baseAsset;
 
 export type Lang = 'zh' | 'en';
 
@@ -6,14 +10,14 @@ const translations: Record<Lang, Record<string, string>> = {
   zh: {
     // ── Common ──
     'common.live': 'LIVE',
-    'common.solusdt': 'SOLUSDT',
+    'common.solusdt': SYM,
     'common.perp': 'Perp',
     'common.connecting': '连接中...',
     'common.price': 'Price',
     'common.qty': 'Qty',
     'common.total': 'Total',
     'common.spread': 'Spread',
-    'common.sol': 'SOL',
+    'common.sol': BASE,
 
     // ── StatusBar ──
     'status.grandFinal': '总决赛',
@@ -237,7 +241,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'notif.currentPrize': '💰 当前预计奖金 {prize} USDT — 保住排名还是冲击更高？',
     'notif.fieldLosing': '📊 全场 {pct}% 选手亏损中 | 平均亏损 {avgLoss}%',
     'notif.tradesRemaining': '⚠️ 仅剩 {n} 笔交易机会！每一笔都很关键',
-    'notif.prediction': '🔮 整点预测！5分钟后SOL会涨还是跌？',
+    'notif.prediction': `🔮 整点预测！5分钟后${BASE}会涨还是跌？`,
     'notif.predAccuracy': '准确率: {pct}% ({correct}/{total})',
     'notif.predSubmitted': '已提交: {dir} — 等待结算',
     'notif.up': '↑ UP',
@@ -335,7 +339,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'land.lb.subtitle': '单场按加权收益率排名，总榜按累计积分排名',
     'land.lb.current': '当前比赛 · 收益率',
     'land.lb.alltime': '赛季总榜 · 积分',
-    'land.lb.matchLabel': '第 5 场 · SOLUSDT',
+    'land.lb.matchLabel': `第 5 场 · ${SYM}`,
     'land.lb.prizePool': '奖金池 500 USDT · 847 名选手',
     'land.lb.player': '选手',
     'land.lb.weightedReturn': '加权收益',
@@ -386,6 +390,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'login.invitePlaceholder': 'Enter your invite code...',
     'login.setUsername': 'Set Username',
     'login.usernamePlaceholder': 'Choose your trading alias...',
+    'login.password': '密码',
+    'login.passwordPlaceholder': '设置登录密码...',
     'login.register': 'Register & Enter',
     'login.registerHint': 'First time? Enter your invite code and pick a username.',
     'login.username': 'Username',
@@ -393,7 +399,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'login.enter': 'Enter Arena',
     'login.returnHint': 'Already registered? Enter your username to rejoin.',
     'login.feat1.title': 'Real-Time Market',
-    'login.feat1.desc': 'Live SOLUSDT data',
+    'login.feat1.desc': `Live ${SYM} data`,
     'login.feat2.title': 'Rank System',
     'login.feat2.desc': 'Compete for prizes',
     'login.feat3.title': '500 USDT Pool',
@@ -425,14 +431,14 @@ const translations: Record<Lang, Record<string, string>> = {
   en: {
     // ── Common ──
     'common.live': 'LIVE',
-    'common.solusdt': 'SOLUSDT',
+    'common.solusdt': SYM,
     'common.perp': 'Perp',
     'common.connecting': 'Connecting...',
     'common.price': 'Price',
     'common.qty': 'Qty',
     'common.total': 'Total',
     'common.spread': 'Spread',
-    'common.sol': 'SOL',
+    'common.sol': BASE,
 
     // ── StatusBar ──
     'status.grandFinal': 'Grand Final',
@@ -656,7 +662,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'notif.currentPrize': '💰 Est. prize {prize} USDT — hold rank or push higher?',
     'notif.fieldLosing': '📊 {pct}% of field losing | avg loss {avgLoss}%',
     'notif.tradesRemaining': '⚠️ Only {n} trades left! Every one counts',
-    'notif.prediction': '🔮 Hourly prediction! Will SOL go up or down in 5min?',
+    'notif.prediction': `🔮 Hourly prediction! Will ${BASE} go up or down in 5min?`,
     'notif.predAccuracy': 'Accuracy: {pct}% ({correct}/{total})',
     'notif.predSubmitted': 'Submitted: {dir} — awaiting result',
     'notif.up': '↑ UP',
@@ -754,7 +760,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'land.lb.subtitle': 'Match rank by weighted return, season rank by cumulative points',
     'land.lb.current': 'Current Match · Return',
     'land.lb.alltime': 'Season Total · Points',
-    'land.lb.matchLabel': 'Match 5 · SOLUSDT',
+    'land.lb.matchLabel': `Match 5 · ${SYM}`,
     'land.lb.prizePool': 'Prize Pool 500 USDT · 847 players',
     'land.lb.player': 'Player',
     'land.lb.weightedReturn': 'Weighted Return',
@@ -805,6 +811,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'login.invitePlaceholder': 'Enter your invite code...',
     'login.setUsername': 'Set Username',
     'login.usernamePlaceholder': 'Choose your trading alias...',
+    'login.password': 'Password',
+    'login.passwordPlaceholder': 'Set your login password...',
     'login.register': 'Register & Enter',
     'login.registerHint': 'First time? Enter your invite code and pick a username.',
     'login.username': 'Username',
@@ -812,7 +820,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'login.enter': 'Enter Arena',
     'login.returnHint': 'Already registered? Enter your username to rejoin.',
     'login.feat1.title': 'Real-Time Market',
-    'login.feat1.desc': 'Live SOLUSDT data',
+    'login.feat1.desc': `Live ${SYM} data`,
     'login.feat2.title': 'Rank System',
     'login.feat2.desc': 'Compete for prizes',
     'login.feat3.title': '500 USDT Pool',
@@ -878,8 +886,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     return str;
   }, [lang]);
 
+  const value = useMemo(() => ({ lang, setLang, t }), [lang, setLang, t]);
+
   return (
-    <I18nContext.Provider value={{ lang, setLang, t }}>
+    <I18nContext.Provider value={value}>
       {children}
     </I18nContext.Provider>
   );

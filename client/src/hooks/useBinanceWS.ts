@@ -8,10 +8,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { KlineData, TickerData, OrderBook, TimeframeKey } from '@/lib/types';
 
+import { TRADING_PAIR } from '@shared/tradingPair';
+
 const REST_BASE = 'https://data-api.binance.vision/api/v3';
 const WS_BASE = 'wss://data-stream.binance.vision/stream?streams=';
-const SYMBOL = 'SOLUSDT';
-const SYMBOL_LC = 'solusdt';
+const SYMBOL = TRADING_PAIR.symbol;
+const SYMBOL_LC = TRADING_PAIR.symbolLc;
 
 // ─── WebSocket Manager (Batched) ────────────────────────────
 // Collects all subscriptions, then connects once with all streams
@@ -125,6 +127,7 @@ class BinanceWSManager {
     }
     this.isConnected = false;
     this.currentStreamsUrl = '';
+    this.connectionAttempts = 0; // Reset so reconnection works after navigating back
   }
 
   private scheduleReconnect() {

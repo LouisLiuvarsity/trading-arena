@@ -12,17 +12,20 @@ import { login, quickLogin } from "./lib/api";
 type AppScreen = 'landing' | 'login' | 'rules' | 'trading';
 
 function App() {
-  // Always start on landing — no auto-restore to trading
-  const [screen, setScreen] = useState<AppScreen>('landing');
+  // Restore session from localStorage if available
+  const [screen, setScreen] = useState<AppScreen>(() => {
+    const savedToken = localStorage.getItem("arena_token");
+    return savedToken ? 'trading' : 'landing';
+  });
   const [username, setUsername] = useState(() => localStorage.getItem("arena_username") ?? "");
-  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(() => localStorage.getItem("arena_token"));
 
   const handleEnterFromLanding = useCallback(() => {
     setScreen('login');
   }, []);
 
-  const handleLogin = useCallback(async (inviteCode: string, name: string) => {
-    const result = await login(inviteCode, name);
+  const handleLogin = useCallback(async (inviteCode: string, name: string, password: string) => {
+    const result = await login(inviteCode, name, password);
     setUsername(result.user.username);
     setAuthToken(result.token);
     localStorage.setItem("arena_username", result.user.username);
@@ -31,8 +34,8 @@ function App() {
     setScreen('trading');
   }, []);
 
-  const handleQuickLogin = useCallback(async (name: string) => {
-    const result = await quickLogin(name);
+  const handleQuickLogin = useCallback(async (name: string, password: string) => {
+    const result = await quickLogin(name, password);
     setUsername(result.user.username);
     setAuthToken(result.token);
     localStorage.setItem("arena_username", result.user.username);

@@ -26,6 +26,7 @@ import MobileOrderBook from "@/components/MobileOrderBook";
 import { MobileToolbar, MobileToolbarOverlay } from "@/components/MobileToolbarOverlay";
 import type { TimeframeKey } from "@/lib/types";
 import { useT } from "@/lib/i18n";
+import { TRADING_PAIR } from "@shared/tradingPair";
 
 // ─── Resizable divider hook (desktop only) ──────────────────
 function useResizable(initial: number, min: number, max: number, direction: 'horizontal' | 'vertical') {
@@ -321,7 +322,7 @@ export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
 
           {/* Compact ticker on the right */}
           <div className="ml-auto flex items-center gap-1.5 text-[10px]">
-            <span className="font-display font-bold text-white text-[10px]">SOL</span>
+            <span className="font-display font-bold text-white text-[10px]">{TRADING_PAIR.baseAsset}</span>
             <span className={`font-mono font-bold tabular-nums ${
               priceDirection === 'up' ? 'text-[#0ECB81]' : priceDirection === 'down' ? 'text-[#F6465D]' : 'text-[#D1D4DC]'
             }`}>

@@ -28,6 +28,10 @@ export const arenaAccounts = mysqlTable("arena_accounts", {
   username: varchar("username", { length: 64 }).notNull().unique(),
   /** Unique invite code / ID used for login */
   inviteCode: varchar("inviteCode", { length: 32 }).notNull().unique(),
+  /** bcrypt-style password hash (scrypt) */
+  passwordHash: varchar("passwordHash", { length: 256 }),
+  /** Whether the invite code has been consumed (used for registration) */
+  inviteConsumed: int("inviteConsumed").notNull().default(0),
   capital: double("capital").notNull().default(5000),
   seasonPoints: double("seasonPoints").notNull().default(0),
   createdAt: bigint("createdAt", { mode: "number" }).notNull(),
@@ -40,6 +44,8 @@ export const arenaSessions = mysqlTable("arena_sessions", {
   arenaAccountId: int("arenaAccountId").notNull(),
   createdAt: bigint("createdAt", { mode: "number" }).notNull(),
   lastSeen: bigint("lastSeen", { mode: "number" }).notNull(),
+  /** Session expiration timestamp (ms) */
+  expiresAt: bigint("expiresAt", { mode: "number" }).notNull(),
 }, (table) => [
   index("idx_sessions_account").on(table.arenaAccountId),
 ]);

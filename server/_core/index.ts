@@ -29,11 +29,15 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  // Validate critical env vars
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 16) {
+    console.warn("[WARN] JWT_SECRET is missing or too short (<16 chars). Set a strong JWT_SECRET in production.");
+  }
+
   const app = express();
   const server = createServer(app);
-  // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  app.use(express.json({ limit: "1mb" }));
+  app.use(express.urlencoded({ limit: "1mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // Arena REST API routes

@@ -4,7 +4,7 @@
 // urgency indicators, and attention-grabbing animations
 // ============================================================
 
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { NewsItem } from '@/lib/types';
 import { useT } from '@/lib/i18n';
@@ -47,19 +47,24 @@ function NewsFeed({ news }: Props) {
   const [flashIndex, setFlashIndex] = useState<number | null>(null);
 
   // Simulate a "breaking news" flash effect periodically
+  const flashTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     const interval = setInterval(() => {
+      if (flashTimeout.current) return; // Don't stack flashes
       const highImpactIndices = news
         .map((n, i) => (n.impact === 'high' ? i : -1))
         .filter(i => i >= 0);
       if (highImpactIndices.length > 0) {
         const idx = highImpactIndices[Math.floor(Math.random() * highImpactIndices.length)];
         setFlashIndex(idx);
-        setTimeout(() => setFlashIndex(null), 3000);
+        flashTimeout.current = setTimeout(() => { setFlashIndex(null); flashTimeout.current = null; }, 3000);
       }
     }, 30000 + Math.random() * 20000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (flashTimeout.current) { clearTimeout(flashTimeout.current); flashTimeout.current = null; }
+    };
   }, [news]);
 
   return (

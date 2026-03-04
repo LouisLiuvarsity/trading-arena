@@ -5,9 +5,10 @@
  * running inside a MySQL transaction. Defaults to the module-level `db`.
  */
 
+import crypto from "node:crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, lt } from "drizzle-orm";
 import {
   users,
   arenaAccounts,
@@ -20,7 +21,25 @@ import {
   predictions,
   type User,
 } from "../drizzle/schema";
-import { MATCH_DURATION_MS, STARTING_CAPITAL } from "./constants";
+import { MATCH_DURATION_MS, SESSION_TTL_MS, STARTING_CAPITAL } from "./constants";
+
+// ─── Password Hashing ────────────────────────────────────────────────────────
+
+const SCRYPT_KEYLEN = 64;
+const SCRYPT_COST = 16384;
+
+export function hashPassword(password: string): string {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(password, salt, SCRYPT_KEYLEN, { N: SCRYPT_COST }).toString("hex");
+  return `${salt}:${hash}`;
+}
+
+export function verifyPassword(password: string, stored: string): boolean {
+  const [salt, hash] = stored.split(":");
+  if (!salt || !hash) return false;
+  const derived = crypto.scryptSync(password, salt, SCRYPT_KEYLEN, { N: SCRYPT_COST }).toString("hex");
+  return crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(derived, "hex"));
+}
 
 // ─── Drizzle DB Connection ───────────────────────────────────────────────────
 
@@ -112,12 +131,13 @@ export async function getOrCreateArenaAccount(
   return { id: insertId, username, capital: STARTING_CAPITAL, seasonPoints: 0 };
 }
 
-/** Lookup or create arena account by invite code (first-time registration) */
-export async function getOrCreateArenaAccountByCode(
+/** Register a new arena account with invite code + password (first-time registration) */
+export async function registerArenaAccount(
   inviteCode: string,
   username: string,
+  password: string,
 ): Promise<{ id: number; username: string; capital: number; seasonPoints: number }> {
-  // Check if account exists with this invite code
+  // Check if invite code already consumed
   const existing = await db
     .select()
     .from(arenaAccounts)
@@ -125,6 +145,15 @@ export async function getOrCreateArenaAccountByCode(
     .limit(1);
 
   if (existing[0]) {
+    if (existing[0].inviteConsumed) {
+      throw new Error("Invite code already used");
+    }
+    // Legacy account without password — set password now
+    const hashed = hashPassword(password);
+    await db
+      .update(arenaAccounts)
+      .set({ passwordHash: hashed, inviteConsumed: 1, updatedAt: Date.now() })
+      .where(eq(arenaAccounts.id, existing[0].id));
     return {
       id: existing[0].id,
       username: existing[0].username,
@@ -144,10 +173,13 @@ export async function getOrCreateArenaAccountByCode(
   }
 
   const now = Date.now();
+  const hashed = hashPassword(password);
   const result = await db.insert(arenaAccounts).values({
     userId: 0,
     username,
     inviteCode,
+    passwordHash: hashed,
+    inviteConsumed: 1,
     capital: STARTING_CAPITAL,
     seasonPoints: 0,
     createdAt: now,
@@ -157,10 +189,10 @@ export async function getOrCreateArenaAccountByCode(
   return { id: insertId, username, capital: STARTING_CAPITAL, seasonPoints: 0 };
 }
 
-/** Login existing account by username (returning users) */
+/** Login existing account by username (returning users) — returns passwordHash for verification */
 export async function getArenaAccountByUsernameForLogin(
   username: string,
-): Promise<{ id: number; username: string; capital: number; seasonPoints: number } | null> {
+): Promise<{ id: number; username: string; capital: number; seasonPoints: number; passwordHash: string | null } | null> {
   const rows = await db
     .select()
     .from(arenaAccounts)
@@ -172,6 +204,7 @@ export async function getArenaAccountByUsernameForLogin(
     username: rows[0].username,
     capital: rows[0].capital,
     seasonPoints: rows[0].seasonPoints,
+    passwordHash: rows[0].passwordHash,
   };
 }
 
@@ -205,12 +238,18 @@ export async function createArenaSession(arenaAccountId: number, token: string):
     arenaAccountId,
     createdAt: now,
     lastSeen: now,
+    expiresAt: now + SESSION_TTL_MS,
   });
 }
+
+// Throttle lastSeen updates to at most once per 5 minutes per token
+const lastSeenCache = new Map<string, number>();
+const LAST_SEEN_THROTTLE_MS = 5 * 60 * 1000;
 
 export async function getArenaAccountByToken(
   token: string,
 ): Promise<{ id: number; userId: number; username: string; capital: number; seasonPoints: number } | null> {
+  const now = Date.now();
   const rows = await db
     .select({
       id: arenaAccounts.id,
@@ -218,18 +257,60 @@ export async function getArenaAccountByToken(
       username: arenaAccounts.username,
       capital: arenaAccounts.capital,
       seasonPoints: arenaAccounts.seasonPoints,
+      expiresAt: arenaSessions.expiresAt,
     })
     .from(arenaSessions)
     .innerJoin(arenaAccounts, eq(arenaSessions.arenaAccountId, arenaAccounts.id))
     .where(eq(arenaSessions.token, token))
     .limit(1);
-  if (rows[0]) {
+
+  if (!rows[0]) return null;
+
+  // Check session expiration
+  if (rows[0].expiresAt > 0 && now > rows[0].expiresAt) {
+    // Clean up expired session
+    await db.delete(arenaSessions).where(eq(arenaSessions.token, token));
+    lastSeenCache.delete(token);
+    return null;
+  }
+
+  // Throttle lastSeen updates
+  const lastUpdate = lastSeenCache.get(token) ?? 0;
+  if (now - lastUpdate > LAST_SEEN_THROTTLE_MS) {
+    lastSeenCache.set(token, now);
     await db
       .update(arenaSessions)
-      .set({ lastSeen: Date.now() })
+      .set({ lastSeen: now })
       .where(eq(arenaSessions.token, token));
   }
-  return rows[0] ?? null;
+
+  return {
+    id: rows[0].id,
+    userId: rows[0].userId,
+    username: rows[0].username,
+    capital: rows[0].capital,
+    seasonPoints: rows[0].seasonPoints,
+  };
+}
+
+// ─── Cleanup Jobs ─────────────────────────────────────────────────────────────
+
+/** Delete expired sessions */
+export async function cleanupExpiredSessions(): Promise<void> {
+  const now = Date.now();
+  await db.delete(arenaSessions).where(and(lt(arenaSessions.expiresAt, now), sql`${arenaSessions.expiresAt} > 0`));
+}
+
+/** Delete old behavior events (older than 30 days) */
+export async function cleanupOldBehaviorEvents(): Promise<void> {
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  await db.delete(behaviorEvents).where(lt(behaviorEvents.timestamp, cutoff));
+}
+
+/** Delete old chat messages (older than 7 days) */
+export async function cleanupOldChatMessages(): Promise<void> {
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  await db.delete(chatMessages).where(lt(chatMessages.timestamp, cutoff));
 }
 
 export async function getActiveMatch(

@@ -79,6 +79,10 @@ export class ArenaEngine {
   private rotationLock = false;
   private lastResolvedRound = "";
 
+  // Leaderboard cache (TTL-based to avoid recomputing per request)
+  private leaderboardCache: { matchId: number; rows: LeaderboardRow[]; at: number } | null = null;
+  private static LEADERBOARD_CACHE_TTL_MS = 3000; // 3 seconds
+
   constructor(private readonly market: MarketService) {}
 
   async init(): Promise<void> {
@@ -87,7 +91,7 @@ export class ArenaEngine {
     this.initialized = true;
   }
 
-  async login(inviteCode: string, usernameInput: string): Promise<{ token: string; account: ArenaAccount }> {
+  async login(inviteCode: string, usernameInput: string, password: string): Promise<{ token: string; account: ArenaAccount }> {
     const username = usernameInput.trim();
     if (!username || username.length < 2 || username.length > 20) {
       throw new Error("Username length must be between 2 and 20");
@@ -96,26 +100,39 @@ export class ArenaEngine {
     if (!code || code.length < 4) {
       throw new Error("Invalid invite code");
     }
+    if (!password || password.length < 4) {
+      throw new Error("Password must be at least 4 characters");
+    }
 
-    const account = await dbHelpers.getOrCreateArenaAccountByCode(code, username);
+    const account = await dbHelpers.registerArenaAccount(code, username, password);
     const token = crypto.randomBytes(24).toString("hex");
     await dbHelpers.createArenaSession(account.id, token);
 
     return { token, account };
   }
 
-  async loginByUsername(usernameInput: string): Promise<{ token: string; account: ArenaAccount }> {
+  async loginByUsername(usernameInput: string, password: string): Promise<{ token: string; account: ArenaAccount }> {
     const username = usernameInput.trim();
     if (!username || username.length < 2 || username.length > 20) {
       throw new Error("Invalid username");
+    }
+    if (!password) {
+      throw new Error("Password is required");
     }
     const account = await dbHelpers.getArenaAccountByUsernameForLogin(username);
     if (!account) {
       throw new Error("Account not found. Please register with an invite code first.");
     }
+    // Verify password
+    if (!account.passwordHash) {
+      throw new Error("Account has no password set. Please re-register with your invite code to set a password.");
+    }
+    if (!dbHelpers.verifyPassword(password, account.passwordHash)) {
+      throw new Error("Incorrect password");
+    }
     const token = crypto.randomBytes(24).toString("hex");
     await dbHelpers.createArenaSession(account.id, token);
-    return { token, account };
+    return { token, account: { id: account.id, username: account.username, capital: account.capital, seasonPoints: account.seasonPoints } };
   }
 
   async getAccountByToken(token: string | null | undefined): Promise<ArenaAccount | null> {
@@ -182,6 +199,24 @@ export class ArenaEngine {
       throw new Error("Market data is stale, trading temporarily disabled");
     }
 
+    // TP/SL directional validation
+    if (input.tp !== null && input.tp !== undefined) {
+      if (input.direction === "long" && input.tp <= price) {
+        throw new Error("Take profit must be above current price for long positions");
+      }
+      if (input.direction === "short" && input.tp >= price) {
+        throw new Error("Take profit must be below current price for short positions");
+      }
+    }
+    if (input.sl !== null && input.sl !== undefined) {
+      if (input.direction === "long" && input.sl >= price) {
+        throw new Error("Stop loss must be below current price for long positions");
+      }
+      if (input.direction === "short" && input.sl <= price) {
+        throw new Error("Stop loss must be above current price for short positions");
+      }
+    }
+
     // Use transaction to prevent race condition on position creation
     await db.transaction(async (tx) => {
       const existingPosition = await dbHelpers.getPosition(arenaAccountId, tx);
@@ -244,14 +279,36 @@ export class ArenaEngine {
   }
 
   async setTpSl(arenaAccountId: number, input: { tp?: number | null; sl?: number | null }) {
-    const pos = await dbHelpers.getPosition(arenaAccountId);
-    if (!pos) {
-      throw new Error("No open position");
-    }
-    // undefined = keep existing, null = clear, number = set new value
-    const newTp = input.tp === undefined ? pos.takeProfit : input.tp;
-    const newSl = input.sl === undefined ? pos.stopLoss : input.sl;
-    await dbHelpers.updatePositionTpSl(arenaAccountId, newTp, newSl);
+    // Wrap in transaction for atomicity
+    await db.transaction(async (tx) => {
+      const pos = await dbHelpers.getPosition(arenaAccountId, tx);
+      if (!pos) {
+        throw new Error("No open position");
+      }
+      // undefined = keep existing, null = clear, number = set new value
+      const newTp = input.tp === undefined ? pos.takeProfit : input.tp;
+      const newSl = input.sl === undefined ? pos.stopLoss : input.sl;
+
+      // Directional validation
+      if (newTp !== null && newTp !== undefined) {
+        if (pos.direction === "long" && newTp <= pos.entryPrice) {
+          throw new Error("Take profit must be above entry price for long positions");
+        }
+        if (pos.direction === "short" && newTp >= pos.entryPrice) {
+          throw new Error("Take profit must be below entry price for short positions");
+        }
+      }
+      if (newSl !== null && newSl !== undefined) {
+        if (pos.direction === "long" && newSl >= pos.entryPrice) {
+          throw new Error("Stop loss must be below entry price for long positions");
+        }
+        if (pos.direction === "short" && newSl <= pos.entryPrice) {
+          throw new Error("Stop loss must be above entry price for short positions");
+        }
+      }
+
+      await dbHelpers.updatePositionTpSl(arenaAccountId, newTp, newSl);
+    });
   }
 
   async tick() {
@@ -657,7 +714,7 @@ export class ArenaEngine {
     const sign = pos.direction === "long" ? 1 : -1;
     // pos.size already includes leverage (applied at open time)
     const rawPnl = sign * ((closePrice - pos.entryPrice) / pos.entryPrice) * pos.size;
-    // Fee: 0.05% per side (open + close)
+    // Fee: 0.05% per side (open + close = 0.1% round trip)
     const fee = round2(pos.size * FEE_RATE + pos.size * (closePrice / pos.entryPrice) * FEE_RATE);
     const pnl = rawPnl - fee;
     const pnlPct = (pnl / pos.size) * 100;
@@ -799,6 +856,12 @@ export class ArenaEngine {
   }
 
   private async buildLeaderboard(matchId: number): Promise<LeaderboardRow[]> {
+    // Return cached result if still fresh
+    const now = Date.now();
+    if (this.leaderboardCache && this.leaderboardCache.matchId === matchId && now - this.leaderboardCache.at < ArenaEngine.LEADERBOARD_CACHE_TTL_MS) {
+      return this.leaderboardCache.rows;
+    }
+
     const allAccounts = await dbHelpers.getAllArenaAccountsWithCapital();
     const aggregated = await dbHelpers.getTradeAggregatesForMatch(matchId);
     const aggMap = new Map<number, { pnl: number; weighted: number; trades: number }>();
@@ -859,6 +922,8 @@ export class ArenaEngine {
       row.matchPoints = getPointsForRank(row.rank);
       row.prizeAmount = row.prizeEligible ? getPrizeForRank(row.rank) : 0;
     });
+
+    this.leaderboardCache = { matchId, rows, at: Date.now() };
     return rows;
   }
 

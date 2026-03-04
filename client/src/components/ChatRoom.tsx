@@ -5,7 +5,7 @@
 // Emotional messages are styled to trigger FOMO, panic, envy
 // ============================================================
 
-import { useState, useRef, useEffect, memo } from 'react';
+import { useState, useRef, useEffect, useMemo, memo } from 'react';
 import type { ChatMessage } from '@/lib/types';
 import { useT } from '@/lib/i18n';
 
@@ -56,7 +56,12 @@ function ChatRoom({ messages, onSendMessage, highlightFromIndex }: Props) {
     }
   };
 
-  const onlineCount = 847 + Math.floor(Math.random() * 50);
+  // Stable online count that only changes every 30 seconds
+  const [onlineCount, setOnlineCount] = useState(() => 847 + Math.floor(Math.random() * 50));
+  useEffect(() => {
+    const timer = setInterval(() => setOnlineCount(847 + Math.floor(Math.random() * 50)), 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <div className="flex flex-col h-full">
@@ -132,6 +137,7 @@ function ChatRoom({ messages, onSendMessage, highlightFromIndex }: Props) {
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSend()}
           placeholder={t('chat.placeholder')}
+          maxLength={280}
           className="flex-1 bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded px-2 py-1 text-[11px] text-[#D1D4DC] placeholder-[#848E9C]/50 focus:outline-none focus:border-[#F0B90B]/30"
         />
         <button

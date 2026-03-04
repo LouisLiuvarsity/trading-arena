@@ -34,6 +34,8 @@ export function useTrading(currentPrice: number) {
   const positionRef = useRef<Position | null>(null);
   const priceRef = useRef(currentPrice);
   priceRef.current = currentPrice;
+  const leverageRef = useRef(account.tierLeverage);
+  leverageRef.current = account.tierLeverage;
 
   const closePositionRef = useRef<(exitPrice?: number, reason?: 'manual' | 'sl' | 'tp') => CompletedTrade | null>(null);
 
@@ -75,13 +77,13 @@ export function useTrading(currentPrice: number) {
     const holdSeconds = (Date.now() - pos.openTime) / 1000;
     const weight = getHoldWeight(holdSeconds);
     const direction = pos.direction === 'long' ? 1 : -1;
-    // Apply tier leverage to P&L
-    const leverage = account.tierLeverage;
+    // Apply tier leverage to P&L (using ref to avoid stale closure)
+    const leverage = leverageRef.current;
     const pnl = direction * (price - pos.entryPrice) / pos.entryPrice * pos.size * leverage;
     const pnlPct = direction * (price - pos.entryPrice) / pos.entryPrice * 100 * leverage;
     const weightedPnl = pnl * weight;
 
-    const fee = Math.round(pos.size * 0.001 * 100) / 100; // 0.05% per side
+    const fee = Math.round(pos.size * 0.001 * 100) / 100; // 0.05% per side (0.1% round trip)
     const trade: CompletedTrade = {
       id: `trade-${Date.now()}`,
       direction: pos.direction,
@@ -173,8 +175,8 @@ export function useTrading(currentPrice: number) {
     const holdSeconds = (Date.now() - pos.openTime) / 1000;
     const weight = getHoldWeight(holdSeconds);
     const dir = pos.direction === 'long' ? 1 : -1;
-    // Apply tier leverage to unrealized P&L
-    const leverage = account.tierLeverage;
+    // Apply tier leverage to unrealized P&L (using ref to avoid stale closure)
+    const leverage = leverageRef.current;
     const pnl = dir * (price - pos.entryPrice) / pos.entryPrice * pos.size * leverage;
     const pnlPct = dir * (price - pos.entryPrice) / pos.entryPrice * 100 * leverage;
 

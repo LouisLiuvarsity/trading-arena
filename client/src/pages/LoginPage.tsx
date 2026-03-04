@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Trophy, Zap, TrendingUp, Shield, ChevronRight, UserPlus, LogIn } from 'lucide-react';
 import { useT } from '@/lib/i18n';
+import { TRADING_PAIR } from '@shared/tradingPair';
 
 interface LoginPageProps {
-  onLogin: (inviteCode: string, username: string) => Promise<void>;
-  onQuickLogin: (username: string) => Promise<void>;
+  onLogin: (inviteCode: string, username: string, password: string) => Promise<void>;
+  onQuickLogin: (username: string, password: string) => Promise<void>;
 }
 
 export default function LoginPage({ onLogin, onQuickLogin }: LoginPageProps) {
@@ -14,32 +15,36 @@ export default function LoginPage({ onLogin, onQuickLogin }: LoginPageProps) {
   );
   const [inviteCode, setInviteCode] = useState('');
   const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [quickUsername, setQuickUsername] = useState(() => localStorage.getItem("arena_username") ?? '');
+  const [quickPassword, setQuickPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteCode.trim() || !username.trim()) return;
+    if (!inviteCode.trim() || !username.trim() || !password) return;
     setIsLoading(true);
     setError(null);
     try {
-      await onLogin(inviteCode.trim(), username.trim());
+      await onLogin(inviteCode.trim(), username.trim(), password);
     } catch (err) {
       setError((err as Error).message);
+    } finally {
       setIsLoading(false);
     }
   };
 
   const handleQuickLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!quickUsername.trim()) return;
+    if (!quickUsername.trim() || !quickPassword) return;
     setIsLoading(true);
     setError(null);
     try {
-      await onQuickLogin(quickUsername.trim());
+      await onQuickLogin(quickUsername.trim(), quickPassword);
     } catch (err) {
       setError((err as Error).message);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -90,7 +95,7 @@ export default function LoginPage({ onLogin, onQuickLogin }: LoginPageProps) {
           </div>
           <div className="w-px h-8 bg-[rgba(255,255,255,0.06)]" />
           <div className="text-center">
-            <div className="text-white text-lg font-bold" style={{ fontFamily: "'DM Mono', monospace" }}>SOL</div>
+            <div className="text-white text-lg font-bold" style={{ fontFamily: "'DM Mono', monospace" }}>{TRADING_PAIR.baseAsset}</div>
             <div className="text-[#5E6673] text-[10px] uppercase tracking-wider">{t('login.pair')}</div>
           </div>
           <div className="w-px h-8 bg-[rgba(255,255,255,0.06)]" />
@@ -149,9 +154,22 @@ export default function LoginPage({ onLogin, onQuickLogin }: LoginPageProps) {
                   style={{ fontFamily: "'DM Mono', monospace" }}
                 />
 
+                <label className="block text-[#848E9C] text-xs uppercase tracking-wider mb-2 mt-4">
+                  {t('login.password')}
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={t('login.passwordPlaceholder')}
+                  maxLength={128}
+                  className="w-full bg-[#0B0E11] border border-[rgba(255,255,255,0.1)] rounded-lg px-4 py-3 text-white placeholder:text-[#5E6673] focus:outline-none focus:border-[#F0B90B]/50 transition-colors text-sm"
+                  style={{ fontFamily: "'DM Mono', monospace" }}
+                />
+
                 <button
                   type="submit"
-                  disabled={!inviteCode.trim() || !username.trim() || isLoading}
+                  disabled={!inviteCode.trim() || !username.trim() || !password || isLoading}
                   className="w-full mt-4 bg-gradient-to-r from-[#F0B90B] to-[#F0B90B]/90 hover:from-[#F0B90B]/90 hover:to-[#F0B90B] text-[#0B0E11] font-bold py-3 rounded-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
                 >
                   {isLoading ? (
@@ -186,9 +204,22 @@ export default function LoginPage({ onLogin, onQuickLogin }: LoginPageProps) {
                   autoFocus
                 />
 
+                <label className="block text-[#848E9C] text-xs uppercase tracking-wider mb-2 mt-4">
+                  {t('login.password')}
+                </label>
+                <input
+                  type="password"
+                  value={quickPassword}
+                  onChange={(e) => setQuickPassword(e.target.value)}
+                  placeholder={t('login.passwordPlaceholder')}
+                  maxLength={128}
+                  className="w-full bg-[#0B0E11] border border-[rgba(255,255,255,0.1)] rounded-lg px-4 py-3 text-white placeholder:text-[#5E6673] focus:outline-none focus:border-[#F0B90B]/50 transition-colors text-sm"
+                  style={{ fontFamily: "'DM Mono', monospace" }}
+                />
+
                 <button
                   type="submit"
-                  disabled={!quickUsername.trim() || isLoading}
+                  disabled={!quickUsername.trim() || !quickPassword || isLoading}
                   className="w-full mt-4 bg-gradient-to-r from-[#F0B90B] to-[#F0B90B]/90 hover:from-[#F0B90B]/90 hover:to-[#F0B90B] text-[#0B0E11] font-bold py-3 rounded-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
                 >
                   {isLoading ? (

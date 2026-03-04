@@ -16,6 +16,7 @@ import {
 } from 'lightweight-charts';
 import type { IChartApi, ISeriesApi, CandlestickData, HistogramData, Time } from 'lightweight-charts';
 import type { KlineData, TimeframeKey, Position } from '@/lib/types';
+import { TRADING_PAIR } from '@shared/tradingPair';
 
 interface Props {
   klines: KlineData[];
@@ -351,7 +352,7 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
           </button>
         ))}
         <div className="ml-auto text-[10px] text-[#848E9C] font-mono">
-          SOLUSDT Perpetual
+          {TRADING_PAIR.symbol} Perpetual
         </div>
         {position && onSetTpSl && (
           <div className="text-[9px] text-[#F0B90B]/60 ml-2">

@@ -6,6 +6,7 @@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { CompletedTrade } from '@/lib/types';
 import { useT } from '@/lib/i18n';
+import { TRADING_PAIR } from '@shared/tradingPair';
 
 interface Props {
   trades: CompletedTrade[];
@@ -40,7 +41,7 @@ export default function TradeHistory({ trades }: Props) {
           <div className="flex items-center px-2 py-1 text-[10px] text-[#848E9C] border-b border-[rgba(255,255,255,0.04)]">
             <span className="w-8">{t('trades.dir')}</span>
             <span className="w-14 text-right">USDT</span>
-            <span className="w-16 text-right">SOL</span>
+            <span className="w-16 text-right">{TRADING_PAIR.baseAsset}</span>
             <span className="flex-1 text-right">{t('status.pnl')}</span>
             <span className="w-14 text-right">{t('trades.fee')}</span>
             <span className="w-12 text-right">{t('trades.hold')}</span>

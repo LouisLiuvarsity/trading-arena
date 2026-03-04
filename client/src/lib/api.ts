@@ -28,23 +28,28 @@ export async function apiRequest<T>(
   });
 
   const raw = await res.text();
-  const data = raw ? JSON.parse(raw) : {};
+  let data: any;
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {
+    data = {};
+  }
   if (!res.ok) {
     throw new ApiError(data?.error ?? `Request failed (${res.status})`, res.status);
   }
   return data as T;
 }
 
-export async function login(inviteCode: string, username: string) {
+export async function login(inviteCode: string, username: string, password: string) {
   return apiRequest<{ token: string; user: { id: number; username: string } }>("/api/auth/login", {
     method: "POST",
-    body: { inviteCode, username },
+    body: { inviteCode, username, password },
   });
 }
 
-export async function quickLogin(username: string) {
+export async function quickLogin(username: string, password: string) {
   return apiRequest<{ token: string; user: { id: number; username: string } }>("/api/auth/quick-login", {
     method: "POST",
-    body: { username },
+    body: { username, password },
   });
 }

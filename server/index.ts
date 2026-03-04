@@ -3,17 +3,21 @@
  */
 
 import type { Express, Request, Response, NextFunction } from "express";
+import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import { ArenaEngine } from "./engine";
 import { MarketService } from "./market";
+import * as dbHelpers from "./db";
 
 const loginSchema = z.object({
   inviteCode: z.string().trim().min(4).max(32),
   username: z.string().trim().min(2).max(20),
+  password: z.string().min(4).max(128),
 });
 
 const quickLoginSchema = z.object({
   username: z.string().trim().min(2).max(20),
+  password: z.string().min(1).max(128),
 });
 
 const openSchema = z.object({
@@ -62,13 +66,47 @@ export async function registerArenaRoutes(app: Express) {
   engineInstance = engine;
 
   // Tick every second for TP/SL, match rotation, and prediction resolution
-  setInterval(async () => {
+  const tickTimer = setInterval(async () => {
     try {
       await engine.tick();
     } catch (error) {
       console.error("[engine.tick]", error);
     }
   }, 1000);
+
+  // Cleanup job: run every hour
+  const cleanupTimer = setInterval(async () => {
+    try {
+      await dbHelpers.cleanupExpiredSessions();
+      await dbHelpers.cleanupOldBehaviorEvents();
+      await dbHelpers.cleanupOldChatMessages();
+    } catch (error) {
+      console.error("[cleanup]", error);
+    }
+  }, 60 * 60 * 1000);
+
+  // Graceful shutdown
+  const shutdown = () => {
+    console.log("[server] Shutting down gracefully...");
+    clearInterval(tickTimer);
+    clearInterval(cleanupTimer);
+    market.stop();
+  };
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
+
+  // Rate limiters
+  const authLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, message: { error: "Too many login attempts, try again later" } });
+  const tradeLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { error: "Too many trade requests, slow down" } });
+  const chatLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: { error: "Too many messages, slow down" } });
+  const generalLimiter = rateLimit({ windowMs: 60 * 1000, max: 120, message: { error: "Too many requests" } });
+
+  app.use("/api/auth/", authLimiter);
+  app.use("/api/arena/trade/", tradeLimiter);
+  app.use("/api/trade/", tradeLimiter);
+  app.use("/api/arena/chat", chatLimiter);
+  app.use("/api/chat", chatLimiter);
+  app.use("/api/", generalLimiter);
 
   // Health check
   app.get("/api/health", (_req: Request, res: Response) => {
@@ -83,7 +121,7 @@ export async function registerArenaRoutes(app: Express) {
       return;
     }
     try {
-      const result = await engine.login(parsed.data.inviteCode, parsed.data.username);
+      const result = await engine.login(parsed.data.inviteCode, parsed.data.username, parsed.data.password);
       res.json({ token: result.token, user: { id: result.account.id, username: result.account.username } });
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
@@ -98,7 +136,7 @@ export async function registerArenaRoutes(app: Express) {
       return;
     }
     try {
-      const result = await engine.loginByUsername(parsed.data.username);
+      const result = await engine.loginByUsername(parsed.data.username, parsed.data.password);
       res.json({ token: result.token, user: { id: result.account.id, username: result.account.username } });
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });

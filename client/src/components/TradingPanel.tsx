@@ -3,6 +3,10 @@ import { Slider } from '@/components/ui/slider';
 import type { Position, AccountState } from '@/lib/types';
 import { HOLD_WEIGHT_MIN, HOLD_WEIGHT_MAX } from '@/lib/types';
 import { useT } from '@/lib/i18n';
+import { TRADING_PAIR } from '@shared/tradingPair';
+
+const BASE = TRADING_PAIR.baseAsset;
+const QUOTE = TRADING_PAIR.quoteAsset;
 
 interface Props {
   account: AccountState;
@@ -68,7 +72,7 @@ function TradingPanel({
 }: Props) {
   const { t } = useT();
   const [positionSize, setPositionSize] = useState(250);
-  const [sizeUnit, setSizeUnit] = useState<'USDT' | 'SOL'>('USDT');
+  const [sizeUnit, setSizeUnit] = useState<'USDT' | 'BASE'>('USDT');
   const [sizeInput, setSizeInput] = useState('250');
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [holdSeconds, setHoldSeconds] = useState(0);
@@ -232,13 +236,13 @@ function TradingPanel({
     setSizeInput(raw);
     const v = parseFloat(raw);
     if (!Number.isFinite(v) || v <= 0) return;
-    const usdt = sizeUnit === 'SOL' && currentPrice > 0 ? Math.round(v * currentPrice) : Math.round(v);
+    const usdt = sizeUnit === 'BASE' && currentPrice > 0 ? Math.round(v * currentPrice) : Math.round(v);
     setPositionSize(Math.max(10, Math.min(usdt, maxEquity)));
   }, [sizeUnit, currentPrice, maxEquity]);
 
   const handleSliderChange = useCallback((v: number) => {
     setPositionSize(v);
-    if (sizeUnit === 'SOL' && currentPrice > 0) {
+    if (sizeUnit === 'BASE' && currentPrice > 0) {
       setSizeInput((v / currentPrice).toFixed(4));
     } else {
       setSizeInput(String(v));
@@ -248,7 +252,7 @@ function TradingPanel({
   const handlePctClick = useCallback((pct: number) => {
     const usdt = Math.max(10, Math.floor(account.equity * pct / 100));
     setPositionSize(usdt);
-    if (sizeUnit === 'SOL' && currentPrice > 0) {
+    if (sizeUnit === 'BASE' && currentPrice > 0) {
       setSizeInput((usdt / currentPrice).toFixed(4));
     } else {
       setSizeInput(String(usdt));
@@ -256,9 +260,9 @@ function TradingPanel({
   }, [account.equity, sizeUnit, currentPrice]);
 
   const handleToggleUnit = useCallback(() => {
-    const next = sizeUnit === 'USDT' ? 'SOL' : 'USDT';
+    const next = sizeUnit === 'USDT' ? 'BASE' : 'USDT';
     setSizeUnit(next);
-    if (next === 'SOL' && currentPrice > 0) {
+    if (next === 'BASE' && currentPrice > 0) {
       setSizeInput((positionSize / currentPrice).toFixed(4));
     } else {
       setSizeInput(String(positionSize));
@@ -530,11 +534,11 @@ function TradingPanel({
                 onBlur={() => {
                   const v = parseFloat(sizeInput);
                   if (!Number.isFinite(v) || v <= 0) {
-                    setSizeInput(sizeUnit === 'SOL' && currentPrice > 0 ? (positionSize / currentPrice).toFixed(4) : String(positionSize));
+                    setSizeInput(sizeUnit === 'BASE' && currentPrice > 0 ? (positionSize / currentPrice).toFixed(4) : String(positionSize));
                   }
                 }}
                 min={0}
-                step={sizeUnit === 'SOL' ? 0.01 : 10}
+                step={sizeUnit === 'BASE' ? 0.01 : 10}
                 className="w-full bg-[#0B0E11] border border-[#2B3139] rounded px-2.5 py-1.5 pr-16 text-sm font-mono text-[#D1D4DC] placeholder:text-[#848E9C]/30 focus:border-[#F0B90B] focus:outline-none tabular-nums"
               />
               <button
@@ -543,7 +547,7 @@ function TradingPanel({
               >
                 <span className={sizeUnit === 'USDT' ? 'text-[#F0B90B]' : 'text-[#848E9C]'}>USDT</span>
                 <span className="text-[#848E9C]/40">/</span>
-                <span className={sizeUnit === 'SOL' ? 'text-[#F0B90B]' : 'text-[#848E9C]'}>SOL</span>
+                <span className={sizeUnit === 'BASE' ? 'text-[#F0B90B]' : 'text-[#848E9C]'}>{BASE}</span>
               </button>
             </div>
             <div className="text-right shrink-0">
@@ -552,7 +556,7 @@ function TradingPanel({
                 <span className="text-[#848E9C] mx-0.5">=</span>
                 <span className="text-[#F0B90B] font-bold">{notionalSize} U</span>
               </div>
-              {sizeUnit === 'SOL' && currentPrice > 0 && (
+              {sizeUnit === 'BASE' && currentPrice > 0 && (
                 <div className="text-[10px] text-[#848E9C]/60 font-mono">{positionSize} USDT</div>
               )}
             </div>

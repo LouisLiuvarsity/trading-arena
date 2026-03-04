@@ -5,6 +5,7 @@
 // Min 5 trades/match for prize eligibility
 // ============================================================
 
+import { TRADING_PAIR } from '@shared/tradingPair';
 import type {
   LeaderboardEntry,
   ChatMessage,
@@ -209,7 +210,7 @@ export function generateMatchState(): MatchState {
     endTime,
     elapsed: Math.min(elapsed, 1),
     remainingSeconds,
-    symbol: 'SOLUSDT',
+    symbol: TRADING_PAIR.symbol,
     participantCount: 847,
     prizePool: 500,
     isCloseOnly: remainingSeconds < 1800,
@@ -376,7 +377,7 @@ export const SYSTEM_ALERTS = [
   '📊 奖金线 #100 当前加权收益：+{pnl}%',
   '⚡ 奖金区竞争激烈！#90-#110 有 {count} 人',
   '🏆 距离比赛结束还有不到{hours}小时！',
-  '📈 SOLUSDT 突破关键阻力位',
+  `📈 ${TRADING_PAIR.symbol} 突破关键阻力位`,
   '⚠️ 资金费率即将结算',
   '🔔 前10名平均收益率 +{topPnl}%',
   '📉 过去30分钟有{overtaken}人被超越',

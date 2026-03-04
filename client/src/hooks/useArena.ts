@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiRequest, ApiError } from "@/lib/api";
+import { TRADING_PAIR } from "@shared/tradingPair";
 import type {
   AccountState,
   ChatMessage,
@@ -95,7 +96,7 @@ const emptyState: ArenaState = {
     endTime: Date.now() + 24 * 60 * 60 * 1000,
     elapsed: 0,
     remainingSeconds: 24 * 60 * 60,
-    symbol: "SOLUSDT",
+    symbol: TRADING_PAIR.symbol,
     participantCount: 0,
     prizePool: 500,
     isCloseOnly: false,
@@ -112,6 +113,8 @@ export function useArena(token: string | null, onAuthError?: () => void) {
   const [state, setState] = useState<ArenaState>(emptyState);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const onAuthErrorRef = useRef(onAuthError);
+  onAuthErrorRef.current = onAuthError;
 
   const refresh = useCallback(async () => {
     if (!token) return;
@@ -121,21 +124,36 @@ export function useArena(token: string | null, onAuthError?: () => void) {
       setError(null);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
-        onAuthError?.();
+        onAuthErrorRef.current?.();
         return;
       }
       setError((err as Error).message);
     }
-  }, [token, onAuthError]);
+  }, [token]);
 
   useEffect(() => {
     if (!token) return;
     setLoading(true);
     void refresh().finally(() => setLoading(false));
-    const timer = setInterval(() => {
-      void refresh();
-    }, 1000);
-    return () => clearInterval(timer);
+
+    // Poll every 3 seconds, pause when tab is hidden
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const startPolling = () => {
+      if (timer) return;
+      timer = setInterval(() => { void refresh(); }, 3000);
+    };
+    const stopPolling = () => {
+      if (timer) { clearInterval(timer); timer = null; }
+    };
+    const onVisibilityChange = () => {
+      if (document.hidden) { stopPolling(); } else { void refresh(); startPolling(); }
+    };
+    startPolling();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      stopPolling();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, [token, refresh]);
 
   const openPosition = useCallback(

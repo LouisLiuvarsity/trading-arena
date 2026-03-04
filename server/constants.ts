@@ -1,5 +1,10 @@
-export const SYMBOL = "SOLUSDT";
+import { TRADING_PAIR } from "../shared/tradingPair";
+
+export const SYMBOL = TRADING_PAIR.symbol;
+export const BASE_ASSET = TRADING_PAIR.baseAsset;
+export const QUOTE_ASSET = TRADING_PAIR.quoteAsset;
 export const STARTING_CAPITAL = 5000;
+export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 export const MAX_TRADES_PER_MATCH = 40;
 export const MIN_TRADES_FOR_PRIZE = 5;
 export const MATCH_DURATION_MS = 24 * 60 * 60 * 1000;
