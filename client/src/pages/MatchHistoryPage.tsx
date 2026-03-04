@@ -1,0 +1,448 @@
+import { useEffect, useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  History,
+  ChevronDown,
+  ChevronRight,
+  Trophy,
+  Target,
+  RefreshCw,
+  Inbox,
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { apiRequest } from "@/lib/api";
+import type { MatchResultSummary } from "@shared/competitionTypes";
+
+// ─── Types ──────────────────────────────────────────────────────────
+
+interface TradeDetail {
+  id: string;
+  tradeNumber: number;
+  direction: "long" | "short";
+  entryPrice: number;
+  exitPrice: number;
+  pnl: number;
+  pnlPct: number;
+  holdDuration: number; // seconds
+  closeReason: "tp" | "sl" | "manual" | "match_end" | "time_limit";
+}
+
+interface MatchHistoryItem extends MatchResultSummary {
+  trades?: TradeDetail[];
+}
+
+interface HistoryResponse {
+  results: MatchHistoryItem[];
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────
+
+function formatPnl(pct: number): string {
+  return `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
+}
+
+function pnlColor(pct: number): string {
+  return pct >= 0 ? "text-[#0ECB81]" : "text-[#F6465D]";
+}
+
+function pnlBgColor(pct: number): string {
+  return pct >= 0 ? "bg-[#0ECB81]/10" : "bg-[#F6465D]/10";
+}
+
+function formatHoldTime(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}min`;
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return m > 0 ? `${h}h${m}m` : `${h}h`;
+}
+
+function formatDate(timestamp: number): string {
+  const d = new Date(timestamp * 1000);
+  return d.toLocaleDateString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
+
+const CLOSE_REASON_ICONS: Record<string, { icon: string; label: string }> = {
+  tp: { icon: "\uD83C\uDFAF", label: "TP" },
+  sl: { icon: "\uD83D\uDED1", label: "SL" },
+  manual: { icon: "\u270B", label: "手动" },
+  match_end: { icon: "\u23F0", label: "结束" },
+  time_limit: { icon: "\u23F0", label: "超时" },
+};
+
+function getCompTypeLabel(title: string): string {
+  if (title.includes("总决赛") || title.toLowerCase().includes("grand")) return "总决赛";
+  if (title.includes("练习") || title.toLowerCase().includes("practice")) return "练习赛";
+  return "常规赛";
+}
+
+// ─── Skeleton ───────────────────────────────────────────────────────
+
+function SkeletonCard() {
+  return (
+    <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-5 animate-pulse">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="h-4 bg-white/5 rounded w-24" />
+        <div className="h-3 bg-white/5 rounded w-32" />
+        <div className="h-3 bg-white/5 rounded w-16 ml-auto" />
+      </div>
+      <div className="flex gap-4">
+        <div className="h-3 bg-white/5 rounded w-20" />
+        <div className="h-3 bg-white/5 rounded w-16" />
+        <div className="h-3 bg-white/5 rounded w-24" />
+      </div>
+    </div>
+  );
+}
+
+// ─── Trade Row ──────────────────────────────────────────────────────
+
+function TradeRow({ trade }: { trade: TradeDetail }) {
+  const closeInfo = CLOSE_REASON_ICONS[trade.closeReason] ?? CLOSE_REASON_ICONS.manual;
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 text-[11px] font-mono bg-[#0B0E11] rounded-lg">
+      {/* Trade number */}
+      <span className="text-[#5E6673] w-6 shrink-0">#{trade.tradeNumber}</span>
+
+      {/* Direction */}
+      <span
+        className={`w-12 shrink-0 font-semibold ${
+          trade.direction === "long" ? "text-[#0ECB81]" : "text-[#F6465D]"
+        }`}
+      >
+        {trade.direction === "long" ? "LONG" : "SHORT"}
+      </span>
+
+      {/* Entry -> Exit */}
+      <span className="text-[#D1D4DC] shrink-0">
+        {trade.entryPrice.toFixed(2)}
+        <span className="text-[#5E6673] mx-0.5">{"\u2192"}</span>
+        {trade.exitPrice.toFixed(2)}
+      </span>
+
+      {/* PnL */}
+      <span className={`font-semibold shrink-0 ${pnlColor(trade.pnlPct)}`}>
+        {formatPnl(trade.pnlPct)}
+      </span>
+
+      {/* Hold time */}
+      <span className="text-[#848E9C] shrink-0">
+        {formatHoldTime(trade.holdDuration)}
+      </span>
+
+      {/* Close reason */}
+      <span className="ml-auto shrink-0" title={closeInfo.label}>
+        {closeInfo.icon}
+        <span className="text-[#848E9C] ml-0.5 text-[9px]">{closeInfo.label}</span>
+      </span>
+    </div>
+  );
+}
+
+// ─── Match Card ─────────────────────────────────────────────────────
+
+function MatchCard({ match, isExpanded, onToggle }: {
+  match: MatchHistoryItem;
+  isExpanded: boolean;
+  onToggle: () => void;
+}) {
+  const winRate =
+    match.tradesCount > 0
+      ? ((match.winCount / match.tradesCount) * 100).toFixed(1)
+      : "0.0";
+  const compType = getCompTypeLabel(match.competitionTitle);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl overflow-hidden"
+    >
+      {/* Main card content */}
+      <div className="p-4 sm:p-5">
+        {/* Top row: Competition info + rank */}
+        <div className="flex items-start gap-2 mb-2.5 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] text-[#848E9C] bg-white/5 px-2 py-0.5 rounded">
+              #{match.competitionNumber}
+            </span>
+            <span className="text-[11px] font-semibold text-[#D1D4DC]">
+              {compType}
+            </span>
+            <span className="text-[10px] text-[#5E6673]">{"\u00B7"}</span>
+            <span className="text-[11px] text-[#D1D4DC] font-mono">
+              Rank <span className="font-bold">#{match.finalRank}</span>
+              <span className="text-[#848E9C]">/{match.participantCount}</span>
+            </span>
+          </div>
+          <span className="text-[10px] text-[#5E6673] ml-auto shrink-0">
+            {formatDate(match.createdAt)}
+          </span>
+        </div>
+
+        {/* Stats row */}
+        <div className="flex items-center gap-3 flex-wrap text-[11px]">
+          {/* PnL */}
+          <span className={`font-mono font-bold ${pnlColor(match.totalPnlPct)} ${pnlBgColor(match.totalPnlPct)} px-2 py-0.5 rounded`}>
+            {formatPnl(match.totalPnlPct)}
+          </span>
+
+          {/* Points */}
+          {match.pointsEarned > 0 && (
+            <span className="font-mono text-[#F0B90B] flex items-center gap-0.5">
+              <Target className="w-3 h-3" />
+              +{match.pointsEarned}pts
+            </span>
+          )}
+
+          {/* Prize */}
+          {match.prizeWon > 0 && (
+            <span className="font-mono text-[#F0B90B] font-semibold flex items-center gap-0.5">
+              <Trophy className="w-3 h-3" />
+              {match.prizeWon}U
+            </span>
+          )}
+
+          {/* Divider */}
+          <span className="text-[#5E6673] hidden sm:inline">{"\u00B7"}</span>
+
+          {/* Trades + WR */}
+          <span className="text-[#848E9C] font-mono">
+            {match.tradesCount}{"\u7B14\u4EA4\u6613"}
+          </span>
+          <span className="text-[#848E9C] font-mono">
+            WR {winRate}%
+          </span>
+        </div>
+      </div>
+
+      {/* Expand/collapse toggle */}
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-center gap-1 px-4 py-2 border-t border-[rgba(255,255,255,0.05)] text-[10px] text-[#848E9C] hover:text-[#D1D4DC] hover:bg-white/[0.02] transition-colors"
+      >
+        {isExpanded ? (
+          <>
+            <ChevronDown className="w-3 h-3" />
+            收起交易明细
+          </>
+        ) : (
+          <>
+            <ChevronRight className="w-3 h-3" />
+            展开交易明细
+          </>
+        )}
+      </button>
+
+      {/* Expanded trade details */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-4 space-y-1.5">
+              {match.trades && match.trades.length > 0 ? (
+                match.trades.map((trade) => (
+                  <TradeRow key={trade.id} trade={trade} />
+                ))
+              ) : (
+                <div className="text-center py-4 text-[#5E6673] text-[11px]">
+                  交易明细暂不可用
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+// ─── Summary Stats ──────────────────────────────────────────────────
+
+function SummaryStats({ matches }: { matches: MatchHistoryItem[] }) {
+  if (matches.length === 0) return null;
+
+  const totalMatches = matches.length;
+  const totalPrize = matches.reduce((s, m) => s + (m.prizeWon ?? 0), 0);
+  const totalPoints = matches.reduce((s, m) => s + (m.pointsEarned ?? 0), 0);
+  const avgPnl =
+    matches.reduce((s, m) => s + m.totalPnlPct, 0) / totalMatches;
+  const bestRank = Math.min(...matches.map((m) => m.finalRank));
+  const winCount = matches.filter((m) => m.totalPnlPct > 0).length;
+  const winRate = (winCount / totalMatches) * 100;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-5"
+    >
+      {[
+        { label: "总场次", value: String(totalMatches), color: "text-[#D1D4DC]" },
+        { label: "总奖金", value: `${totalPrize}U`, color: totalPrize > 0 ? "text-[#F0B90B]" : "text-[#848E9C]" },
+        { label: "总积分", value: `+${totalPoints}`, color: "text-[#F0B90B]" },
+        { label: "平均PnL", value: formatPnl(avgPnl), color: pnlColor(avgPnl) },
+        { label: "最佳排名", value: `#${bestRank}`, color: "text-[#D1D4DC]" },
+        { label: "胜率", value: `${winRate.toFixed(0)}%`, color: "text-[#D1D4DC]" },
+      ].map(({ label, value, color }) => (
+        <div
+          key={label}
+          className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-lg p-3 text-center"
+        >
+          <p className="text-[9px] text-[#848E9C] uppercase mb-1">{label}</p>
+          <p className={`text-sm font-mono font-bold ${color}`}>{value}</p>
+        </div>
+      ))}
+    </motion.div>
+  );
+}
+
+// ─── Empty State ────────────────────────────────────────────────────
+
+function EmptyState() {
+  return (
+    <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-10 text-center">
+      <Inbox className="w-10 h-10 text-[#5E6673] mx-auto mb-3" />
+      <p className="text-[#848E9C] text-sm font-display font-bold mb-1">
+        暂无比赛记录
+      </p>
+      <p className="text-[#5E6673] text-[11px]">
+        参加比赛后，你的历史战绩将显示在这里
+      </p>
+    </div>
+  );
+}
+
+// ─── Main MatchHistoryPage ──────────────────────────────────────────
+
+export default function MatchHistoryPage() {
+  const { token } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [matches, setMatches] = useState<MatchHistoryItem[]>([]);
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchHistory = useCallback(async () => {
+    if (!token) return;
+    setError(null);
+
+    try {
+      const data = await apiRequest<HistoryResponse>("/api/me/history", { token });
+      const results = data.results ?? [];
+      // Sort by createdAt descending (most recent first)
+      results.sort((a, b) => b.createdAt - a.createdAt);
+      setMatches(results);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "加载失败");
+    }
+  }, [token]);
+
+  // Initial load
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+
+    fetchHistory().finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [fetchHistory]);
+
+  // Refresh handler
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchHistory();
+    setRefreshing(false);
+  }, [fetchHistory]);
+
+  // Toggle expand
+  const toggleExpand = useCallback((competitionId: number) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(competitionId)) {
+        next.delete(competitionId);
+      } else {
+        next.add(competitionId);
+      }
+      return next;
+    });
+  }, []);
+
+  return (
+    <div className="p-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          <History className="w-5 h-5 text-[#F0B90B]" />
+          <h1 className="text-xl font-display font-bold text-white">比赛历史</h1>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={loading || refreshing}
+          className="flex items-center gap-1 text-[11px] text-[#848E9C] hover:text-[#D1D4DC] transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+          刷新
+        </button>
+      </div>
+
+      {/* Loading state */}
+      {loading && (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+      )}
+
+      {/* Error state */}
+      {!loading && error && (
+        <div className="bg-[#1C2030] border border-[#F6465D]/20 rounded-xl p-6 text-center">
+          <p className="text-[#F6465D] text-sm mb-2">{error}</p>
+          <button
+            onClick={handleRefresh}
+            className="text-[#848E9C] hover:text-[#D1D4DC] text-xs underline"
+          >
+            重试
+          </button>
+        </div>
+      )}
+
+      {/* Content */}
+      {!loading && !error && (
+        <>
+          {/* Summary stats */}
+          <SummaryStats matches={matches} />
+
+          {/* Match list */}
+          {matches.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <div className="space-y-3">
+              {matches.map((match, idx) => (
+                <MatchCard
+                  key={match.competitionId}
+                  match={match}
+                  isExpanded={expandedIds.has(match.competitionId)}
+                  onToggle={() => toggleExpand(match.competitionId)}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}

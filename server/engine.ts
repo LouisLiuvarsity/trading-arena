@@ -83,11 +83,20 @@ export class ArenaEngine {
   private leaderboardCache: { matchId: number; rows: LeaderboardRow[]; at: number } | null = null;
   private static LEADERBOARD_CACHE_TTL_MS = 3000; // 3 seconds
 
-  constructor(private readonly market: MarketService) {}
+  private readonly legacyAutoRotate: boolean;
+
+  constructor(
+    private readonly market: MarketService,
+    options?: { legacyAutoRotate?: boolean },
+  ) {
+    this.legacyAutoRotate = options?.legacyAutoRotate ?? true;
+  }
 
   async init(): Promise<void> {
     if (this.initialized) return;
-    await dbHelpers.ensureActiveMatch();
+    if (this.legacyAutoRotate) {
+      await dbHelpers.ensureActiveMatch();
+    }
     this.initialized = true;
   }
 
@@ -809,6 +818,8 @@ export class ArenaEngine {
   }
 
   private async rotateMatchIfNeeded() {
+    // When CompetitionEngine manages lifecycle, skip auto-rotation
+    if (!this.legacyAutoRotate) return;
     if (this.rotationLock) return;
 
     const active = await dbHelpers.getActiveMatch();

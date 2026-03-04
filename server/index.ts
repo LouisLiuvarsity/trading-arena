@@ -8,6 +8,11 @@ import { z } from "zod";
 import { ArenaEngine } from "./engine";
 import { MarketService } from "./market";
 import * as dbHelpers from "./db";
+import { CompetitionEngine } from "./competition-engine";
+import { registerCompetitionRoutes } from "./competition-routes";
+import { registerProfileRoutes } from "./profile-routes";
+import { registerAnalyticsRoutes } from "./analytics-routes";
+import { registerStatsRoutes } from "./stats-routes";
 
 const loginSchema = z.object({
   inviteCode: z.string().trim().min(4).max(32),
@@ -61,14 +66,18 @@ let engineInstance: ArenaEngine | null = null;
 export async function registerArenaRoutes(app: Express) {
   const market = new MarketService();
   await market.start();
-  const engine = new ArenaEngine(market);
+  const engine = new ArenaEngine(market, { legacyAutoRotate: true });
   await engine.init();
   engineInstance = engine;
 
-  // Tick every second for TP/SL, match rotation, and prediction resolution
+  // Competition system v2
+  const competitionEngine = new CompetitionEngine(engine, market);
+
+  // Tick every second for TP/SL, match rotation, prediction resolution, and competition lifecycle
   const tickTimer = setInterval(async () => {
     try {
       await engine.tick();
+      await competitionEngine.tick();
     } catch (error) {
       console.error("[engine.tick]", error);
     }
@@ -500,4 +509,16 @@ export async function registerArenaRoutes(app: Express) {
       res.status(400).json({ error: (error as Error).message });
     }
   });
+
+  // ─── Competition System v2 Routes ─────────────────────────────────────────
+  registerCompetitionRoutes(app, competitionEngine, engine);
+
+  // ─── Profile & Institution Routes ──────────────────────────────────────────
+  registerProfileRoutes(app, engine);
+
+  // ─── Analytics Routes ─────────────────────────────────────────────────────
+  registerAnalyticsRoutes(app, engine);
+
+  // ─── Public Stats Routes ──────────────────────────────────────────────────
+  registerStatsRoutes(app);
 }

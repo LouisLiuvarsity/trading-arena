@@ -13,7 +13,7 @@ export class ApiError extends Error {
 export async function apiRequest<T>(
   path: string,
   options: {
-    method?: "GET" | "POST";
+    method?: "GET" | "POST" | "PUT" | "DELETE";
     token?: string | null;
     body?: unknown;
   } = {},

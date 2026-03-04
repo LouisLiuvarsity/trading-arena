@@ -2,13 +2,17 @@ import { useState } from 'react';
 import { Trophy, Zap, TrendingUp, Shield, ChevronRight, UserPlus, LogIn } from 'lucide-react';
 import { useT } from '@/lib/i18n';
 import { TRADING_PAIR } from '@shared/tradingPair';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface LoginPageProps {
-  onLogin: (inviteCode: string, username: string, password: string) => Promise<void>;
-  onQuickLogin: (username: string, password: string) => Promise<void>;
+  onLogin?: (inviteCode: string, username: string, password: string) => Promise<void>;
+  onQuickLogin?: (username: string, password: string) => Promise<void>;
 }
 
-export default function LoginPage({ onLogin, onQuickLogin }: LoginPageProps) {
+export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickLoginProp }: LoginPageProps) {
+  const auth = useAuth();
+  const onLogin = onLoginProp ?? auth.login;
+  const onQuickLogin = onQuickLoginProp ?? auth.quickLogin;
   const { t, lang, setLang } = useT();
   const [mode, setMode] = useState<'register' | 'quick'>(() =>
     localStorage.getItem("arena_username") ? 'quick' : 'register'

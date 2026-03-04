@@ -1,108 +1,86 @@
 # Trading Arena TODO
 
-## Completed (Previous Sessions)
-- [x] Public landing page (LandingPage.tsx) with Hero, rules, dual leaderboards, quant bot showcase
-- [x] LoL-style tier system: Iron/Bronze/Silver/Gold/Platinum/Diamond with leverage 1x-3x
-- [x] Leverage integrated into P&L calculations and UI display
-- [x] Minimum 5 trades per match for prize eligibility
-- [x] Monthly point decay (×0.8) as demotion mechanism
-- [x] Updated all rules across components to reflect v4.1 design document
-- [x] Changed trading pair from BTC/USDT to SOL/USDT with live Binance data
-- [x] Enhanced UI: draggable/closable notification panel, pulsing Next button, bordered tabs
-- [x] Updated branding to "Varsity Tech"
-- [x] Created comprehensive README.md
-- [x] Added design document to docs/ folder
-- [x] Synced code to GitHub
-- [x] Pulled server-side architecture from GitHub (SQLite + Express API)
-- [x] Upgraded to web-db-user template
+## v2.0 Implementation ✅ Complete (2026-03-04)
 
-## Current: Resolve Template Upgrade Conflicts
-- [x] Add getUserByOpenId and upsertUser exports to server/db.ts (required by _core/sdk.ts)
-- [x] Register custom arena API routes in _core/index.ts Express app
-- [x] Fix App.tsx to use custom screen-based routing with tRPC provider wrapper
-- [x] Remove better-sqlite3 dependency, migrate arena engine to use MySQL/Drizzle
-- [x] Add arena tables to drizzle/schema.ts (matches, positions, trades, etc.)
-- [x] Fix all TypeScript errors
-- [x] Write vitest tests for key server functionality
-- [x] Test full integration between frontend and backend
-- [x] Save checkpoint
+### Phase 0: Infrastructure Foundation ✅
+- [x] Drizzle schema: 8 new tables (seasons, competitions, competition_registrations, match_results, notifications, user_achievements, institutions, user_profiles)
+- [x] Modified tables: arenaAccounts +role, positions +competitionId, chatMessages +competitionId
+- [x] Shared types: competitionTypes.ts (CompetitionStatus, HubData, etc.)
+- [x] AuthContext: extracted token/login/logout from App.tsx to context
+- [x] Wouter routing: replaced useState state machine with 25-route wouter setup
+- [x] AppShell: global nav bar (desktop top + mobile bottom tab bar)
+- [x] NotificationBell: nav bar bell icon + dropdown panel
+- [x] 18 stub pages → all implemented with real API calls
 
-## Mobile Portrait Layout Redesign
-- [x] Audit current mobile layout issues across all pages
-- [x] Write mobile layout redesign proposal document (design only, no code changes)
-- [x] Deliver proposal to user
+### Phase 1: Core Competition Flow ✅
+- [x] competition-db.ts: 34 DB helper functions
+- [x] CompetitionEngine: lifecycle state machine (tick, start, settle, register, review)
+- [x] competition-routes.ts: ~25 API endpoints (public, user, admin)
+- [x] ArenaEngine: legacyAutoRotate flag (backward compatible)
+- [x] competition-api.ts: frontend API client functions
+- [x] Server integration: routes registered in server/index.ts
 
-## Data Reset
-- [x] Reset all user data in database (truncate all arena tables)
+### Phase 2: Settlement & History ✅
+- [x] SettlementOverlay: framer-motion animated full-screen overlay
+- [x] ResultsPage: podium + my result + full leaderboard table
+- [x] MatchHistoryPage: expandable cards with trade details + close reason icons
 
-## Mobile Trading Page Optimization
-- [x] Audit current TradingPage layout and device detection
-- [x] Use existing useIsMobile hook for responsive device detection
-- [x] Create MobileToolbarOverlay component (floating overlay for Chat/Rank/Stats/News/Trades)
-- [x] Create MobileStatusBar component (compact 2-row status)
-- [x] Create MobileTradingPanel component (vertical stacked trade controls)
-- [x] Create MobileOrderBook component (compact horizontal layout)
-- [x] Modify TradingPage to detect mobile and render mobile layout
-- [x] Add Chart/OrderBook/Info tab switching for mobile main content area
-- [x] Test on mobile viewport and fix issues (TypeScript 0 errors, vitest 20 pass)
-- [x] Run vitest tests (20 passed)
+### Phase 3: User Profile & Institutions ✅
+- [x] profile-routes.ts: GET/PUT /api/me/profile, institution search/create
+- [x] ProfilePage: dashboard with tier badge, country flag, institution, stats grid
+- [x] ProfileEditPage: full form with institution search autocomplete
+- [x] PublicProfilePage: read-only view of other users
 
-## Always Start on Landing Page with Quick Login
-- [x] Remove auto-restore session to trading page on app load
-- [x] Always show Landing Page on first visit
-- [x] Remember username in localStorage for quick re-entry (already stored in localStorage)
-- [x] Show "Welcome back, xxx" quick login option on Landing/Login page (LoginPage already has Returning Player tab with pre-filled username)
-- [x] Test the new flow end-to-end (tsc 0 errors, vitest 20 passed)
+### Phase 4: Notifications ✅
+- [x] useNotifications hook: polling every 30s
+- [x] NotificationBell: bell icon + badge + dropdown
+- [x] NotificationsPage: full list with read/unread, mark all read
+- [x] Server-side notification triggers in CompetitionEngine
 
-## Fix TradingPanel Overlapping Layout
-- [x] Investigate overlapping elements in TradingPanel bottom bar (StatusBar, input, toggle, slider, buttons)
-- [x] Fix the layout overlap issue
-- [x] Test and verify the fix (tsc 0 errors, vitest 20 passed)
+### Phase 5: Trading Analytics ✅
+- [x] analytics-routes.ts: comprehensive aggregation API
+- [x] AnalyticsPage: equity curve, PnL distribution, direction analysis, close reason pie, hourly heatmap, hold duration scatter (all recharts)
 
-## Fix Slider Thumb Overlapping USDT/SOL Toggle
-- [x] Fix vertical overlap between Slider thumb and USDT/SOL toggle button in TradingPanel
+### Phase 6: Geographic & Institutional Stats ✅
+- [x] stats-routes.ts: overview, countries, institutions APIs
+- [x] StatsOverviewPage: 6 stats cards + country ranking + institution ranking
+- [x] InstitutionStatsPage: sortable list with expandable details
 
-## Hide Number Input Spinners
-- [x] Hide browser default up/down arrows on number inputs in TradingPanel
+### Phase 7: Achievements + Admin ✅
+- [x] achievements.ts: 24 achievement definitions (5 categories)
+- [x] AchievementsPage: grid display with locked/unlocked state + progress bar
+- [x] LeaderboardPage: multi-tab (current + season)
+- [x] Admin CompetitionsPage: full management with status-based actions
+- [x] Admin CompetitionFormPage: create/edit with all fields
+- [x] Admin RegistrationsPage: review table with batch actions
+- [x] Admin SeasonsPage: create + list
+- [x] HubPage: 4-state hero + season progress + registrations + recent results + quick stats
 
-## TP/SL System Redesign
-- [x] Audit current TP/SL implementation (backend engine, TradingPanel, CandlestickChart)
-- [x] Write comprehensive TP/SL design proposal (chart double-click, price/percentage modes, adjust/cancel)
-- [x] Deliver design proposal to user
+---
 
-## TP/SL System Implementation
-- [x] Backend: Adjust setTpSl API to support partial updates (undefined = keep existing)
-- [x] Backend: Adjust useArena hook to support independent setTp/setSl
-- [x] Frontend: Order entry TP/SL with price/percentage dual mode + quick buttons
-- [x] Frontend: Position view independent TP/SL edit/cancel
-- [x] Frontend: Chart double-click to set TP/SL with confirmation popover
-- [x] Frontend: Mobile long-press (600ms) as alternative to double-click for chart TP/SL
-- [x] Frontend: Wire up data flow in TradingPage (desktop + mobile)
-- [x] Frontend: Update MobileTradingPanel with same TP/SL improvements
-- [x] Test all flows: tsc 0 errors, vitest 20 passed
+## v1.0 Implementation ✅ Complete (Earlier)
 
-## Fix Trading Page Errors
-- [x] Investigate all error sources (logs, TS, browser console)
-- [x] Fix poll query SQL error (MySQL only_full_group_by + Drizzle column reference mismatch)
-- [x] Fix identified errors - switched to raw db.execute() for poll aggregation
-- [x] Run tests and verify fixes (21 tests passed, 0 red error banner on trading page)
+- [x] Public landing page with Hero, rules, dual leaderboards, quant bot showcase
+- [x] LoL-style tier system: Iron/Bronze/Silver/Gold/Platinum/Diamond
+- [x] Server-authoritative trading engine (ArenaEngine)
+- [x] Binance SOL/USDT live data (WebSocket + REST)
+- [x] Log-sigmoid hold duration weight: weight(t) = 0.5 + 0.6/(1+(300/t)^1.5)
+- [x] TP/SL system with chart double-click
+- [x] Mobile responsive layout
+- [x] i18n (Chinese/English)
+- [x] Chat room, predictions, polls
+- [x] Achievements (frontend-only in v1)
+- [x] MySQL + Drizzle ORM migration from SQLite
 
-## Follow-up Tasks After GitHub Sync
-- [x] Fix dev server crash (added try-catch for DB timeout in WebSocket + /api/state handlers)
-- [x] Add i18n translations for LandingPage (~80 text replacements: hero, rules, prizes, leaderboard, quant bots, CTA, footer)
-- [x] Add i18n translations for LoginPage (tabs, inputs, buttons, features, hints)
-- [x] Add i18n translations for RulesPage (heading, 6 rules, notice, agree, enter, skip)
-- [x] Language preference persistence already built into i18n system (localStorage)
-- [x] Added language toggle button (EN/中) to LandingPage nav, LoginPage, and RulesPage
-- [x] Run tests: vitest 21 passed, only pre-existing server/db.ts fee TS error remains
+---
 
-## Fix Post-Sync Issues
-- [x] expiresAt and fee fields already in schema from GitHub sync (TS errors were stale cache)
-- [x] Run pnpm db:push to sync schema to database (no changes needed)
-- [x] Remove better-sqlite3 and @types/better-sqlite3 dependencies (fixed deployment failure)
-- [x] Install express-rate-limit (new dependency from GitHub)
-- [x] Add trust proxy setting to fix X-Forwarded-For warning
-- [x] Fix sameSite cookie test assertions (none → lax)
-- [x] Restart dev server and verify: tsc 0 errors, server running
-- [x] Run vitest tests: 21 passed
-- [x] Save checkpoint
+## Next Steps (Post v2.0)
+- [ ] `pnpm db:push` — migrate schema to database
+- [ ] Set first admin: `UPDATE arena_accounts SET role='admin' WHERE username='xxx'`
+- [ ] Create first season + competition for end-to-end testing
+- [ ] i18n: add ~200 translation keys for new pages
+- [ ] Code splitting with React.lazy for page components
+- [ ] Email/Push notification integration (optional)
+- [ ] Achievement engine: server-side detection on match settlement
+- [ ] Observation/spectator mode for non-participants watching live competitions
+- [ ] Share competition results as image cards

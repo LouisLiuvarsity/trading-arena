@@ -31,9 +31,10 @@ import {
 } from '@/lib/types';
 import type { AllTimeLeaderboardEntry, QuantBotStats } from '@/lib/types';
 import { apiRequest } from '@/lib/api';
+import { useLocation } from 'wouter';
 
 interface LandingPageProps {
-  onEnterArena: () => void;
+  onEnterArena?: () => void;
 }
 
 // ─── Animated Section Wrapper ─────────────────────────────────
@@ -157,6 +158,8 @@ function EquityChart({ data }: { data: Array<{ time: number; equity: number }> }
 // ─── Main Landing Page ────────────────────────────────────────
 export default function LandingPage({ onEnterArena }: LandingPageProps) {
   const { t, lang, setLang } = useT();
+  const [, navigate] = useLocation();
+  const handleEnterArena = onEnterArena ?? (() => navigate("/login"));
   const [leaderboard, setLeaderboard] = useState(() => generateLeaderboard(285));
   const [allTimeLeaderboard] = useState(() => generateAllTimeLeaderboard());
   const [botStats] = useState(() => generateQuantBotStats());
@@ -207,7 +210,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
           <div className="flex items-center gap-3">
             <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} className="text-[10px] text-[#848E9C] hover:text-[#D1D4DC] px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition-colors font-medium">{lang === 'zh' ? 'EN' : '中'}</button>
             <button
-              onClick={onEnterArena}
+              onClick={handleEnterArena}
               className="bg-[#F0B90B] text-[#0B0E11] text-xs font-bold px-4 py-2 rounded-lg hover:bg-[#F0B90B]/90 transition-colors"
             >
               {t('land.nav.enter')}
@@ -252,7 +255,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
 
             <div className="flex items-center justify-center gap-4 mb-10">
               <button
-                onClick={onEnterArena}
+                onClick={handleEnterArena}
                 className="bg-gradient-to-r from-[#F0B90B] to-[#F0B90B]/85 text-[#0B0E11] font-bold px-8 py-3.5 rounded-xl text-sm hover:shadow-[0_0_30px_rgba(240,185,11,0.3)] transition-all duration-300 flex items-center gap-2"
               >
                 {t('land.hero.cta')}
@@ -848,7 +851,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             {t('land.cta.desc')}
           </p>
           <button
-            onClick={onEnterArena}
+            onClick={handleEnterArena}
             className="bg-gradient-to-r from-[#F0B90B] to-[#F0B90B]/85 text-[#0B0E11] font-bold px-10 py-4 rounded-xl text-sm hover:shadow-[0_0_40px_rgba(240,185,11,0.3)] transition-all duration-300 flex items-center gap-2 mx-auto"
           >
             {t('land.cta.btn')}

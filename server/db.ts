@@ -211,7 +211,7 @@ export async function getArenaAccountByUsernameForLogin(
 export async function getArenaAccountById(
   arenaAccountId: number,
   dbOrTx: DbOrTx = db,
-): Promise<{ id: number; userId: number; username: string; capital: number; seasonPoints: number } | null> {
+): Promise<{ id: number; userId: number; username: string; capital: number; seasonPoints: number; role: string } | null> {
   const rows = await dbOrTx
     .select()
     .from(arenaAccounts)

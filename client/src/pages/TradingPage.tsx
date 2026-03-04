@@ -27,6 +27,8 @@ import { MobileToolbar, MobileToolbarOverlay } from "@/components/MobileToolbarO
 import type { TimeframeKey } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 import { TRADING_PAIR } from "@shared/tradingPair";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLocation } from "wouter";
 
 // ─── Resizable divider hook (desktop only) ──────────────────
 function useResizable(initial: number, min: number, max: number, direction: 'horizontal' | 'vertical') {
@@ -78,11 +80,18 @@ function ResizeHandle({ direction, onMouseDown }: { direction: 'horizontal' | 'v
 
 // ─── Main Page ──────────────────────────────────────────────
 interface TradingPageProps {
-  authToken: string | null;
+  /** v1 compat: direct token prop (optional, falls back to AuthContext) */
+  authToken?: string | null;
   onLogout?: () => void;
+  /** v2: competition ID from route param */
+  competitionId?: string;
 }
 
-export default function TradingPage({ authToken, onLogout }: TradingPageProps) {
+export default function TradingPage({ authToken: authTokenProp, onLogout: onLogoutProp, competitionId }: TradingPageProps) {
+  const auth = useAuth();
+  const [, navigate] = useLocation();
+  const authToken = authTokenProp ?? auth.token;
+  const onLogout = onLogoutProp ?? auth.logout;
   const { t } = useT();
   const isMobile = useIsMobile();
   const [timeframe, setTimeframe] = useState<TimeframeKey>("1m");

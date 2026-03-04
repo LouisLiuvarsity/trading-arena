@@ -7,15 +7,22 @@
 import { useState } from 'react';
 import { Shield, Activity, Clock, DollarSign, Star, Trophy, ChevronRight, Zap, AlertTriangle } from 'lucide-react';
 import { useT } from '@/lib/i18n';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLocation } from 'wouter';
 
 interface RulesPageProps {
-  username: string;
-  onEnterArena: () => void;
+  username?: string;
+  onEnterArena?: () => void;
   onSkipRules?: () => void;
 }
 
-export default function RulesPage({ username, onEnterArena, onSkipRules }: RulesPageProps) {
+export default function RulesPage({ username: usernameProp, onEnterArena, onSkipRules }: RulesPageProps) {
   const { t, lang, setLang } = useT();
+  const auth = useAuth();
+  const [, navigate] = useLocation();
+  const username = usernameProp ?? auth.username;
+  if (!onEnterArena) onEnterArena = () => navigate("/hub");
+  if (!onSkipRules) onSkipRules = () => navigate("/hub");
   const [agreed, setAgreed] = useState(false);
 
   return (

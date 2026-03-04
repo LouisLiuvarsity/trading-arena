@@ -1,457 +1,324 @@
-# Trading Arena
+# Trading Arena v2.0
 
-> **24-Hour Crypto Trading Competition Platform** — A real-time, gamified trading arena built with React 19, featuring live Binance SOL/USDT market data, LoL-style rank tiers, fixed prize pools, and behavioral pressure mechanics designed for competitive trading at scale.
-
----
-
-## Overview
-
-Trading Arena is a **24-hour crypto trading competition simulator** where players compete using 5,000 USDT simulated capital on live Binance SOL/USDT market data. The platform runs a monthly tournament structure — 15 regular matches plus a grand final — with a fixed 10,000 USDT monthly prize budget. Single-match rankings are determined by **return percentage (pnlPct)**, while the season leaderboard uses a **Season Rank Score** that combines cumulative match points with a trade quality multiplier based on average hold duration weight. A six-tier LoL-inspired rank system (Iron → Diamond) drives progression, each unlocking higher leverage multipliers.
-
-The project includes a **server-authoritative backend**:
-- Session login and token auth (`/api/auth/login`, `/api/auth/quick-login`)
-- Server-side position lifecycle (open/close/TP/SL/match-end close)
-- Persistent MySQL storage via Drizzle ORM (`users`, `arena_accounts`, `sessions`, `matches`, `positions`, `trades`, `chat_messages`, `behavior_events`, `predictions`)
-- Real-time state sync endpoint (`/api/arena/state`)
-- Behavior event ingestion endpoint (`/api/arena/events`)
+> **赛事运营平台** — 从永动机竞技场到有排期、报名、审核的正式比赛系统。基于 React 19 + Express + MySQL/Drizzle，使用 Binance SOL/USDT 实时行情数据，支持 LoL 段位体系、固定奖池、用户画像（国家/高校）和完整的赛事生命周期管理。
 
 ---
 
-## Core Parameters
+## 系统概览
 
-| Parameter | Value |
+Trading Arena 是一个 **加密货币交易比赛平台**。v2.0 从"永动机"自动轮转模型转型为**赛事运营平台**：管理员排期比赛 → 用户报名 → 管理员审核入选 → 比赛 → 结算 → 回顾。
+
+### v1 → v2 核心转变
+
+| 维度 | v1 (永动机) | v2 (赛事制) |
+|------|-----------|-------------|
+| 比赛创建 | 自动轮转 24h | 管理员预排期 |
+| 参赛方式 | 注册即参赛 | 报名 → 审核 → 入选 |
+| 用户首页 | 直接进交易 | Hub 赛事大厅 |
+| 比赛间隙 | 不存在 | 浏览赛程、回顾、准备 |
+| 管理后台 | 无 | 完整 CRUD + 审核 |
+| 通知系统 | 无 | 全生命周期通知 |
+| 用户画像 | 仅 username | 国家/地区/高校/专业 |
+| 统计展示 | 无 | 地区排行、高校排行 |
+| 比赛结果 | 瞬态（丢失） | 持久化到 match_results |
+| 交易分析 | 无 | 完整 recharts 图表 |
+
+---
+
+## 核心参数
+
+| 参数 | 值 |
+|------|-----|
+| **月度预算** | 10,000 USDT (固定) |
+| **常规赛奖池** | 500 USDT / 场 |
+| **Grand Final 奖池** | 2,500 USDT |
+| **月度赛程** | 15 常规赛 + 1 Grand Final |
+| **比赛时长** | 24 小时（可配置） |
+| **初始资金** | 5,000 USDT (模拟) |
+| **交易对** | SOL/USDT (Binance 实时数据) |
+| **最大交易次数** | 40 笔 / 场 |
+| **同时持仓** | 1 个仓位 |
+| **最低交易数** | 5 笔才有奖金资格 |
+| **最后 30 分钟** | 仅平仓模式 |
+
+---
+
+## 竞赛生命周期
+
+```
+draft → announced → registration_open → registration_closed → live → settling → completed
+                                                                        ↘ cancelled (任何阶段)
+```
+
+- **draft**: 管理员创建草稿
+- **announced**: 已发布，用户可见但不能报名
+- **registration_open**: 报名开放
+- **registration_closed**: 报名截止，等待开赛
+- **live**: 比赛进行中（ArenaEngine 处理交易）
+- **settling**: 结算中（强平 → 排行 → 写结果 → 加积分 → 通知）
+- **completed**: 比赛完成，结果可查
+
+---
+
+## 页面架构
+
+```
+公开页面
+/                        LandingPage          公开首页
+/login                   LoginPage            注册/登录
+/rules                   RulesPage            规则说明
+/stats                   StatsOverviewPage    平台统计（国家/高校排行）
+/stats/institutions      InstitutionStatsPage 高校排行详情
+
+需要登录（AppShell 导航）
+/hub                     HubPage              赛事大厅（登录后首页）
+/competitions            CompetitionsPage     赛程列表
+/competitions/:slug      CompetitionDetailPage 竞赛详情（多状态）
+/arena/:competitionId    TradingPage          交易界面（全屏）
+/results/:competitionId  ResultsPage          比赛结果/结算
+/profile                 ProfilePage          个人仪表盘
+/profile/edit            ProfileEditPage      编辑资料（国家/高校/简介）
+/profile/analytics       AnalyticsPage        交易分析（recharts 图表）
+/profile/achievements    AchievementsPage     成就陈列柜
+/history                 MatchHistoryPage     比赛历史
+/leaderboard             LeaderboardPage      排行榜（多维度）
+/notifications           NotificationsPage    通知中心
+/user/:username          PublicProfilePage    他人公开主页
+
+管理后台
+/admin/competitions      AdminCompetitionsPage    比赛管理
+/admin/competitions/new  AdminCompetitionFormPage 创建比赛
+/admin/competitions/:id/edit  编辑比赛
+/admin/registrations/:id AdminRegistrationsPage   报名审核
+/admin/seasons           AdminSeasonsPage         赛季管理
+```
+
+---
+
+## 技术栈
+
+| 层 | 技术 |
 |---|---|
-| **Monthly Budget** | 10,000 USDT (fixed) |
-| **Regular Match Prize** | 500 USDT / match |
-| **Grand Final Prize** | 2,500 USDT |
-| **Monthly Schedule** | 15 regular + 1 grand final |
-| **Match Duration** | 24 hours |
-| **Starting Capital** | 5,000 USDT (simulated) |
-| **Trading Pair** | SOL/USDT perpetual (Binance live data) |
-| **Max Trades / Match** | 40 |
-| **Concurrent Positions** | 1 at a time |
-| **Min Trades for Prize** | 5 per match |
-| **Last 30 Minutes** | No new positions (close-only) |
+| **前端框架** | React 19, TypeScript |
+| **路由** | wouter v3.7.1 |
+| **样式** | Tailwind CSS v4 + shadcn/ui + Radix UI |
+| **图表** | Lightweight Charts (K线), recharts (分析图表) |
+| **动画** | Framer Motion |
+| **状态** | React hooks + AuthContext + custom hooks |
+| **后端** | Express + TypeScript |
+| **数据库** | MySQL + Drizzle ORM |
+| **行情** | Binance REST API (server) + WebSocket (client) |
+| **构建** | Vite 7 + ESBuild |
+| **包管理** | pnpm 10 |
 
 ---
 
-## Key Features
-
-### Real-Time Market Data
-
-The platform connects directly to Binance's public data streams for live SOL/USDT market information. A custom **WebSocket Manager** (`BinanceWSManager`) batches all subscriptions into a single connection, with automatic reconnection and exponential backoff. When WebSocket is unavailable, the system gracefully falls back to REST polling.
-
-| Data Stream | Source | Update Frequency |
-|---|---|---|
-| Candlestick (K-line) | `solusdt@kline_{timeframe}` | Real-time per tick |
-| 24h Ticker | `solusdt@ticker` | Real-time per tick |
-| Order Book Depth | `solusdt@depth10@100ms` | Every 100ms |
-| Recent Trades | `solusdt@trade` | Real-time per trade |
-
-Five timeframes are supported: **1m, 5m, 15m, 1H, 4H**. Historical data is fetched via Binance REST API on initial load, then kept current through WebSocket updates.
-
-### Simulated Trading Engine
-
-The trading engine is **server-authoritative** and persists all state in MySQL via Drizzle ORM. Players can open long/short positions with configurable size, set take-profit and stop-loss levels, and manage a maximum of 40 trades per match. Only one position may be open at a time.
-
-### Hold Duration Weight — Log-Sigmoid Continuous Function
-
-**Hold Duration Weighting** is a core mechanic that adjusts trade PnL and drives the season quality multiplier. v4.2 replaced the previous discrete 6-bucket table with a **continuous log-sigmoid function**, eliminating boundary gaming and preserving natural trading behavior for data collection.
-
-**Formula:**
-
-```
-weight(t) = 0.5 + 0.6 / (1 + (300 / t)^1.5)
-```
-
-**Parameters:** `W_MIN = 0.5`, `W_MAX = 1.1`, `T_MID = 300s (5 min)`, `K = 1.5`
-
-| Hold Duration | Weight | Note |
-|---|---|---|
-| 10 seconds | 0.50x | Floor — noise trades |
-| 30 seconds | 0.52x | Minimal suppression |
-| 1 minute | 0.55x | Quick trades |
-| 3 minutes | 0.69x | Tactical trades |
-| 5 minutes | 0.80x | Midpoint |
-| 10 minutes | 0.96x | Near baseline |
-| 30 minutes | 1.07x | Medium conviction |
-| 1 hour | 1.09x | Near ceiling |
-| 2+ hours | 1.10x | Ceiling — high conviction |
-
-**Design rationale:**
-- **Narrow range (0.5x–1.1x)**: Prevents traders from distorting their exit timing to game the weight system, preserving authentic behavioral data for reverse alpha signal extraction.
-- **Continuous function**: No discrete boundaries to exploit — players can't identify "just hold 1 more second to jump to the next tier".
-- **Log-time axis**: Hold durations span 3 orders of magnitude (10s to 12h); log-sigmoid provides natural transitions across all ranges.
-
-### Season Rank Score — Quality-Weighted Points
-
-The season leaderboard combines cumulative match points with a **trade quality multiplier**:
-
-```
-Season Rank Score = Season Points × Average Hold Weight
-```
-
-Where `Average Hold Weight` is the arithmetic mean of `holdWeight` across all completed trades in the season.
-
-**Example:**
-- Player A (steady): 450 pts × 1.01 avg weight = **454.5** rank score
-- Player B (scalper): 450 pts × 0.55 avg weight = **247.5** rank score
-
-Same points, but the quality trader ranks nearly 2x higher. This rewards deliberate, conviction-driven trading.
-
-### Rank Tier System (LoL-Style)
-
-Players progress through six rank tiers driven by **cumulative season points**. Each tier unlocks a higher leverage multiplier, allowing higher-ranked players to amplify their returns. Leverage is applied automatically to all P&L calculations — it is not a user-selectable option, but a reward earned through consistent performance.
-
-| Rank Tier | Points Required | Leverage | Color |
-|---|---|---|---|
-| **Iron** | 0 – 99 | 1.0x | Gray |
-| **Bronze** | 100 – 299 | 1.2x | Bronze |
-| **Silver** | 300 – 599 | 1.5x | Silver |
-| **Gold** | 600 – 999 | 2.0x | Gold |
-| **Platinum** | 1,000 – 1,499 | 2.5x | Teal |
-| **Diamond** | 1,500+ | 3.0x | Purple |
-
-**Monthly Points Decay**: At the end of each season (month), all players' cumulative points are multiplied by **0.8x**. This prevents inactive players from holding high ranks indefinitely and ensures the leaderboard reflects recent performance. A Diamond player (1,500 pts) who skips one month drops to 1,200 (Platinum); two months of inactivity drops them to 960 (Gold).
-
-### Prize Distribution
-
-**Regular Match (500 USDT per match):**
-
-| Rank | Prize | Count | Subtotal |
-|---|---|---|---|
-| 1st | 55 USDT | 1 | 55 |
-| 2nd | 35 USDT | 1 | 35 |
-| 3rd | 25 USDT | 1 | 25 |
-| 4th–5th | 15 USDT | 2 | 30 |
-| 6th–10th | 10 USDT | 5 | 50 |
-| 11th–20th | 6 USDT | 10 | 60 |
-| 21st–50th | 4 USDT | 30 | 120 |
-| 51st–100th | 2.5 USDT | 50 | 125 |
-| **Total** | | **100** | **500 USDT** |
-
-**Grand Final (2,500 USDT):**
-
-| Rank | Prize | Count | Subtotal |
-|---|---|---|---|
-| Champion | 300 USDT | 1 | 300 |
-| 2nd | 200 USDT | 1 | 200 |
-| 3rd | 150 USDT | 1 | 150 |
-| 4th–5th | 100 USDT | 2 | 200 |
-| 6th–10th | 60 USDT | 5 | 300 |
-| 11th–20th | 35 USDT | 10 | 350 |
-| 21st–50th | 15 USDT | 30 | 450 |
-| 51st–100th | 11 USDT | 50 | 550 |
-| **Total** | | **100** | **2,500 USDT** |
-
-**Prize Eligibility**: A minimum of **5 completed trades** per match is required to qualify for prizes and season points. This prevents single-trade luck from dominating results while keeping the barrier low enough for genuine participants.
-
-### Match Points & Grand Final Qualification
-
-Each regular match awards season points based on final ranking. Points accumulate across the month, and the top 500 players by **Season Rank Score** qualify for the grand final.
-
-| Rank Range | Points | Design Intent |
-|---|---|---|
-| 1st | 100 | Clear advantage for champions |
-| 2nd–3rd | 70 | Podium has significant value |
-| 4th–10th | 50 | Top 10 is the first psychological line |
-| 11th–50th | 30 | Core players, steady point source |
-| 51st–100th | 15 | Some points, creates chase motivation |
-| 101st–300th | 5 | Participation accumulates over time |
-| 301st–1000th | 0 | Must improve to accumulate |
-
-### Psychological Pressure Mechanics
-
-The **Rank Anxiety Strip** at the bottom of the trading interface provides constant competitive pressure through real-time indicators: current rank, distance to prize zone, number of recent overtakes, and crowding near the promotion line. A live scrolling feed shows ranking events (overtakes, promotions, rank volatility) with red flash effects.
-
-The **Competition Notifications** panel is a draggable, closeable floating window that delivers alerts about rank changes, milestone achievements, and competitive events. It can be repositioned anywhere on screen and minimized to a bell icon.
-
-### Public Landing Page
-
-The landing page is a public-facing portal (no login required) featuring:
-
-- **Hero section** with live match status and participant count
-- **Rules overview** — 6 core rules presented as visual cards
-- **Prize structure** — Regular match and grand final prize tables
-- **Dual leaderboards** — Current match (sorted by return %) and season total (sorted by season rank score)
-- **Hold weight curve** — Visual display of the log-sigmoid weight function with sample data points
-- **Rank tier progression** — Visual display of all 6 tiers with leverage and points decay info
-- **Quant bot showcase** — AlphaEngine performance dashboard
-- **Call-to-action** — Direct entry to the competition
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| **Framework** | React 19 with TypeScript |
-| **Styling** | Tailwind CSS 4 + shadcn/ui components |
-| **Charts** | Lightweight Charts (TradingView) v5 |
-| **Backend** | Express + TypeScript (server-authoritative) |
-| **Database** | MySQL + Drizzle ORM |
-| **Animations** | Framer Motion |
-| **State** | React hooks + refs (no external state library) |
-| **Data** | Binance WebSocket + REST API (public, no key required) |
-| **Build** | Vite 7 |
-| **Package Manager** | pnpm |
-
----
-
-## Project Structure
+## 项目结构
 
 ```
 trading-arena/
-├── client/
-│   ├── index.html                    # Entry HTML with Google Fonts
-│   ├── public/                       # Static assets
-│   └── src/
-│       ├── App.tsx                   # Root component with screen routing
-│       ├── main.tsx                  # React entry point
-│       ├── index.css                 # Global styles & Tailwind theme
-│       ├── pages/
-│       │   ├── LandingPage.tsx       # Public landing page (rules, leaderboards, bot)
-│       │   ├── LoginPage.tsx         # Competition entry screen
-│       │   ├── RulesPage.tsx         # Quick-start rules guide
-│       │   └── TradingPage.tsx       # Main trading arena layout (desktop + mobile)
-│       ├── components/
-│       │   ├── CandlestickChart.tsx  # TradingView Lightweight Charts
-│       │   ├── OrderBookPanel.tsx    # Bid/ask depth display
-│       │   ├── TradingPanel.tsx      # Desktop order entry with leverage display
-│       │   ├── MobileTradingPanel.tsx # Mobile-optimized trading controls
-│       │   ├── MobileStatusBar.tsx   # Compact 2-row mobile status
-│       │   ├── MobileToolbarOverlay.tsx # Floating mobile menu
-│       │   ├── MobileOrderBook.tsx   # Compact horizontal order book
-│       │   ├── StatusBar.tsx         # Top bar with account metrics
-│       │   ├── TickerBar.tsx         # 24h price statistics
-│       │   ├── NewsTicker.tsx        # Scrolling news headline bar
-│       │   ├── ChatRoom.tsx          # Simulated trader chat
-│       │   ├── Leaderboard.tsx       # Full ranking table
-│       │   ├── MiniLeaderboard.tsx   # Compact ranking widget
-│       │   ├── MarketStats.tsx       # Statistics & analytics panel
-│       │   ├── NewsFeed.tsx          # News list with sentiment
-│       │   ├── TradeHistory.tsx      # Personal trade log
-│       │   ├── RankAnxietyStrip.tsx  # Bottom ranking pressure bar
-│       │   ├── CompetitionNotifications.tsx  # Draggable alert panel
-│       │   ├── SocialBar.tsx         # Social metrics display
-│       │   ├── AIChatBox.tsx         # AI trading assistant chat
-│       │   └── ui/                   # shadcn/ui component library (90+)
-│       ├── hooks/
-│       │   ├── useArena.ts           # Arena state + trading operations
-│       │   ├── useBinanceWS.ts       # Binance WebSocket/REST hooks
-│       │   ├── useTrading.ts         # Client-side trading engine
-│       │   └── useMobile.tsx         # Mobile detection
-│       ├── lib/
-│       │   ├── types.ts              # TypeScript type definitions + constants
-│       │   ├── api.ts                # API request wrapper
-│       │   ├── mockData.ts           # Mock data generators
-│       │   └── utils.ts              # Utility functions
-│       └── contexts/
-│           └── ThemeContext.tsx       # Dark/light theme provider
+├── client/src/
+│   ├── App.tsx                    # wouter 路由 + AuthProvider
+│   ├── main.tsx                   # 入口（LanguageProvider + tRPC + QueryClient）
+│   ├── contexts/
+│   │   ├── AuthContext.tsx         # 认证状态管理
+│   │   └── ThemeContext.tsx        # 主题（暗色）
+│   ├── pages/
+│   │   ├── HubPage.tsx            # 赛事大厅（Hero + 赛季 + 报名 + 战绩）
+│   │   ├── CompetitionsPage.tsx   # 赛程列表（筛选 + 卡片）
+│   │   ├── CompetitionDetailPage.tsx # 竞赛详情（多状态渲染）
+│   │   ├── TradingPage.tsx        # 交易界面（桌面 + 移动端）
+│   │   ├── ResultsPage.tsx        # 比赛结果（领奖台 + 排行）
+│   │   ├── MatchHistoryPage.tsx   # 比赛历史（可展开交易明细）
+│   │   ├── ProfilePage.tsx        # 个人仪表盘
+│   │   ├── ProfileEditPage.tsx    # 编辑资料（国家/高校搜索）
+│   │   ├── AnalyticsPage.tsx      # 交易分析（6 种 recharts 图表）
+│   │   ├── AchievementsPage.tsx   # 成就陈列柜（24 个成就）
+│   │   ├── LeaderboardPage.tsx    # 排行榜
+│   │   ├── NotificationsPage.tsx  # 通知中心
+│   │   ├── StatsOverviewPage.tsx  # 平台统计（国家 + 高校排行）
+│   │   ├── InstitutionStatsPage.tsx # 高校排行详情
+│   │   ├── PublicProfilePage.tsx  # 他人公开主页
+│   │   ├── LandingPage.tsx        # 公开首页
+│   │   ├── LoginPage.tsx          # 登录/注册
+│   │   ├── RulesPage.tsx          # 规则说明
+│   │   └── admin/
+│   │       ├── CompetitionsPage.tsx    # 比赛管理
+│   │       ├── CompetitionFormPage.tsx # 创建/编辑
+│   │       ├── RegistrationsPage.tsx  # 报名审核
+│   │       └── SeasonsPage.tsx        # 赛季管理
+│   ├── components/
+│   │   ├── layout/
+│   │   │   ├── AppShell.tsx       # 全局导航（桌面顶栏 + 移动端底栏）
+│   │   │   └── NotificationBell.tsx # 通知铃铛 + 下拉面板
+│   │   ├── results/
+│   │   │   └── SettlementOverlay.tsx # 赛后结算全屏动画
+│   │   ├── CandlestickChart.tsx   # K 线图
+│   │   ├── TradingPanel.tsx       # 交易面板
+│   │   ├── Leaderboard.tsx        # 排行榜组件
+│   │   ├── ChatRoom.tsx           # 聊天室
+│   │   └── ui/                    # shadcn/ui 组件库 (50+)
+│   ├── hooks/
+│   │   ├── useArena.ts            # 竞技场状态 + 交易操作
+│   │   ├── useBinanceWS.ts        # Binance WebSocket
+│   │   ├── useNotifications.ts    # 通知轮询 hook
+│   │   ├── useAchievements.ts     # 成就检测
+│   │   └── useMobile.tsx          # 移动端检测
+│   └── lib/
+│       ├── types.ts               # 核心类型定义
+│       ├── api.ts                 # API 请求封装
+│       ├── competition-api.ts     # 竞赛系统 API 客户端
+│       ├── i18n.tsx               # 国际化（中/英）
+│       └── mockData.ts            # Mock 数据生成器
+│
 ├── server/
-│   ├── index.ts                      # REST API route registration
-│   ├── engine.ts                     # Core trading engine (ArenaEngine)
-│   ├── db.ts                         # Database helpers (Drizzle ORM)
-│   ├── market.ts                     # Binance market data service
-│   ├── constants.ts                  # Game parameters & hold weight function
-│   ├── routers.ts                    # tRPC routers
-│   └── db.test.ts                    # Vitest tests
+│   ├── _core/index.ts             # Express 服务器入口
+│   ├── index.ts                   # API 路由注册（Arena + Competition + Profile + Analytics + Stats）
+│   ├── engine.ts                  # ArenaEngine（交易引擎 + TP/SL + 排行榜）
+│   ├── competition-engine.ts      # CompetitionEngine（竞赛生命周期状态机）
+│   ├── competition-db.ts          # 竞赛系统 DB 辅助函数（34 个）
+│   ├── competition-routes.ts      # 竞赛系统 API 路由（~25 端点）
+│   ├── profile-routes.ts          # 资料/机构 API
+│   ├── analytics-routes.ts        # 交易分析聚合 API
+│   ├── stats-routes.ts            # 公开地区/高校统计 API
+│   ├── db.ts                      # 核心 DB 辅助函数
+│   ├── market.ts                  # Binance 行情服务
+│   └── constants.ts               # 游戏参数 + 持仓权重函数
+│
 ├── drizzle/
-│   ├── schema.ts                     # Full database schema (9 tables)
-│   ├── relations.ts                  # Schema relationships
-│   └── meta/                         # Migration snapshots
+│   └── schema.ts                  # 数据库 Schema (17 张表)
+│
 ├── shared/
-│   ├── types.ts                      # Shared type definitions
-│   └── _core/errors.ts              # Error classes
-├── docs/
-│   └── Trading_Arena_v4.2.docx       # Full competition design document
-├── README.md
-└── package.json
+│   ├── competitionTypes.ts        # 竞赛系统共享类型
+│   ├── achievements.ts            # 成就目录（24 个）
+│   ├── tradingPair.ts             # 交易对配置
+│   ├── const.ts                   # 共享常量
+│   └── types.ts                   # Schema 类型导出
+│
+└── docs/
+    └── SYSTEM_DESIGN_V2.md        # 完整系统设计文档
 ```
 
 ---
 
-## Getting Started
+## 数据库 Schema (17 张表)
 
-### Prerequisites
+### 核心表 (v1)
+| 表 | 用途 |
+|---|---|
+| `users` | OAuth 用户 |
+| `arena_accounts` | 竞技场账户（username, inviteCode, seasonPoints, role） |
+| `arena_sessions` | 会话 token |
+| `matches` | 比赛轮次（ArenaEngine 桥梁） |
+| `positions` | 当前持仓 |
+| `trades` | 已完成交易 |
+| `chat_messages` | 聊天记录 |
+| `behavior_events` | 行为事件分析 |
+| `predictions` | 每小时价格预测 |
 
-- **Node.js** 22+
-- **pnpm** 10+
-- **MySQL** database (with `DATABASE_URL` env var)
+### 竞赛系统表 (v2 新增)
+| 表 | 用途 |
+|---|---|
+| `seasons` | 月度赛季 |
+| `competitions` | 排期竞赛（替代自动轮转） |
+| `competition_registrations` | 报名/候选/审核 |
+| `match_results` | 比赛结果持久化 |
+| `notifications` | 全生命周期通知 |
+| `user_achievements` | 成就持久化 |
+| `institutions` | 高校/机构 |
+| `user_profiles` | 用户画像（国家/地区/高校） |
 
-### Installation
+---
+
+## API 端点
+
+### 公开
+- `GET /api/competitions` — 赛程列表
+- `GET /api/competitions/:slug` — 竞赛详情
+- `GET /api/seasons` — 赛季列表
+- `GET /api/stats/overview` — 平台统计
+- `GET /api/stats/countries` — 国家排行
+- `GET /api/stats/institutions` — 高校排行
+- `GET /api/public/leaderboard` — 公开排行榜
+
+### 用户（需登录）
+- `POST /api/competitions/:slug/register` — 报名
+- `POST /api/competitions/:slug/withdraw` — 撤回
+- `GET /api/hub` — Hub 数据
+- `GET /api/me/history` — 比赛历史
+- `GET /api/me/analytics` — 交易分析
+- `GET /api/me/profile` — 个人资料
+- `PUT /api/me/profile` — 更新资料
+- `GET /api/me/notifications` — 通知列表
+- `GET /api/arena/:competitionId/state` — 竞赛状态
+- `POST /api/arena/:competitionId/trade/open|close|tpsl` — 交易
+
+### 管理员
+- `POST /api/admin/competitions` — 创建比赛
+- `PUT /api/admin/competitions/:id` — 编辑比赛
+- `POST /api/admin/competitions/:id/transition` — 状态转换
+- `GET /api/admin/competitions/:id/registrations` — 报名列表
+- `POST /api/admin/registrations/:id/review` — 审核
+- `POST /api/admin/seasons` — 创建赛季
+
+---
+
+## 快速开始
 
 ```bash
-# Clone the repository
-git clone https://github.com/YOUR_USERNAME/trading-arena.git
-cd trading-arena
-
-# Install dependencies
+# 安装依赖
 pnpm install
 
-# Start development server
+# 启动开发服务器
 pnpm dev
-```
 
-The application will be available at `http://localhost:3000`.
+# 类型检查
+pnpm check
 
-### Build for Production
-
-```bash
+# 构建
 pnpm build
-pnpm preview
+
+# 数据库迁移
+pnpm db:push
 ```
 
-### Run Production Server
-
-```bash
-pnpm build
-NODE_ENV=production PORT=3000 node dist/index.js
-```
-
-Required environment variables:
-
-- `DATABASE_URL`: MySQL connection string (required)
-
-Optional environment variables:
-
-- `PORT`: server listen port (default `3000`)
-- `VITE_API_BASE`: frontend API base URL (default same-origin)
+环境变量:
+- `DATABASE_URL` — MySQL 连接字符串 (必需)
+- `PORT` — 服务器端口 (默认 3000)
 
 ---
 
-## User Flow
+## 段位体系 (LoL 风格)
+
+| 段位 | 积分要求 | 杠杆 | 颜色 |
+|------|---------|------|------|
+| Iron | 0–99 | 1.0x | #5E6673 |
+| Bronze | 100–299 | 1.2x | #CD7F32 |
+| Silver | 300–599 | 1.5x | #C0C0C0 |
+| Gold | 600–999 | 2.0x | #F0B90B |
+| Platinum | 1,000–1,499 | 2.5x | #00D4AA |
+| Diamond | 1,500+ | 3.0x | #B9F2FF |
+
+月末积分衰减 ×0.8。
+
+---
+
+## 持仓权重 (Log-Sigmoid)
 
 ```
-Landing Page (public)
-    │
-    ├── Browse rules, leaderboards, bot stats
-    │
-    └── Click "进入竞技场" (Enter Arena)
-            │
-            ├── Login Page → New player (invite code + username) or Returning player (quick login)
-            │
-            ├── Rules Quick Guide → Confirm 6 core rules
-            │
-            └── Trading Arena → 24h competition
-                    ├── Candlestick chart (5 timeframes)
-                    ├── Order book (real-time depth)
-                    ├── Trading panel (buy/sell with leverage)
-                    ├── TP/SL system (price/percentage modes, chart double-click)
-                    ├── Right sidebar (Chat/Trades/Rank/Stats/News)
-                    ├── Rank anxiety strip (bottom)
-                    └── Competition notifications (draggable)
+weight(t) = 0.5 + 0.6 / (1 + (300/t)^1.5)
 ```
 
----
-
-## Design Philosophy
-
-The visual design follows an **"Obsidian Exchange"** aesthetic — a fusion of professional crypto exchange interfaces with esports arena energy:
-
-- **Dark-first palette**: Deep backgrounds (`#0B0E17`, `#141722`) with Binance-inspired accents — gold (`#F0B90B`), green (`#0ECB81`), red (`#F6465D`).
-- **Information density**: The trading interface maximizes data visibility within a single viewport. Every pixel serves a purpose during active trading.
-- **Psychological tension**: Real-time rank changes, overtake notifications, and proximity-to-prize indicators create constant competitive pressure — this is a deliberate data collection mechanism.
-- **Monospace precision**: All numerical data uses monospace fonts for alignment. Display typography provides visual hierarchy.
+范围 0.5x（噪音交易）到 1.1x（信念持仓）。抑制炒单，鼓励有信念的持仓。
 
 ---
 
-## Data Flow Architecture
+## 成就系统 (24 个)
 
-```
-Binance Public API
-    │
-    ├── WebSocket (Primary — Client)
-    │   └── BinanceWSManager (Singleton)
-    │       ├── Batched subscriptions (150ms debounce)
-    │       ├── Auto-reconnect with exponential backoff
-    │       └── Max 5 connection attempts
-    │
-    └── REST API (Server — Price Feed)
-        └── MarketService polling (1s ticker, 2s depth)
-
-    ↓
-
-React Hooks Layer
-    ├── useBinanceKline()   → KlineData[]
-    ├── useBinanceTicker()  → TickerData + priceDirection
-    ├── useBinanceDepth()   → OrderBook (bids/asks)
-    └── useBinanceTrades()  → RecentTrade[]
-
-    ↓
-
-Server Engine (Express + MySQL/Drizzle ORM)
-    ├── Session auth + account bootstrap
-    ├── Position management (open/close/TP/SL)
-    ├── Hold duration weight (log-sigmoid) and P&L settlement
-    ├── Match rotation + points allocation
-    ├── Season rank score (points × avg hold weight)
-    ├── Chat + behavior event persistence
-    ├── Prediction system (hourly price direction)
-    └── /api/arena/state snapshot for frontend sync
-
-    ↓
-
-UI Components
-    ├── CandlestickChart (TradingView Lightweight Charts)
-    ├── OrderBookPanel (grid-aligned depth display)
-    ├── TradingPanel / MobileTradingPanel (order entry + weight display)
-    ├── StatusBar / MobileStatusBar (account metrics + rank tier)
-    ├── RankAnxietyStrip (competitive pressure)
-    └── Right Sidebar (Chat/Trades/Rank/Stats/News)
-```
-
----
-
-## Implementation Roadmap
-
-The project is designed for three-phase migration to production:
-
-**Phase 1 — Core Competition Engine (Weeks 1–4)** ✅ Complete
-Server-side trading engine, position management, log-sigmoid hold weight, server-side price validation via Binance REST, fixed prize pool distribution, points system, season rank score, TP/SL system, and grand final qualification logic.
-
-**Phase 2 — Anti-Cheat Infrastructure (Weeks 3–6)**
-Device fingerprinting, IP correlation graph, behavioral detection batch processing (position correlation, time synchronization, open/close pairing, size mirroring), and review dashboard.
-
-**Phase 3 — Engagement & Growth (Weeks 5–8)**
-Grand final qualification tracker, badge and achievement system, cheat reporting interface, post-match trading analysis reports, and tier progression visualization.
-
----
-
-## v4.2 Changelog
-
-- **Hold duration weight**: Discrete 6-bucket table → log-sigmoid continuous function `weight(t) = 0.5 + 0.6/(1+(300/t)^1.5)`, range narrowed from 0.2x–1.3x to 0.5x–1.1x
-- **Season rank score**: New formula `seasonRankScore = seasonPoints × avgHoldWeight` combining points with trade quality
-- **Rank system**: 3-tier promotion (Starter/Intermediate/Advanced) → 6-tier LoL-style (Iron→Diamond)
-- **Database**: SQLite → MySQL + Drizzle ORM
-- **Mobile**: Full responsive mobile trading interface with dedicated components
-
----
-
-## Browser Compatibility
-
-| Browser | Status |
-|---|---|
-| Chrome 90+ | Fully supported |
-| Firefox 90+ | Fully supported |
-| Safari 15+ | Fully supported |
-| Edge 90+ | Fully supported |
-
-WebSocket connectivity requires an unblocked connection to `data-stream.binance.vision`. If WebSocket is blocked (e.g., corporate firewalls), the application automatically falls back to REST polling with slightly reduced update frequency.
+分类: 交易 (8)、排名 (3)、段位 (5)、里程碑 (5)、特别 (3)
 
 ---
 
 ## License
 
-This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
-
----
-
-## Acknowledgments
-
-- **Binance** — Public market data API (WebSocket + REST)
-- **TradingView** — Lightweight Charts library for candlestick rendering
-- **shadcn/ui** — Component library foundation
-- **Radix UI** — Accessible primitive components
-- **Lucide** — Icon set used throughout the interface
-- **Framer Motion** — Animation library for landing page and UI transitions
+MIT License
