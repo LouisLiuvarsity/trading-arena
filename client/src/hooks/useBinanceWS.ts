@@ -1,7 +1,7 @@
 // ============================================================
-// Binance Market Data Hooks (Performance Optimized)
-// Primary: WebSocket via data-stream.binance.vision (spot)
-// Fallback: REST polling via data-api.binance.vision
+// Binance USDⓈ-M Futures Market Data Hooks (Performance Optimized)
+// Primary: WebSocket via fstream.binance.com (futures)
+// Fallback: REST polling via fapi.binance.com
 // Key fix: Batched subscriptions to avoid excessive reconnections
 // Supports dynamic symbol switching per-competition
 // ============================================================
@@ -9,8 +9,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { KlineData, TickerData, OrderBook, TimeframeKey } from '@/lib/types';
 
-const REST_BASE = 'https://data-api.binance.vision/api/v3';
-const WS_BASE = 'wss://data-stream.binance.vision/stream?streams=';
+const REST_BASE = 'https://fapi.binance.com/fapi/v1';
+const WS_BASE = 'wss://fstream.binance.com/stream?streams=';
 
 // ─── WebSocket Manager (Batched) ────────────────────────────
 // Collects all subscriptions, then connects once with all streams
@@ -253,8 +253,12 @@ export function useBinanceTicker(symbol: string) {
 
   const fetchTicker = useCallback(async () => {
     try {
-      const res = await fetch(`${REST_BASE}/ticker/24hr?symbol=${symbol}`);
-      const d = await res.json();
+      const [tickerRes, premiumRes] = await Promise.all([
+        fetch(`${REST_BASE}/ticker/24hr?symbol=${symbol}`),
+        fetch(`${REST_BASE}/premiumIndex?symbol=${symbol}`),
+      ]);
+      const d = await tickerRes.json();
+      const p = premiumRes.ok ? await premiumRes.json() : null;
       if (d.lastPrice) {
         const lastPrice = parseFloat(d.lastPrice);
         if (prevPriceRef.current > 0) {
@@ -269,10 +273,10 @@ export function useBinanceTicker(symbol: string) {
           high24h: parseFloat(d.highPrice),
           low24h: parseFloat(d.lowPrice),
           volume24h: parseFloat(d.quoteVolume),
-          markPrice: lastPrice,
-          indexPrice: lastPrice,
-          fundingRate: 0.0001,
-          nextFundingTime: Date.now() + 3600000,
+          markPrice: p ? parseFloat(p.markPrice) : lastPrice,
+          indexPrice: p ? parseFloat(p.indexPrice) : lastPrice,
+          fundingRate: p ? parseFloat(p.lastFundingRate) : 0,
+          nextFundingTime: p ? p.nextFundingTime : Date.now() + 3600000,
         });
       }
     } catch { /* silent */ }
@@ -283,11 +287,12 @@ export function useBinanceTicker(symbol: string) {
     fetchTicker();
   }, [fetchTicker]);
 
-  // WebSocket subscription for ticker
+  // WebSocket subscription for ticker + mark price
   useEffect(() => {
-    const stream = `${symbolLc}@ticker`;
+    const tickerStream = `${symbolLc}@ticker`;
+    const markStream = `${symbolLc}@markPrice@1s`;
 
-    wsManager.subscribe(stream, (d) => {
+    wsManager.subscribe(tickerStream, (d) => {
       if (d?.c) {
         wsActiveRef.current = true;
         const lastPrice = parseFloat(d.c);
@@ -305,14 +310,27 @@ export function useBinanceTicker(symbol: string) {
           volume24h: parseFloat(d.q),
           markPrice: prev?.markPrice || lastPrice,
           indexPrice: prev?.indexPrice || lastPrice,
-          fundingRate: prev?.fundingRate || 0.0001,
+          fundingRate: prev?.fundingRate || 0,
           nextFundingTime: prev?.nextFundingTime || Date.now() + 3600000,
         }));
       }
     });
 
+    wsManager.subscribe(markStream, (d) => {
+      if (d?.p) {
+        setTicker(prev => prev ? {
+          ...prev,
+          markPrice: parseFloat(d.p),
+          indexPrice: parseFloat(d.i) || prev.indexPrice,
+          fundingRate: parseFloat(d.r),
+          nextFundingTime: d.T || prev.nextFundingTime,
+        } : prev);
+      }
+    });
+
     return () => {
-      wsManager.unsubscribe(stream);
+      wsManager.unsubscribe(tickerStream);
+      wsManager.unsubscribe(markStream);
       wsActiveRef.current = false;
     };
   }, [symbol, symbolLc]);

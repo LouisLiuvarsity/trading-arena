@@ -1,6 +1,6 @@
 import { TRADING_PAIR } from "../shared/tradingPair";
 
-const REST_BASE = "https://data-api.binance.vision/api/v3";
+const FAPI_BASE = "https://fapi.binance.com/fapi/v1";
 const STALE_THRESHOLD_MS = 10_000; // 10 seconds
 
 type TickerSnapshot = {
@@ -92,9 +92,10 @@ export class MarketService {
   }
 
   async start() {
-    await Promise.allSettled([this.refreshTicker(), this.refreshDepth()]);
+    await Promise.allSettled([this.refreshTicker(), this.refreshPremiumIndex(), this.refreshDepth()]);
     this.tickerTimer = setInterval(() => {
       void this.refreshTicker();
+      void this.refreshPremiumIndex();
     }, 1000);
     this.depthTimer = setInterval(() => {
       void this.refreshDepth();
@@ -142,7 +143,7 @@ export class MarketService {
         highPrice: string;
         lowPrice: string;
         quoteVolume: string;
-      }>(`${REST_BASE}/ticker/24hr?symbol=${this.symbol}`);
+      }>(`${FAPI_BASE}/ticker/24hr?symbol=${this.symbol}`);
 
       const lastPrice = Number(raw.lastPrice);
       if (!Number.isFinite(lastPrice) || lastPrice <= 0) {
@@ -150,6 +151,7 @@ export class MarketService {
       }
 
       this.ticker = {
+        ...this.ticker,
         symbol: raw.symbol,
         lastPrice,
         priceChange: Number(raw.priceChange),
@@ -157,10 +159,6 @@ export class MarketService {
         high24h: Number(raw.highPrice),
         low24h: Number(raw.lowPrice),
         volume24h: Number(raw.quoteVolume),
-        markPrice: lastPrice,
-        indexPrice: lastPrice,
-        fundingRate: this.ticker.fundingRate,
-        nextFundingTime: this.ticker.nextFundingTime,
         stale: false,
         lastUpdatedAt: Date.now(),
       };
@@ -169,10 +167,31 @@ export class MarketService {
     }
   }
 
+  private async refreshPremiumIndex() {
+    try {
+      const raw = await fetchJson<{
+        markPrice: string;
+        indexPrice: string;
+        lastFundingRate: string;
+        nextFundingTime: number;
+      }>(`${FAPI_BASE}/premiumIndex?symbol=${this.symbol}`);
+
+      this.ticker = {
+        ...this.ticker,
+        markPrice: Number(raw.markPrice) || this.ticker.lastPrice,
+        indexPrice: Number(raw.indexPrice) || this.ticker.lastPrice,
+        fundingRate: Number(raw.lastFundingRate),
+        nextFundingTime: raw.nextFundingTime,
+      };
+    } catch (err) {
+      console.error("[market] refreshPremiumIndex failed:", (err as Error).message);
+    }
+  }
+
   private async refreshDepth() {
     try {
       const raw = await fetchJson<{ bids: [string, string][]; asks: [string, string][] }>(
-        `${REST_BASE}/depth?symbol=${this.symbol}&limit=20`,
+        `${FAPI_BASE}/depth?symbol=${this.symbol}&limit=20`,
       );
 
       let bidTotal = 0;
