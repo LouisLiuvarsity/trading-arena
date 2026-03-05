@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react';
 import type { AccountState, MatchState, SeasonState } from '@/lib/types';
 import { useT } from '@/lib/i18n';
+import LanguageToggle from '@/components/LanguageToggle';
 
 interface Props {
   account: AccountState;
@@ -23,7 +24,7 @@ function formatCountdown(seconds: number): string {
 }
 
 export default function MobileStatusBar({ account, match, season, onLogout }: Props) {
-  const { t, lang, setLang } = useT();
+  const { t } = useT();
   const [remainingSeconds, setRemainingSeconds] = useState(match.remainingSeconds);
   const [elapsed, setElapsed] = useState(match.elapsed);
 
@@ -60,7 +61,7 @@ export default function MobileStatusBar({ account, match, season, onLogout }: Pr
       <div className="flex items-center justify-between px-2.5 py-1 text-[10px]">
         <div className="flex items-center gap-2">
           <button onClick={onLogout} className="text-[9px] text-[#848E9C] hover:text-[#D1D4DC] px-1 py-0.5 rounded bg-white/5 font-medium">{t('status.home')}</button>
-          <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} className="text-[9px] text-[#848E9C] hover:text-[#D1D4DC] px-1 py-0.5 rounded bg-white/5 font-medium">{lang === 'zh' ? 'EN' : '中'}</button>
+          <LanguageToggle compact />
         </div>
 
         <div className="flex items-center gap-1.5">

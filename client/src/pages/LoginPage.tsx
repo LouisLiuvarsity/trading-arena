@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Trophy, Zap, TrendingUp, Shield, ChevronRight, UserPlus, LogIn } from 'lucide-react';
 import { useT } from '@/lib/i18n';
+import LanguageToggle from '@/components/LanguageToggle';
 import { TRADING_PAIR } from '@shared/tradingPair';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -13,7 +14,7 @@ export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickL
   const auth = useAuth();
   const onLogin = onLoginProp ?? auth.login;
   const onQuickLogin = onQuickLoginProp ?? auth.quickLogin;
-  const { t, lang, setLang } = useT();
+  const { t } = useT();
   const [mode, setMode] = useState<'register' | 'quick'>(() => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -82,7 +83,7 @@ export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickL
       <div className="relative z-10 w-full max-w-[440px] mx-4">
         {/* Language toggle */}
         <div className="absolute -top-12 right-0">
-          <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} className="text-[10px] text-[#848E9C] hover:text-[#D1D4DC] px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition-colors font-medium">{lang === 'zh' ? 'EN' : '中'}</button>
+          <LanguageToggle />
         </div>
         {/* Logo */}
         <div className="text-center mb-8">

@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { Shield, Activity, Clock, DollarSign, Star, Trophy, ChevronRight, Zap, AlertTriangle } from 'lucide-react';
 import { useT } from '@/lib/i18n';
+import LanguageToggle from '@/components/LanguageToggle';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from 'wouter';
 
@@ -17,7 +18,7 @@ interface RulesPageProps {
 }
 
 export default function RulesPage({ username: usernameProp, onEnterArena, onSkipRules }: RulesPageProps) {
-  const { t, lang, setLang } = useT();
+  const { t } = useT();
   const auth = useAuth();
   const [, navigate] = useLocation();
   const username = usernameProp ?? auth.username;
@@ -41,7 +42,7 @@ export default function RulesPage({ username: usernameProp, onEnterArena, onSkip
       <div className="relative z-10 w-full max-w-lg mx-4">
         {/* Language toggle */}
         <div className="flex justify-end mb-2">
-          <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} className="text-[10px] text-[#848E9C] hover:text-[#D1D4DC] px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition-colors font-medium">{lang === 'zh' ? 'EN' : '中'}</button>
+          <LanguageToggle />
         </div>
         {/* Header */}
         <div className="text-center mb-5">

@@ -124,18 +124,7 @@ function FAQDropdown() {
   );
 }
 
-// ─── Language Toggle ─────────────────────────────────────────
-function LanguageToggle() {
-  const { lang, setLang } = useT();
-  return (
-    <button
-      onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
-      className="px-2.5 py-1 rounded-md text-[11px] font-medium text-[#848E9C] hover:text-[#D1D4DC] hover:bg-white/[0.04] transition-colors"
-    >
-      {lang === 'zh' ? 'EN' : '中'}
-    </button>
-  );
-}
+import LanguageToggle from '@/components/LanguageToggle';
 
 // ─── Mobile Nav ──────────────────────────────────────────────
 function MobileNav() {
