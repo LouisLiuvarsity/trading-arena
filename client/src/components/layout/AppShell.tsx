@@ -31,7 +31,7 @@ export default function AppShell({ children }: Props) {
       {!isMobile && (
         <header className="h-12 border-b border-[rgba(255,255,255,0.08)] bg-[#0D1017] flex items-center px-4 shrink-0">
           <Link href="/hub" className="text-[#F0B90B] font-display font-bold text-sm mr-6">
-            逆向Alpha
+            Otter Trader
           </Link>
           <nav className="flex items-center gap-1">
             {navItems.map((item) => (

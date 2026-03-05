@@ -385,7 +385,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'land.nav.login': '登录',
     'land.nav.register': '注册',
 
-    'land.about.title': '了解逆向Alpha',
+    'land.about.title': '了解Otter Trader',
     'land.about.step1.title': '注册参赛',
     'land.about.step1.desc': '使用邀请码免费注册，设置你的交易昵称，即刻加入竞技场。',
     'land.about.step2.title': '参与比赛',
@@ -882,7 +882,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'land.nav.login': 'Log In',
     'land.nav.register': 'Register',
 
-    'land.about.title': 'About 逆向Alpha',
+    'land.about.title': 'About Otter Trader',
     'land.about.step1.title': 'Register',
     'land.about.step1.desc': 'Sign up for free with an invite code, set your trading alias, and join the arena instantly.',
     'land.about.step2.title': 'Compete',

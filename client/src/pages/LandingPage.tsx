@@ -19,7 +19,7 @@ export default function LandingPage(_props: LandingPageProps) {
       {/* Footer */}
       <footer className="border-t border-white/[0.05] py-6 text-center">
         <p className="text-[11px] text-[#5E6673]">
-          逆向Alpha &copy; {new Date().getFullYear()} &middot; Simulated trading &middot; No real capital at risk
+          Otter Trader &copy; {new Date().getFullYear()} &middot; Simulated trading &middot; No real capital at risk
         </p>
       </footer>
     </div>

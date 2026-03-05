@@ -153,7 +153,7 @@ function MobileNav() {
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2 text-[#F0B90B] font-display font-bold">
             <Trophy className="w-4 h-4" />
-            逆向Alpha
+            Otter Trader
           </SheetTitle>
         </SheetHeader>
 
@@ -253,7 +253,7 @@ export default function LandingNavbar() {
           <div className="w-8 h-8 rounded-lg bg-[#F0B90B]/10 flex items-center justify-center">
             <Trophy className="w-4 h-4 text-[#F0B90B]" />
           </div>
-          <span className="text-[#F0B90B] font-display font-bold text-[15px]">逆向Alpha</span>
+          <span className="text-[#F0B90B] font-display font-bold text-[15px]">Otter Trader</span>
         </Link>
 
         {/* Desktop Nav */}
