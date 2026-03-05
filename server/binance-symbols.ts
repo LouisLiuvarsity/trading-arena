@@ -41,9 +41,9 @@ async function fetchExchangeInfo(): Promise<void> {
     const newCache = new Map<string, TradingPairConfig>();
 
     for (const s of data.symbols) {
-      // Only PERPETUAL contracts, only TRADING status, only USDT/USDC quote
+      // Only PERPETUAL / TRADIFI_PERPETUAL contracts, only TRADING status, only USDT/USDC quote
       if (
-        s.contractType !== "PERPETUAL" ||
+        (s.contractType !== "PERPETUAL" && s.contractType !== "TRADIFI_PERPETUAL") ||
         s.status !== "TRADING" ||
         (s.quoteAsset !== "USDT" && s.quoteAsset !== "USDC")
       ) {
