@@ -14,9 +14,13 @@ export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickL
   const onLogin = onLoginProp ?? auth.login;
   const onQuickLogin = onQuickLoginProp ?? auth.quickLogin;
   const { t, lang, setLang } = useT();
-  const [mode, setMode] = useState<'register' | 'quick'>(() =>
-    localStorage.getItem("arena_username") ? 'quick' : 'register'
-  );
+  const [mode, setMode] = useState<'register' | 'quick'>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('mode') === 'register') return 'register';
+    } catch {}
+    return localStorage.getItem("arena_username") ? 'quick' : 'register';
+  });
   const [inviteCode, setInviteCode] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
