@@ -185,6 +185,7 @@ export class ArenaEngine {
   async openPosition(
     arenaAccountId: number,
     input: { direction: "long" | "short"; size: number; tp?: number | null; sl?: number | null },
+    competitionId?: number | null,
   ) {
     await this.rotateMatchIfNeeded();
     const active = await this.getActiveMatch();
@@ -254,6 +255,7 @@ export class ArenaEngine {
       await dbHelpers.insertPosition(
         {
           arenaAccountId,
+          competitionId: competitionId ?? null,
           direction: input.direction,
           size: notionalSize,
           entryPrice: price,
@@ -362,10 +364,20 @@ export class ArenaEngine {
     }));
   }
 
-  async getStateForUser(arenaAccountId: number) {
+  async getStateForUser(
+    arenaAccountId: number,
+    competitionContext?: { competitionId: number; matchId: number; participantIds: Set<number> } | null,
+  ) {
     await this.rotateMatchIfNeeded();
-    const active = await this.getActiveMatch();
-    const leaderboard = await this.buildLeaderboard(active.id);
+    let active: { id: number; matchNumber: number; startTime: number; endTime: number };
+    if (competitionContext) {
+      const matchRow = await dbHelpers.getMatchById(competitionContext.matchId);
+      active = matchRow ?? await this.getActiveMatch();
+    } else {
+      active = await this.getActiveMatch();
+    }
+    const participantIds = competitionContext?.participantIds;
+    const leaderboard = await this.buildLeaderboard(active.id, participantIds);
     const me = leaderboard.find((row) => row.arenaAccountId === arenaAccountId);
     const myRank = me?.rank ?? Math.max(leaderboard.length, 1);
 
@@ -414,7 +426,7 @@ export class ArenaEngine {
     const elapsed = Math.max(0, Math.min(1, (now - active.startTime) / (active.endTime - active.startTime)));
     const cycleMatchNumber = ((active.matchNumber - 1) % 15) + 1;
     const participantCount = Math.max(leaderboard.length, 1);
-    const directionCounts = await dbHelpers.getPositionCountByDirection();
+    const directionCounts = await dbHelpers.getPositionCountByDirection(participantIds);
     const totalOpen = directionCounts.long + directionCounts.short;
     const longPct = totalOpen > 0 ? round2((directionCounts.long / totalOpen) * 100) : 50;
     const shortPct = round2(100 - longPct);
@@ -868,21 +880,27 @@ export class ArenaEngine {
     }
   }
 
-  async buildLeaderboard(matchId: number): Promise<LeaderboardRow[]> {
-    // Return cached result if still fresh
+  async buildLeaderboard(matchId: number, participantIds?: Set<number>): Promise<LeaderboardRow[]> {
+    // Return cached result if still fresh (cache only for unfiltered/legacy builds)
     const now = Date.now();
-    if (this.leaderboardCache && this.leaderboardCache.matchId === matchId && now - this.leaderboardCache.at < ArenaEngine.LEADERBOARD_CACHE_TTL_MS) {
+    if (!participantIds && this.leaderboardCache && this.leaderboardCache.matchId === matchId && now - this.leaderboardCache.at < ArenaEngine.LEADERBOARD_CACHE_TTL_MS) {
       return this.leaderboardCache.rows;
     }
 
-    const allAccounts = await dbHelpers.getAllArenaAccountsWithCapital();
+    let allAccounts = await dbHelpers.getAllArenaAccountsWithCapital();
+    if (participantIds) {
+      allAccounts = allAccounts.filter(a => participantIds.has(a.id));
+    }
     const aggregated = await dbHelpers.getTradeAggregatesForMatch(matchId);
     const aggMap = new Map<number, { pnl: number; weighted: number; trades: number }>();
     for (const row of aggregated) {
       aggMap.set(row.arenaAccountId, { pnl: row.pnl, weighted: row.weighted, trades: row.trades });
     }
 
-    const allPositions = await dbHelpers.getAllPositions();
+    let allPositions = await dbHelpers.getAllPositions();
+    if (participantIds) {
+      allPositions = allPositions.filter(p => participantIds.has(p.arenaAccountId));
+    }
     const positionMap = new Map<number, (typeof allPositions)[0]>();
     for (const pos of allPositions) positionMap.set(pos.arenaAccountId, pos);
 
@@ -936,7 +954,10 @@ export class ArenaEngine {
       row.prizeAmount = row.prizeEligible ? getPrizeForRank(row.rank) : 0;
     });
 
-    this.leaderboardCache = { matchId, rows, at: Date.now() };
+    // Cache only unfiltered (legacy) results
+    if (!participantIds) {
+      this.leaderboardCache = { matchId, rows, at: Date.now() };
+    }
     return rows;
   }
 

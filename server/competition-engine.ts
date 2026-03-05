@@ -197,9 +197,9 @@ export class CompetitionEngine {
         }
       }
 
-      // 2. Build final leaderboard via ArenaEngine (filtered to participants)
-      const leaderboard = await this.arena.buildLeaderboard(comp.matchId!);
-      const participantLeaderboard = leaderboard.filter((r) => acceptedIds.has(r.arenaAccountId));
+      // 2. Build final leaderboard scoped to competition participants only
+      const leaderboard = await this.arena.buildLeaderboard(comp.matchId!, acceptedIds);
+      const participantLeaderboard = leaderboard;
 
       // 3. Write match_results for every participant
       for (const row of participantLeaderboard) {
@@ -395,7 +395,8 @@ export class CompetitionEngine {
     for (const comp of liveComps) {
       const reg = await compDb.getRegistration(comp.id, arenaAccountId);
       if (reg && reg.status === "accepted" && comp.matchId) {
-        const leaderboard = await this.arena.buildLeaderboard(comp.matchId!);
+        const acceptedIds = new Set(await compDb.getAcceptedAccountIds(comp.id));
+        const leaderboard = await this.arena.buildLeaderboard(comp.matchId!, acceptedIds);
         const me = leaderboard.find((r: any) => r.arenaAccountId === arenaAccountId);
         activeCompetition = {
           id: comp.id,

@@ -185,8 +185,9 @@ export function registerCompetitionRoutes(
           prizeWon: r.prizeWon,
         })));
       } else if (comp.status === "live" && comp.matchId) {
-        // Return real-time leaderboard for this competition's match
-        const lb = (await arenaEngine.buildLeaderboard(comp.matchId)).slice(0, 100).map((row) => ({
+        // Return real-time leaderboard scoped to competition participants only
+        const acceptedIds = new Set(await compDb.getAcceptedAccountIds(comp.id));
+        const lb = (await arenaEngine.buildLeaderboard(comp.matchId, acceptedIds)).slice(0, 100).map((row) => ({
           rank: row.rank,
           username: row.username,
           pnlPct: row.pnlPct,

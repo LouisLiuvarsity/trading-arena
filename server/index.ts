@@ -14,6 +14,7 @@ import { registerProfileRoutes } from "./profile-routes";
 import { registerAnalyticsRoutes } from "./analytics-routes";
 import { registerStatsRoutes } from "./stats-routes";
 import { initBinanceSymbols, startSymbolRefresh, getAllBinanceSymbols } from "./binance-symbols";
+import * as compDb from "./competition-db";
 
 const loginSchema = z.object({
   inviteCode: z.string().trim().min(4).max(32),
@@ -59,6 +60,22 @@ function getAuthToken(req: Request): string | null {
   const [prefix, token] = header.split(" ");
   if (prefix !== "Bearer" || !token) return null;
   return token;
+}
+
+/** Look up the live competition a user is participating in (if any) */
+async function getActiveCompetitionForUser(
+  arenaAccountId: number,
+): Promise<{ competitionId: number; matchId: number; participantIds: Set<number> } | null> {
+  const liveComps = await compDb.getLiveCompetitions();
+  for (const comp of liveComps) {
+    if (!comp.matchId) continue;
+    const reg = await compDb.getRegistration(comp.id, arenaAccountId);
+    if (reg && reg.status === "accepted") {
+      const acceptedIds = new Set(await compDb.getAcceptedAccountIds(comp.id));
+      return { competitionId: comp.id, matchId: comp.matchId, participantIds: acceptedIds };
+    }
+  }
+  return null;
 }
 
 // Singleton engine instance
@@ -217,7 +234,8 @@ export async function registerArenaRoutes(app: Express) {
   app.get("/api/arena/state", async (req: Request, res: Response) => {
     try {
       const arenaAccountId = (req as any).arenaAccountId as number;
-      res.json(await engine.getStateForUser(arenaAccountId));
+      const compCtx = await getActiveCompetitionForUser(arenaAccountId);
+      res.json(await engine.getStateForUser(arenaAccountId, compCtx));
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
     }
@@ -231,7 +249,8 @@ export async function registerArenaRoutes(app: Express) {
     }
     try {
       const arenaAccountId = (req as any).arenaAccountId as number;
-      await engine.openPosition(arenaAccountId, parsed.data);
+      const compCtx = await getActiveCompetitionForUser(arenaAccountId);
+      await engine.openPosition(arenaAccountId, parsed.data, compCtx?.competitionId ?? null);
       await engine.recordBehaviorEvent(arenaAccountId, "order_open", parsed.data);
       res.json({ ok: true });
     } catch (error) {
@@ -347,7 +366,8 @@ export async function registerArenaRoutes(app: Express) {
         res.status(401).json({ error: "Unauthorized" });
         return;
       }
-      res.json(await engine.getStateForUser(account.id));
+      const compCtx = await getActiveCompetitionForUser(account.id);
+      res.json(await engine.getStateForUser(account.id, compCtx));
     } catch (error) {
       console.error("[/api/state]", (error as Error).message);
       res.status(500).json({ error: (error as Error).message });
@@ -374,7 +394,8 @@ export async function registerArenaRoutes(app: Express) {
       return;
     }
     try {
-      await engine.openPosition(account.id, parsed.data);
+      const compCtx = await getActiveCompetitionForUser(account.id);
+      await engine.openPosition(account.id, parsed.data, compCtx?.competitionId ?? null);
       await engine.recordBehaviorEvent(account.id, "order_open", parsed.data);
       res.json({ ok: true });
     } catch (error) {

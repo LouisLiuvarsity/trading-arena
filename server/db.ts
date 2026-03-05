@@ -8,7 +8,7 @@
 import crypto from "node:crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { eq, and, desc, sql, lt } from "drizzle-orm";
+import { eq, and, desc, sql, lt, inArray } from "drizzle-orm";
 import {
   users,
   arenaAccounts,
@@ -353,6 +353,25 @@ export async function getActiveMatch(
     : null;
 }
 
+export async function getMatchById(
+  matchId: number,
+  dbOrTx: DbOrTx = db,
+): Promise<{
+  id: number;
+  matchNumber: number;
+  startTime: number;
+  endTime: number;
+} | null> {
+  const rows = await dbOrTx
+    .select()
+    .from(matches)
+    .where(eq(matches.id, matchId))
+    .limit(1);
+  return rows[0]
+    ? { id: rows[0].id, matchNumber: rows[0].matchNumber, startTime: rows[0].startTime, endTime: rows[0].endTime }
+    : null;
+}
+
 export async function createMatch(
   matchNumber: number,
   startTime: number,
@@ -416,6 +435,7 @@ export async function getAllPositions(
 export async function insertPosition(
   input: {
     arenaAccountId: number;
+    competitionId?: number | null;
     direction: string;
     size: number;
     entryPrice: number;
@@ -428,6 +448,7 @@ export async function insertPosition(
 ): Promise<void> {
   await dbOrTx.insert(positions).values({
     ...input,
+    competitionId: input.competitionId ?? null,
     updatedAt: Date.now(),
   });
 }
@@ -633,13 +654,21 @@ export async function insertBehaviorEvent(input: {
   await db.insert(behaviorEvents).values(input);
 }
 
-export async function getPositionCountByDirection(): Promise<{ long: number; short: number }> {
+export async function getPositionCountByDirection(
+  participantIds?: Set<number>,
+): Promise<{ long: number; short: number }> {
+  const conditions = [];
+  if (participantIds && participantIds.size > 0) {
+    const ids = Array.from(participantIds);
+    conditions.push(inArray(positions.arenaAccountId, ids));
+  }
   const rows = await db
     .select({
       direction: positions.direction,
       count: sql<number>`COUNT(*)`,
     })
     .from(positions)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
     .groupBy(positions.direction);
   let long = 0;
   let short = 0;
