@@ -3,17 +3,14 @@
 // Primary: WebSocket via data-stream.binance.vision (spot)
 // Fallback: REST polling via data-api.binance.vision
 // Key fix: Batched subscriptions to avoid excessive reconnections
+// Supports dynamic symbol switching per-competition
 // ============================================================
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { KlineData, TickerData, OrderBook, TimeframeKey } from '@/lib/types';
-
-import { TRADING_PAIR } from '@shared/tradingPair';
 
 const REST_BASE = 'https://data-api.binance.vision/api/v3';
 const WS_BASE = 'wss://data-stream.binance.vision/stream?streams=';
-const SYMBOL = TRADING_PAIR.symbol;
-const SYMBOL_LC = TRADING_PAIR.symbolLc;
 
 // ─── WebSocket Manager (Batched) ────────────────────────────
 // Collects all subscriptions, then connects once with all streams
@@ -150,15 +147,22 @@ class BinanceWSManager {
 const wsManager = new BinanceWSManager();
 
 // ─── Kline Hook ──────────────────────────────────────────────
-export function useBinanceKline(timeframe: TimeframeKey = '1m') {
+export function useBinanceKline(symbol: string, timeframe: TimeframeKey = '1m') {
+  const symbolLc = useMemo(() => symbol.toLowerCase(), [symbol]);
   const [klines, setKlines] = useState<KlineData[]>([]);
   const [loading, setLoading] = useState(true);
   const wsActiveRef = useRef(false);
 
+  // Clear stale data on symbol change
+  useEffect(() => {
+    setKlines([]);
+    setLoading(true);
+  }, [symbol]);
+
   // Fetch historical klines via REST
   const fetchKlines = useCallback(async () => {
     try {
-      const res = await fetch(`${REST_BASE}/klines?symbol=${SYMBOL}&interval=${timeframe}&limit=300`);
+      const res = await fetch(`${REST_BASE}/klines?symbol=${symbol}&interval=${timeframe}&limit=300`);
       const data = await res.json();
       if (Array.isArray(data)) {
         const parsed: KlineData[] = data.map((d: any) => ({
@@ -175,7 +179,7 @@ export function useBinanceKline(timeframe: TimeframeKey = '1m') {
     } catch {
       setLoading(false);
     }
-  }, [timeframe]);
+  }, [symbol, timeframe]);
 
   // Initial fetch
   useEffect(() => {
@@ -185,7 +189,7 @@ export function useBinanceKline(timeframe: TimeframeKey = '1m') {
 
   // WebSocket subscription
   useEffect(() => {
-    const stream = `${SYMBOL_LC}@kline_${timeframe}`;
+    const stream = `${symbolLc}@kline_${timeframe}`;
 
     wsManager.subscribe(stream, (d) => {
       if (d?.k) {
@@ -217,7 +221,7 @@ export function useBinanceKline(timeframe: TimeframeKey = '1m') {
       wsManager.unsubscribe(stream);
       wsActiveRef.current = false;
     };
-  }, [timeframe]);
+  }, [symbolLc, timeframe]);
 
   // Polling fallback (only if WS not active)
   useEffect(() => {
@@ -233,15 +237,23 @@ export function useBinanceKline(timeframe: TimeframeKey = '1m') {
 }
 
 // ─── Ticker Hook ─────────────────────────────────────────────
-export function useBinanceTicker() {
+export function useBinanceTicker(symbol: string) {
+  const symbolLc = useMemo(() => symbol.toLowerCase(), [symbol]);
   const [ticker, setTicker] = useState<TickerData | null>(null);
   const prevPriceRef = useRef<number>(0);
   const [priceDirection, setPriceDirection] = useState<'up' | 'down' | 'neutral'>('neutral');
   const wsActiveRef = useRef(false);
 
+  // Reset on symbol change
+  useEffect(() => {
+    setTicker(null);
+    prevPriceRef.current = 0;
+    setPriceDirection('neutral');
+  }, [symbol]);
+
   const fetchTicker = useCallback(async () => {
     try {
-      const res = await fetch(`${REST_BASE}/ticker/24hr?symbol=${SYMBOL}`);
+      const res = await fetch(`${REST_BASE}/ticker/24hr?symbol=${symbol}`);
       const d = await res.json();
       if (d.lastPrice) {
         const lastPrice = parseFloat(d.lastPrice);
@@ -250,7 +262,7 @@ export function useBinanceTicker() {
         }
         prevPriceRef.current = lastPrice;
         setTicker({
-          symbol: SYMBOL,
+          symbol,
           lastPrice,
           priceChange: parseFloat(d.priceChange),
           priceChangePct: parseFloat(d.priceChangePercent),
@@ -264,7 +276,7 @@ export function useBinanceTicker() {
         });
       }
     } catch { /* silent */ }
-  }, []);
+  }, [symbol]);
 
   // Initial fetch
   useEffect(() => {
@@ -273,7 +285,7 @@ export function useBinanceTicker() {
 
   // WebSocket subscription for ticker
   useEffect(() => {
-    const stream = `${SYMBOL_LC}@ticker`;
+    const stream = `${symbolLc}@ticker`;
 
     wsManager.subscribe(stream, (d) => {
       if (d?.c) {
@@ -284,7 +296,7 @@ export function useBinanceTicker() {
         }
         prevPriceRef.current = lastPrice;
         setTicker(prev => ({
-          symbol: SYMBOL,
+          symbol,
           lastPrice,
           priceChange: parseFloat(d.p),
           priceChangePct: parseFloat(d.P),
@@ -303,7 +315,7 @@ export function useBinanceTicker() {
       wsManager.unsubscribe(stream);
       wsActiveRef.current = false;
     };
-  }, []);
+  }, [symbol, symbolLc]);
 
   // Polling fallback
   useEffect(() => {
@@ -319,9 +331,15 @@ export function useBinanceTicker() {
 }
 
 // ─── Depth Hook ──────────────────────────────────────────────
-export function useBinanceDepth() {
+export function useBinanceDepth(symbol: string) {
+  const symbolLc = useMemo(() => symbol.toLowerCase(), [symbol]);
   const [orderBook, setOrderBook] = useState<OrderBook>({ bids: [], asks: [] });
   const wsActiveRef = useRef(false);
+
+  // Reset on symbol change
+  useEffect(() => {
+    setOrderBook({ bids: [], asks: [] });
+  }, [symbol]);
 
   const parseDepth = useCallback((bids: string[][], asks: string[][]) => {
     let bidTotal = 0;
@@ -342,13 +360,13 @@ export function useBinanceDepth() {
 
   const fetchDepth = useCallback(async () => {
     try {
-      const res = await fetch(`${REST_BASE}/depth?symbol=${SYMBOL}&limit=20`);
+      const res = await fetch(`${REST_BASE}/depth?symbol=${symbol}&limit=20`);
       const d = await res.json();
       if (d.bids && d.asks) {
         parseDepth(d.bids, d.asks);
       }
     } catch { /* silent */ }
-  }, [parseDepth]);
+  }, [symbol, parseDepth]);
 
   // Initial fetch
   useEffect(() => {
@@ -357,7 +375,7 @@ export function useBinanceDepth() {
 
   // WebSocket subscription for depth
   useEffect(() => {
-    const stream = `${SYMBOL_LC}@depth20@1000ms`;
+    const stream = `${symbolLc}@depth20@1000ms`;
 
     wsManager.subscribe(stream, (d) => {
       if (d?.b && d?.a) {
@@ -370,7 +388,7 @@ export function useBinanceDepth() {
       wsManager.unsubscribe(stream);
       wsActiveRef.current = false;
     };
-  }, [parseDepth]);
+  }, [symbolLc, parseDepth]);
 
   // Polling fallback
   useEffect(() => {
@@ -386,13 +404,19 @@ export function useBinanceDepth() {
 }
 
 // ─── Aggregate Trades Hook ───────────────────────────────────
-export function useBinanceAggTrades() {
+export function useBinanceAggTrades(symbol: string) {
+  const symbolLc = useMemo(() => symbol.toLowerCase(), [symbol]);
   const [trades, setTrades] = useState<Array<{ price: number; qty: number; isBuyerMaker: boolean; time: number }>>([]);
   const wsActiveRef = useRef(false);
 
+  // Reset on symbol change
+  useEffect(() => {
+    setTrades([]);
+  }, [symbol]);
+
   const fetchTrades = useCallback(async () => {
     try {
-      const res = await fetch(`${REST_BASE}/trades?symbol=${SYMBOL}&limit=30`);
+      const res = await fetch(`${REST_BASE}/trades?symbol=${symbol}&limit=30`);
       const data = await res.json();
       if (Array.isArray(data)) {
         setTrades(data.map((d: any) => ({
@@ -403,7 +427,7 @@ export function useBinanceAggTrades() {
         })).reverse());
       }
     } catch { /* silent */ }
-  }, []);
+  }, [symbol]);
 
   // Initial fetch
   useEffect(() => {
@@ -412,7 +436,7 @@ export function useBinanceAggTrades() {
 
   // WebSocket subscription for trades
   useEffect(() => {
-    const stream = `${SYMBOL_LC}@aggTrade`;
+    const stream = `${symbolLc}@aggTrade`;
 
     wsManager.subscribe(stream, (d) => {
       if (d?.p) {
@@ -433,7 +457,7 @@ export function useBinanceAggTrades() {
       wsManager.unsubscribe(stream);
       wsActiveRef.current = false;
     };
-  }, []);
+  }, [symbolLc]);
 
   // Polling fallback
   useEffect(() => {

@@ -14,6 +14,7 @@ import type { MarketService } from "./market";
 import * as compDb from "./competition-db";
 import * as db from "./db";
 import { getPointsForRank, getPrizeForRank, getRankTier, MATCH_DURATION_MS, MIN_TRADES_FOR_PRIZE } from "./constants";
+import { TRADING_PAIR } from "../shared/tradingPair";
 
 type CompetitionRow = Awaited<ReturnType<typeof compDb.getCompetitionById>>;
 
@@ -125,6 +126,9 @@ export class CompetitionEngine {
       }
       return;
     }
+
+    // Switch market data feed to this competition's symbol
+    this.market.setSymbol(comp.symbol);
 
     // Create a matches row for ArenaEngine compatibility
     const matchId = await db.createMatch(
@@ -262,6 +266,9 @@ export class CompetitionEngine {
 
       // 7. Mark completed
       await compDb.updateCompetitionStatus(comp.id, "completed");
+
+      // 8. Reset market feed to default symbol
+      this.market.setSymbol(TRADING_PAIR.symbol);
     } finally {
       this.settlingLock.delete(comp.id);
     }

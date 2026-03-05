@@ -6,6 +6,7 @@
 
 import type { OrderBook } from '@/lib/types';
 import { useT } from '@/lib/i18n';
+import { useTradingPair } from '@/contexts/TradingPairContext';
 
 interface Props {
   orderBook: OrderBook;
@@ -33,6 +34,7 @@ function formatTotal(total: number): string {
 
 export default function OrderBookPanel({ orderBook, lastPrice, priceDirection }: Props) {
   const { t } = useT();
+  const tradingPair = useTradingPair();
   const maxAskTotal = orderBook.asks.length > 0 ? orderBook.asks[orderBook.asks.length - 1].total : 1;
   const maxBidTotal = orderBook.bids.length > 0 ? orderBook.bids[orderBook.bids.length - 1].total : 1;
 
@@ -40,7 +42,7 @@ export default function OrderBookPanel({ orderBook, lastPrice, priceDirection }:
     <div className="flex flex-col h-full text-[11px] font-mono">
       <div className="panel-header flex justify-between">
         <span>{t('orderbook.title')}</span>
-        <span className="text-[#848E9C]">{t('common.solusdt')}</span>
+        <span className="text-[#848E9C]">{tradingPair.symbol}</span>
       </div>
 
       {/* Column headers — use grid for fixed column widths */}

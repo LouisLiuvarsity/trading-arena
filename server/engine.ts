@@ -9,13 +9,13 @@ import {
   MAX_TRADES_PER_MATCH,
   MIN_TRADES_FOR_PRIZE,
   STARTING_CAPITAL,
-  SYMBOL,
   getHoldWeight,
   getPointsForRank,
   getPrizeForRank,
   getRankTier,
 } from "./constants";
 import type { MarketService } from "./market";
+import { getSymbolConfig } from "../shared/tradingPair";
 
 type ArenaAccount = {
   id: number;
@@ -334,7 +334,7 @@ export class ArenaEngine {
       participants: leaderboard.length,
       matchNumber: ((active.matchNumber - 1) % 15) + 1,
       prizePool: 500,
-      symbol: SYMBOL,
+      symbol: this.market.getSymbol(),
       leader: top
         ? {
             username: top.username,
@@ -546,12 +546,13 @@ export class ArenaEngine {
         endTime: active.endTime,
         elapsed,
         remainingSeconds,
-        symbol: SYMBOL,
+        symbol: this.market.getSymbol(),
         participantCount,
         prizePool: 500,
         isCloseOnly: remainingSeconds <= CLOSE_ONLY_SECONDS,
         monthLabel: monthLabelCn(active.startTime),
       },
+      tradingPair: getSymbolConfig(this.market.getSymbol()),
       chatMessages: await dbHelpers.getRecentChatMessages(120),
       ticker: this.market.getTicker(),
       orderBook: this.market.getOrderBook(),

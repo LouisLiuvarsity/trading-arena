@@ -1,4 +1,4 @@
-import { SYMBOL } from "./constants";
+import { TRADING_PAIR } from "../shared/tradingPair";
 
 const REST_BASE = "https://data-api.binance.vision/api/v3";
 const STALE_THRESHOLD_MS = 10_000; // 10 seconds
@@ -45,25 +45,51 @@ async function fetchJson<T>(url: string): Promise<T> {
 }
 
 export class MarketService {
-  private ticker: TickerSnapshot = {
-    symbol: SYMBOL,
-    lastPrice: 150,
-    priceChange: 0,
-    priceChangePct: 0,
-    high24h: 150,
-    low24h: 150,
-    volume24h: 0,
-    markPrice: 150,
-    indexPrice: 150,
-    fundingRate: 0,
-    nextFundingTime: Date.now() + 4 * 60 * 60 * 1000,
-    stale: true,
-    lastUpdatedAt: 0,
-  };
+  private symbol: string;
+
+  private ticker: TickerSnapshot;
 
   private orderBook: OrderBookSnapshot = { bids: [], asks: [] };
   private tickerTimer?: NodeJS.Timeout;
   private depthTimer?: NodeJS.Timeout;
+
+  constructor(symbol?: string) {
+    this.symbol = symbol ?? TRADING_PAIR.symbol;
+    this.ticker = {
+      symbol: this.symbol,
+      lastPrice: 0,
+      priceChange: 0,
+      priceChangePct: 0,
+      high24h: 0,
+      low24h: 0,
+      volume24h: 0,
+      markPrice: 0,
+      indexPrice: 0,
+      fundingRate: 0,
+      nextFundingTime: Date.now() + 4 * 60 * 60 * 1000,
+      stale: true,
+      lastUpdatedAt: 0,
+    };
+  }
+
+  /** Switch to a new symbol. Resets ticker and orderbook state. */
+  setSymbol(newSymbol: string): void {
+    if (this.symbol === newSymbol) return;
+    console.log(`[market] Switching symbol: ${this.symbol} → ${newSymbol}`);
+    this.symbol = newSymbol;
+    this.ticker = {
+      ...this.ticker,
+      symbol: newSymbol,
+      lastPrice: 0,
+      stale: true,
+      lastUpdatedAt: 0,
+    };
+    this.orderBook = { bids: [], asks: [] };
+  }
+
+  getSymbol(): string {
+    return this.symbol;
+  }
 
   async start() {
     await Promise.allSettled([this.refreshTicker(), this.refreshDepth()]);
@@ -116,7 +142,7 @@ export class MarketService {
         highPrice: string;
         lowPrice: string;
         quoteVolume: string;
-      }>(`${REST_BASE}/ticker/24hr?symbol=${SYMBOL}`);
+      }>(`${REST_BASE}/ticker/24hr?symbol=${this.symbol}`);
 
       const lastPrice = Number(raw.lastPrice);
       if (!Number.isFinite(lastPrice) || lastPrice <= 0) {
@@ -146,7 +172,7 @@ export class MarketService {
   private async refreshDepth() {
     try {
       const raw = await fetchJson<{ bids: [string, string][]; asks: [string, string][] }>(
-        `${REST_BASE}/depth?symbol=${SYMBOL}&limit=20`,
+        `${REST_BASE}/depth?symbol=${this.symbol}&limit=20`,
       );
 
       let bidTotal = 0;

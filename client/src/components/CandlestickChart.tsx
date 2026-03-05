@@ -16,7 +16,7 @@ import {
 } from 'lightweight-charts';
 import type { IChartApi, ISeriesApi, CandlestickData, HistogramData, Time } from 'lightweight-charts';
 import type { KlineData, TimeframeKey, Position } from '@/lib/types';
-import { TRADING_PAIR } from '@shared/tradingPair';
+import { useTradingPair } from '@/contexts/TradingPairContext';
 
 interface Props {
   klines: KlineData[];
@@ -52,6 +52,7 @@ const TIMEFRAMES: { key: TimeframeKey; label: string }[] = [
 ];
 
 export default function CandlestickChart({ klines, loading, timeframe, onTimeframeChange, position, onSetTpSl }: Props) {
+  const tradingPair = useTradingPair();
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
@@ -352,7 +353,7 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
           </button>
         ))}
         <div className="ml-auto text-[10px] text-[#848E9C] font-mono">
-          {TRADING_PAIR.symbol} Perpetual
+          {tradingPair.symbol} Perpetual
         </div>
         {position && onSetTpSl && (
           <div className="text-[9px] text-[#F0B90B]/60 ml-2">

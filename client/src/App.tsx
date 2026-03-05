@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { TradingPairProvider } from "./contexts/TradingPairContext";
 import AppShell from "./components/layout/AppShell";
 
 // ─── Pages ──────────────────────────────────────────────────
@@ -159,7 +160,9 @@ function App() {
           />
           <Router>
             <AuthProvider>
-              <AppRoutes />
+              <TradingPairProvider>
+                <AppRoutes />
+              </TradingPairProvider>
             </AuthProvider>
           </Router>
         </TooltipProvider>

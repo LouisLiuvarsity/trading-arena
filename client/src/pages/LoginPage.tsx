@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Trophy, Zap, TrendingUp, Shield, ChevronRight, UserPlus, LogIn } from 'lucide-react';
 import { useT } from '@/lib/i18n';
 import LanguageToggle from '@/components/LanguageToggle';
-import { TRADING_PAIR } from '@shared/tradingPair';
+import { useTradingPair } from '@/contexts/TradingPairContext';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface LoginPageProps {
@@ -15,6 +15,7 @@ export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickL
   const onLogin = onLoginProp ?? auth.login;
   const onQuickLogin = onQuickLoginProp ?? auth.quickLogin;
   const { t } = useT();
+  const tradingPair = useTradingPair();
   const [mode, setMode] = useState<'register' | 'quick'>(() => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -104,7 +105,7 @@ export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickL
           </div>
           <div className="w-px h-8 bg-[rgba(255,255,255,0.06)]" />
           <div className="text-center">
-            <div className="text-white text-lg font-bold" style={{ fontFamily: "'DM Mono', monospace" }}>{TRADING_PAIR.baseAsset}</div>
+            <div className="text-white text-lg font-bold" style={{ fontFamily: "'DM Mono', monospace" }}>{tradingPair.baseAsset}</div>
             <div className="text-[#5E6673] text-[10px] uppercase tracking-wider">{t('login.pair')}</div>
           </div>
           <div className="w-px h-8 bg-[rgba(255,255,255,0.06)]" />

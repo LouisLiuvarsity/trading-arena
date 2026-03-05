@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiRequest, ApiError } from "@/lib/api";
-import { TRADING_PAIR } from "@shared/tradingPair";
+import { TRADING_PAIR, getSymbolConfig } from "@shared/tradingPair";
+import { useSetTradingPair } from "@/contexts/TradingPairContext";
 import type {
   AccountState,
   ChatMessage,
@@ -115,13 +116,20 @@ export function useArena(token: string | null, onAuthError?: () => void) {
   const [error, setError] = useState<string | null>(null);
   const onAuthErrorRef = useRef(onAuthError);
   onAuthErrorRef.current = onAuthError;
+  const setTradingPair = useSetTradingPair();
 
   const refresh = useCallback(async () => {
     if (!token) return;
     try {
-      const next = await apiRequest<ArenaState>("/api/state", { token });
+      const next = await apiRequest<ArenaState & { tradingPair?: any }>("/api/state", { token });
       setState(next);
       setError(null);
+      // Push the server-provided trading pair into context
+      if (next.tradingPair) {
+        setTradingPair(next.tradingPair);
+      } else if (next.match?.symbol) {
+        setTradingPair(getSymbolConfig(next.match.symbol));
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         onAuthErrorRef.current?.();
@@ -129,7 +137,7 @@ export function useArena(token: string | null, onAuthError?: () => void) {
       }
       setError((err as Error).message);
     }
-  }, [token]);
+  }, [token, setTradingPair]);
 
   useEffect(() => {
     if (!token) return;

@@ -1,8 +1,8 @@
 import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react';
-import { TRADING_PAIR } from '@shared/tradingPair';
-
-const SYM = TRADING_PAIR.symbol;
-const BASE = TRADING_PAIR.baseAsset;
+// Default symbol values for static translation strings.
+// Dynamic symbol display should use useTradingPair() context instead.
+const SYM = 'SOLUSDT';
+const BASE = 'SOL';
 
 export type Lang = 'zh' | 'en';
 

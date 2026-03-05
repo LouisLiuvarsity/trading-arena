@@ -1,7 +1,10 @@
 import { TRADING_PAIR } from "../shared/tradingPair";
 
+/** @deprecated Use MarketService.getSymbol() for dynamic symbol */
 export const SYMBOL = TRADING_PAIR.symbol;
+/** @deprecated Use getSymbolConfig() for dynamic base asset */
 export const BASE_ASSET = TRADING_PAIR.baseAsset;
+/** @deprecated Use getSymbolConfig() for dynamic quote asset */
 export const QUOTE_ASSET = TRADING_PAIR.quoteAsset;
 export const STARTING_CAPITAL = 5000;
 export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days

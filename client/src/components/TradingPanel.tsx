@@ -3,10 +3,7 @@ import { Slider } from '@/components/ui/slider';
 import type { Position, AccountState } from '@/lib/types';
 import { HOLD_WEIGHT_MIN, HOLD_WEIGHT_MAX } from '@/lib/types';
 import { useT } from '@/lib/i18n';
-import { TRADING_PAIR } from '@shared/tradingPair';
-
-const BASE = TRADING_PAIR.baseAsset;
-const QUOTE = TRADING_PAIR.quoteAsset;
+import { useTradingPair } from '@/contexts/TradingPairContext';
 
 interface Props {
   account: AccountState;
@@ -71,6 +68,7 @@ function TradingPanel({
   account, position, currentPrice, onOpenPosition, onClosePosition, onSetTpSl, isStale
 }: Props) {
   const { t } = useT();
+  const { baseAsset: BASE, quoteAsset: QUOTE } = useTradingPair();
   const [positionSize, setPositionSize] = useState(250);
   const [sizeUnit, setSizeUnit] = useState<'USDT' | 'BASE'>('USDT');
   const [sizeInput, setSizeInput] = useState('250');

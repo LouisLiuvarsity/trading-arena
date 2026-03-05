@@ -10,9 +10,7 @@ import { Slider } from '@/components/ui/slider';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { Position, AccountState } from '@/lib/types';
 import { HOLD_WEIGHT_MIN, HOLD_WEIGHT_MAX } from '@/lib/types';
-import { TRADING_PAIR } from '@shared/tradingPair';
-
-const BASE = TRADING_PAIR.baseAsset;
+import { useTradingPair } from '@/contexts/TradingPairContext';
 import { useT } from '@/lib/i18n';
 
 interface Props {
@@ -67,6 +65,7 @@ function MobileTradingPanel({
   account, position, currentPrice, onOpenPosition, onClosePosition, onSetTpSl, isStale
 }: Props) {
   const { t } = useT();
+  const { baseAsset: BASE } = useTradingPair();
   const [positionSize, setPositionSize] = useState(250);
   const [sizeUnit, setSizeUnit] = useState<'USDT' | 'BASE'>('USDT');
   const [sizeInput, setSizeInput] = useState('250');

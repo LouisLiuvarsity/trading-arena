@@ -26,7 +26,7 @@ import MobileOrderBook from "@/components/MobileOrderBook";
 import { MobileToolbar, MobileToolbarOverlay } from "@/components/MobileToolbarOverlay";
 import type { TimeframeKey } from "@/lib/types";
 import { useT } from "@/lib/i18n";
-import { TRADING_PAIR } from "@shared/tradingPair";
+import { useTradingPair } from "@/contexts/TradingPairContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
 
@@ -94,13 +94,14 @@ export default function TradingPage({ authToken: authTokenProp, onLogout: onLogo
   const onLogout = onLogoutProp ?? auth.logout;
   const { t } = useT();
   const isMobile = useIsMobile();
+  const tradingPair = useTradingPair();
   const [timeframe, setTimeframe] = useState<TimeframeKey>("1m");
   const [rightTab, setRightTab] = useState<string>("chat");
   const [mobilePanel, setMobilePanel] = useState<string | null>(null);
   const [mobileContentTab, setMobileContentTab] = useState<string>("chart");
-  const { klines, loading: klinesLoading } = useBinanceKline(timeframe);
-  const { ticker: wsTicker, priceDirection: wsPriceDirection } = useBinanceTicker();
-  const { orderBook: wsOrderBook } = useBinanceDepth();
+  const { klines, loading: klinesLoading } = useBinanceKline(tradingPair.symbol, timeframe);
+  const { ticker: wsTicker, priceDirection: wsPriceDirection } = useBinanceTicker(tradingPair.symbol);
+  const { orderBook: wsOrderBook } = useBinanceDepth(tradingPair.symbol);
 
   // Resizable panels (desktop only)
   const orderBookResize = useResizable(200, 120, 360, 'horizontal');
@@ -331,7 +332,7 @@ export default function TradingPage({ authToken: authTokenProp, onLogout: onLogo
 
           {/* Compact ticker on the right */}
           <div className="ml-auto flex items-center gap-1.5 text-[10px]">
-            <span className="font-display font-bold text-white text-[10px]">{TRADING_PAIR.baseAsset}</span>
+            <span className="font-display font-bold text-white text-[10px]">{tradingPair.baseAsset}</span>
             <span className={`font-mono font-bold tabular-nums ${
               priceDirection === 'up' ? 'text-[#0ECB81]' : priceDirection === 'down' ? 'text-[#F6465D]' : 'text-[#D1D4DC]'
             }`}>
