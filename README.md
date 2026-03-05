@@ -35,7 +35,7 @@ Trading Arena 是一个 **加密货币交易比赛平台**。v2.0 从"永动机"
 | **月度赛程** | 15 常规赛 + 1 Grand Final |
 | **比赛时长** | 24 小时（可配置） |
 | **初始资金** | 5,000 USDT (模拟) |
-| **交易对** | SOL/USDT (Binance 实时数据) |
+| **交易对** | 支持所有 Binance USDⓈ-M 永续合约（USDT/USDC），每场比赛独立设置 |
 | **最大交易次数** | 40 笔 / 场 |
 | **同时持仓** | 1 个仓位 |
 | **最低交易数** | 5 笔才有奖金资格 |
@@ -107,7 +107,7 @@ draft → announced → registration_open → registration_closed → live → s
 | **状态** | React hooks + AuthContext + custom hooks |
 | **后端** | Express + TypeScript |
 | **数据库** | MySQL + Drizzle ORM |
-| **行情** | Binance REST API (server) + WebSocket (client) |
+| **行情** | Binance USDⓈ-M Futures API — REST `fapi.binance.com` (server) + WebSocket `fstream.binance.com` (client) |
 | **构建** | Vite 7 + ESBuild |
 | **包管理** | pnpm 10 |
 
@@ -122,7 +122,8 @@ trading-arena/
 │   ├── main.tsx                   # 入口（LanguageProvider + tRPC + QueryClient）
 │   ├── contexts/
 │   │   ├── AuthContext.tsx         # 认证状态管理
-│   │   └── ThemeContext.tsx        # 主题（暗色）
+│   │   ├── ThemeContext.tsx        # 主题（暗色）
+│   │   └── TradingPairContext.tsx  # 当前交易对配置（动态，从服务端推送）
 │   ├── pages/
 │   │   ├── HubPage.tsx            # 赛事大厅（Hero + 赛季 + 报名 + 战绩）
 │   │   ├── CompetitionsPage.tsx   # 赛程列表（筛选 + 卡片）
@@ -160,7 +161,7 @@ trading-arena/
 │   │   └── ui/                    # shadcn/ui 组件库 (50+)
 │   ├── hooks/
 │   │   ├── useArena.ts            # 竞技场状态 + 交易操作
-│   │   ├── useBinanceWS.ts        # Binance WebSocket
+│   │   ├── useBinanceWS.ts        # Binance 合约 WebSocket（动态币对）
 │   │   ├── useNotifications.ts    # 通知轮询 hook
 │   │   ├── useAchievements.ts     # 成就检测
 │   │   └── useMobile.tsx          # 移动端检测
@@ -182,7 +183,8 @@ trading-arena/
 │   ├── analytics-routes.ts        # 交易分析聚合 API
 │   ├── stats-routes.ts            # 公开地区/高校统计 API
 │   ├── db.ts                      # 核心 DB 辅助函数
-│   ├── market.ts                  # Binance 行情服务
+│   ├── market.ts                  # Binance 合约行情服务（fapi REST）
+│   ├── binance-symbols.ts         # Binance USDⓈ-M 永续合约币对注册表（动态缓存）
 │   └── constants.ts               # 游戏参数 + 持仓权重函数
 │
 ├── drizzle/
@@ -191,7 +193,7 @@ trading-arena/
 ├── shared/
 │   ├── competitionTypes.ts        # 竞赛系统共享类型
 │   ├── achievements.ts            # 成就目录（24 个）
-│   ├── tradingPair.ts             # 交易对配置
+│   ├── tradingPair.ts             # 交易对类型定义 + 动态解析工具
 │   ├── const.ts                   # 共享常量
 │   └── types.ts                   # Schema 类型导出
 │
@@ -233,6 +235,7 @@ trading-arena/
 ## API 端点
 
 ### 公开
+- `GET /api/symbols` — 所有可用交易对（Binance USDⓈ-M 永续合约，含精度配置）
 - `GET /api/competitions` — 赛程列表
 - `GET /api/competitions/:slug` — 竞赛详情
 - `GET /api/seasons` — 赛季列表
@@ -316,6 +319,77 @@ weight(t) = 0.5 + 0.6 / (1 + (300/t)^1.5)
 ## 成就系统 (24 个)
 
 分类: 交易 (8)、排名 (3)、段位 (5)、里程碑 (5)、特别 (3)
+
+---
+
+## 动态交易对系统
+
+每场比赛可独立设置交易币对，支持所有 Binance USDⓈ-M 永续合约（USDT + USDC）。
+
+### 架构
+
+```
+                    ┌──────────────────────────────────────┐
+                    │  Binance fapi/v1/exchangeInfo         │
+                    │  (300+ 永续合约: BTC, ETH, SOL, XAU…) │
+                    └────────────┬─────────────────────────┘
+                                 │ 启动时拉取, 24h 自动刷新
+                                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│  server/binance-symbols.ts                                   │
+│  缓存所有 PERPETUAL + TRADING 状态的 USDT/USDC 合约          │
+│  提供: getBinanceSymbolConfig() / getAllBinanceSymbols()      │
+│  精度: pricePrecision, quantityPrecision (来自 Binance)       │
+└──────────┬──────────────────────────────────────┬───────────┘
+           │                                      │
+           ▼                                      ▼
+  GET /api/symbols                    CompetitionEngine
+  (Dashboard 下拉选择)                startCompetition(comp)
+                                       → market.setSymbol(comp.symbol)
+                                     settleCompetition()
+                                       → market.setSymbol("SOLUSDT")
+```
+
+### 数据流
+
+```
+Dashboard 选择 BTCUSDC → DB competitions.symbol = "BTCUSDC"
+  → 比赛开始 → market.setSymbol("BTCUSDC")
+  → server/market.ts 切换 fapi REST 轮询到 BTCUSDC
+  → /api/state 返回 { match.symbol, tradingPair: { baseAsset, quoteAsset, priceDecimals, ... } }
+  → 客户端 useArena → TradingPairContext 更新
+  → useBinanceWS hooks 切换 fstream WebSocket 到 btcusdc 流
+  → UI 动态显示 BTC, 使用正确小数位
+  → 比赛结束 → 恢复 SOLUSDT
+```
+
+### 关键文件
+
+| 文件 | 职责 |
+|------|------|
+| `shared/tradingPair.ts` | `TradingPairConfig` 类型定义，`getSymbolConfig()` 客户端降级解析 |
+| `server/binance-symbols.ts` | Binance 合约币对缓存（启动时从 fapi 拉取，24h 刷新） |
+| `server/market.ts` | `MarketService` — 合约 REST 行情（fapi），`setSymbol()` / `getSymbol()` |
+| `server/engine.ts` | `/api/state` 返回 `tradingPair` 字段（优先使用 Binance 精确精度） |
+| `server/competition-engine.ts` | 比赛开始/结束时切换 MarketService 的 symbol |
+| `client/src/contexts/TradingPairContext.tsx` | React Context 持有当前币对配置 |
+| `client/src/hooks/useBinanceWS.ts` | 合约 WebSocket（fstream），所有 Hook 接受动态 `symbol` |
+| `client/src/hooks/useArena.ts` | 从服务端响应推送 `tradingPair` 到 Context |
+
+### 行情数据源
+
+| 数据 | 端点 | 说明 |
+|------|------|------|
+| Ticker (24h) | `fapi/v1/ticker/24hr` | lastPrice, priceChange, volume |
+| Mark Price | `fapi/v1/premiumIndex` | markPrice, indexPrice, fundingRate |
+| 深度 | `fapi/v1/depth` | 买卖盘 15 档 |
+| K 线 | `fapi/v1/klines` | 1m/5m/15m/1h/4h/1d |
+| 成交 | `fapi/v1/trades` | 最近 30 笔 |
+| WS Ticker | `fstream: {sym}@ticker` | 实时价格推送 |
+| WS Mark | `fstream: {sym}@markPrice@1s` | 标记价格 + 资金费率 |
+| WS Depth | `fstream: {sym}@depth20@1000ms` | 实时深度 |
+| WS Kline | `fstream: {sym}@kline_{tf}` | 实时 K 线 |
+| WS Trade | `fstream: {sym}@aggTrade` | 实时成交 |
 
 ---
 

@@ -116,6 +116,8 @@ CREATE TABLE competitions (
   minParticipants     INT NOT NULL DEFAULT 5,
 
   -- 交易规则（每场可独立配置，覆盖默认值）
+  -- symbol 支持所有 Binance USDⓈ-M 永续合约 (USDT/USDC)
+  -- 币对列表从 fapi/v1/exchangeInfo 动态获取，精度自动匹配
   symbol              VARCHAR(16) NOT NULL DEFAULT 'SOLUSDT',
   startingCapital     DOUBLE NOT NULL DEFAULT 5000,
   maxTradesPerMatch   INT NOT NULL DEFAULT 40,
@@ -875,7 +877,7 @@ Mobile:
 │  │  状态B: 已入选，倒计时                                   │ │
 │  │  ┌──────────────────────────────────────────────────┐  │ │
 │  │  │ ⏳ 第8场即将开始                倒计时 02:15:30   │  │ │
-│  │  │ 你已入选 ✅ · 50人参赛 · SOL/USDT · 500U         │  │ │
+│  │  │ 你已入选 ✅ · 50人参赛 · {symbol} · 500U          │  │ │
 │  │  └──────────────────────────────────────────────────┘  │ │
 │  │                                                        │ │
 │  │  状态C: 无活跃比赛                                      │ │
@@ -936,7 +938,7 @@ Mobile:
 │  📅 比赛时间: 2026-03-05 19:00 ~ 2026-03-06 19:00     │
 │  ⏱ 时长: 24小时                                       │
 │  💰 奖池: 500 USDT                                    │
-│  📊 交易对: SOL/USDT · 初始资金: 5,000 USDT            │
+│  📊 交易对: {base}/{quote} · 初始资金: 5,000 USDT       │
 │  👥 名额: 50人 (已报名 42 / 已入选 34)                  │
 │  📋 报名截止: 3月5日 17:00 (还剩 1天12小时)             │
 │                                                        │
@@ -1328,7 +1330,7 @@ GlobalNavBar 中显示 🔔 + unreadCount badge。
 │  最大参赛: [50]   最低参赛: [5]                            │
 │                                                          │
 │  规则（留空使用默认）                                      │
-│  交易对: [SOLUSDT]   初始资金: [5000]                     │
+│  交易对: [搜索下拉 ▼ 全部Binance USDⓈ-M永续]  初始资金: [5000] │
 │  最大交易数: [40]   Close-Only: [1800]秒                  │
 │  费率: [0.0005]                                          │
 │  奖池: [500] USDT                                        │
