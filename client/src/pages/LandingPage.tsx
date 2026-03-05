@@ -1,10 +1,11 @@
-// ============================================================
-// Landing Page — v5.0 Binance-style Homepage
-// Navbar with mega-menus + Left/Right split hero
-// ============================================================
-
 import LandingNavbar from '@/components/landing/LandingNavbar';
 import HeroSection from '@/components/landing/HeroSection';
+import HowItWorks from '@/components/landing/HowItWorks';
+import RulesSection from '@/components/landing/RulesSection';
+import PrizeSection from '@/components/landing/PrizeSection';
+import TierSection from '@/components/landing/TierSection';
+import FAQSection from '@/components/landing/FAQSection';
+import BottomCTA from '@/components/landing/BottomCTA';
 
 interface LandingPageProps {
   onEnterArena?: () => void;
@@ -15,6 +16,12 @@ export default function LandingPage(_props: LandingPageProps) {
     <div className="min-h-screen bg-[#0B0E11] text-white overflow-x-hidden">
       <LandingNavbar />
       <HeroSection />
+      <HowItWorks />
+      <RulesSection />
+      <PrizeSection />
+      <TierSection />
+      <FAQSection />
+      <BottomCTA />
 
       {/* Footer */}
       <footer className="border-t border-white/[0.05] py-6 text-center">
