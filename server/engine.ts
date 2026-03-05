@@ -16,6 +16,7 @@ import {
 } from "./constants";
 import type { MarketService } from "./market";
 import { getSymbolConfig } from "../shared/tradingPair";
+import { getBinanceSymbolConfig } from "./binance-symbols";
 
 type ArenaAccount = {
   id: number;
@@ -552,7 +553,7 @@ export class ArenaEngine {
         isCloseOnly: remainingSeconds <= CLOSE_ONLY_SECONDS,
         monthLabel: monthLabelCn(active.startTime),
       },
-      tradingPair: getSymbolConfig(this.market.getSymbol()),
+      tradingPair: getBinanceSymbolConfig(this.market.getSymbol()) ?? getSymbolConfig(this.market.getSymbol()),
       chatMessages: await dbHelpers.getRecentChatMessages(120),
       ticker: this.market.getTicker(),
       orderBook: this.market.getOrderBook(),

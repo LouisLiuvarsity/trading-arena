@@ -1,6 +1,7 @@
 /**
- * Trading pair configuration registry.
- * Supports multiple symbols — each competition can use a different pair.
+ * Trading pair configuration types and utilities.
+ * Actual symbol list is fetched dynamically from Binance USDⓈ-M Futures API
+ * (see server/binance-symbols.ts). This file provides types and a fallback default.
  */
 
 export interface TradingPairConfig {
@@ -8,7 +9,7 @@ export interface TradingPairConfig {
   symbol: string;
   /** Base asset, e.g. "SOL", "BTC" */
   baseAsset: string;
-  /** Quote asset, e.g. "USDT" */
+  /** Quote asset, e.g. "USDT", "USDC" */
   quoteAsset: string;
   /** Lowercase symbol for Binance WebSocket streams */
   symbolLc: string;
@@ -18,56 +19,41 @@ export interface TradingPairConfig {
   qtyDecimals: number;
 }
 
-export const SYMBOL_REGISTRY: Record<string, TradingPairConfig> = {
-  SOLUSDT: {
-    symbol: "SOLUSDT",
-    baseAsset: "SOL",
-    quoteAsset: "USDT",
-    symbolLc: "solusdt",
-    priceDecimals: 2,
-    qtyDecimals: 2,
-  },
-  BTCUSDT: {
-    symbol: "BTCUSDT",
-    baseAsset: "BTC",
-    quoteAsset: "USDT",
-    symbolLc: "btcusdt",
-    priceDecimals: 2,
-    qtyDecimals: 5,
-  },
-  ETHUSDT: {
-    symbol: "ETHUSDT",
-    baseAsset: "ETH",
-    quoteAsset: "USDT",
-    symbolLc: "ethusdt",
-    priceDecimals: 2,
-    qtyDecimals: 4,
-  },
-  BNBUSDT: {
-    symbol: "BNBUSDT",
-    baseAsset: "BNB",
-    quoteAsset: "USDT",
-    symbolLc: "bnbusdt",
-    priceDecimals: 2,
-    qtyDecimals: 3,
-  },
-  DOGEUSDT: {
-    symbol: "DOGEUSDT",
-    baseAsset: "DOGE",
-    quoteAsset: "USDT",
-    symbolLc: "dogeusdt",
-    priceDecimals: 5,
-    qtyDecimals: 0,
-  },
+/** Default trading pair (used as fallback before server data loads) */
+export const TRADING_PAIR: TradingPairConfig = {
+  symbol: "SOLUSDT",
+  baseAsset: "SOL",
+  quoteAsset: "USDT",
+  symbolLc: "solusdt",
+  priceDecimals: 2,
+  qtyDecimals: 2,
 };
 
-/** All supported symbol keys (for dashboard dropdown) */
-export const SUPPORTED_SYMBOLS = Object.keys(SYMBOL_REGISTRY);
-
-/** Lookup a symbol config from the registry. Falls back to SOLUSDT. */
+/**
+ * Derive a TradingPairConfig from a symbol string.
+ * Used as client-side fallback when the server hasn't provided the full config yet.
+ * The server should always provide precise config via the `tradingPair` field in /api/state.
+ */
 export function getSymbolConfig(symbol: string): TradingPairConfig {
-  return SYMBOL_REGISTRY[symbol] ?? SYMBOL_REGISTRY.SOLUSDT;
-}
+  if (!symbol || symbol === TRADING_PAIR.symbol) return TRADING_PAIR;
 
-/** Default trading pair (backward compatible) */
-export const TRADING_PAIR = SYMBOL_REGISTRY.SOLUSDT;
+  // Derive base/quote from symbol string
+  let quoteAsset = "USDT";
+  let baseAsset = symbol;
+  if (symbol.endsWith("USDC")) {
+    quoteAsset = "USDC";
+    baseAsset = symbol.slice(0, -4);
+  } else if (symbol.endsWith("USDT")) {
+    quoteAsset = "USDT";
+    baseAsset = symbol.slice(0, -4);
+  }
+
+  return {
+    symbol,
+    baseAsset,
+    quoteAsset,
+    symbolLc: symbol.toLowerCase(),
+    priceDecimals: 2, // default; server provides exact value
+    qtyDecimals: 2,   // default; server provides exact value
+  };
+}

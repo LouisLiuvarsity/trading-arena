@@ -13,6 +13,7 @@ import { registerCompetitionRoutes } from "./competition-routes";
 import { registerProfileRoutes } from "./profile-routes";
 import { registerAnalyticsRoutes } from "./analytics-routes";
 import { registerStatsRoutes } from "./stats-routes";
+import { initBinanceSymbols, startSymbolRefresh, getAllBinanceSymbols } from "./binance-symbols";
 
 const loginSchema = z.object({
   inviteCode: z.string().trim().min(4).max(32),
@@ -64,6 +65,10 @@ function getAuthToken(req: Request): string | null {
 let engineInstance: ArenaEngine | null = null;
 
 export async function registerArenaRoutes(app: Express) {
+  // Load all Binance USDⓈ-M perpetual symbols
+  await initBinanceSymbols();
+  const symbolRefreshTimer = startSymbolRefresh();
+
   const market = new MarketService();
   await market.start();
   const engine = new ArenaEngine(market, { legacyAutoRotate: true });
@@ -99,6 +104,7 @@ export async function registerArenaRoutes(app: Express) {
     console.log("[server] Shutting down gracefully...");
     clearInterval(tickTimer);
     clearInterval(cleanupTimer);
+    clearInterval(symbolRefreshTimer);
     market.stop();
   };
   process.on("SIGTERM", shutdown);
@@ -123,6 +129,11 @@ export async function registerArenaRoutes(app: Express) {
   // Health check
   app.get("/api/health", (_req: Request, res: Response) => {
     res.json({ ok: true, ts: Date.now() });
+  });
+
+  // Available trading symbols (all Binance USDⓈ-M perpetual pairs)
+  app.get("/api/symbols", (_req: Request, res: Response) => {
+    res.json(getAllBinanceSymbols());
   });
 
   // Arena login — ID-based with invite code + username

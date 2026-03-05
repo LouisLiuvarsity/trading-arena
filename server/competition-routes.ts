@@ -44,7 +44,7 @@ const createCompetitionSchema = z.object({
   registrationCloseAt: z.number().positive().optional(),
   startTime: z.number().positive(),
   endTime: z.number().positive(),
-  symbol: z.string().regex(/^[A-Z]{2,10}USDT$/).default("SOLUSDT"),
+  symbol: z.string().regex(/^[A-Z]{2,10}(?:USDT|USDC)$/).default("SOLUSDT"),
   startingCapital: z.number().positive().default(5000),
   maxTradesPerMatch: z.number().int().positive().default(40),
   closeOnlySeconds: z.number().int().nonnegative().default(1800),
