@@ -4,6 +4,7 @@ import HowItWorks from '@/components/landing/HowItWorks';
 import RulesSection from '@/components/landing/RulesSection';
 import PrizeSection from '@/components/landing/PrizeSection';
 import TierSection from '@/components/landing/TierSection';
+import LeaderboardSection from '@/components/landing/LeaderboardSection';
 import FAQSection from '@/components/landing/FAQSection';
 import BottomCTA from '@/components/landing/BottomCTA';
 
@@ -20,6 +21,7 @@ export default function LandingPage(_props: LandingPageProps) {
       <RulesSection />
       <PrizeSection />
       <TierSection />
+      <LeaderboardSection />
       <FAQSection />
       <BottomCTA />
 

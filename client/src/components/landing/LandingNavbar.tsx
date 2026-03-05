@@ -16,6 +16,7 @@ const NAV_LINKS = [
   { key: 'land.nav.about', href: '#how-it-works' },
   { key: 'land.nav.competitionRules', href: '#rules' },
   { key: 'land.nav.prizes', href: '#prizes' },
+  { key: 'land.nav.leaderboard', href: '#leaderboard' },
   { key: 'land.nav.faq', href: '#faq' },
 ] as const;
 
