@@ -322,6 +322,8 @@ export const userProfiles = mysqlTable("user_profiles", {
   department: varchar("department", { length: 128 }),
   graduationYear: int("graduationYear"),
   participantType: varchar("participantType", { length: 16 }).notNull().default("independent"),
+  walletAddress: varchar("walletAddress", { length: 256 }),
+  walletNetwork: varchar("walletNetwork", { length: 16 }),
   socialLinks: text("socialLinks"),
   isProfilePublic: int("isProfilePublic").notNull().default(1),
   updatedAt: bigint("updatedAt", { mode: "number" }).notNull(),

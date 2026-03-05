@@ -27,6 +27,8 @@ const updateProfileSchema = z.object({
   participantType: z.enum(["student", "professional", "independent"]).optional(),
   bio: z.string().max(280).nullable().optional(),
   displayName: z.string().max(64).nullable().optional(),
+  walletAddress: z.string().max(256).nullable().optional(),
+  walletNetwork: z.enum(["base", "eth", "sol", "bnb", "trx"]).nullable().optional(),
 });
 
 const createInstitutionSchema = z.object({
@@ -93,6 +95,8 @@ export function registerProfileRoutes(app: Express, arenaEngine: ArenaEngine) {
       if (data.participantType !== undefined) updates.participantType = data.participantType;
       if (data.bio !== undefined) updates.bio = data.bio;
       if (data.displayName !== undefined) updates.displayName = data.displayName;
+      if (data.walletAddress !== undefined) updates.walletAddress = data.walletAddress;
+      if (data.walletNetwork !== undefined) updates.walletNetwork = data.walletNetwork;
 
       await compDb.updateProfile(account.id, updates);
       const updated = await compDb.getProfileByAccountId(account.id);
