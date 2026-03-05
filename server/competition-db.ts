@@ -67,7 +67,7 @@ export async function getSeasonBySlug(
 }
 
 export async function listSeasons(): Promise<Array<typeof seasons.$inferSelect>> {
-  return db.select().from(seasons).orderBy(desc(seasons.startDate));
+  return db.select().from(seasons).where(eq(seasons.archived, 0)).orderBy(desc(seasons.startDate));
 }
 
 // ─── Competition Helpers ─────────────────────────────────────────────────────
@@ -170,18 +170,14 @@ export async function setCompetitionMatchId(
 export async function listCompetitions(
   filters?: { seasonId?: number; status?: string },
 ): Promise<Array<typeof competitions.$inferSelect>> {
-  const conditions = [];
+  const conditions = [eq(competitions.archived, 0)];
   if (filters?.seasonId) {
     conditions.push(eq(competitions.seasonId, filters.seasonId));
   }
   if (filters?.status) {
     conditions.push(eq(competitions.status, filters.status));
   }
-  const query = db.select().from(competitions);
-  if (conditions.length > 0) {
-    return query.where(and(...conditions)).orderBy(desc(competitions.startTime));
-  }
-  return query.orderBy(desc(competitions.startTime));
+  return db.select().from(competitions).where(and(...conditions)).orderBy(desc(competitions.startTime));
 }
 
 export async function getCompetitionsByStatus(

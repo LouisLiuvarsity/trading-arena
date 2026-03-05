@@ -167,6 +167,7 @@ export const seasons = mysqlTable("seasons", {
   startDate: bigint("startDate", { mode: "number" }).notNull(),
   endDate: bigint("endDate", { mode: "number" }).notNull(),
   pointsDecayFactor: double("pointsDecayFactor").notNull().default(0.8),
+  archived: int("archived").notNull().default(0),
   createdAt: bigint("createdAt", { mode: "number" }).notNull(),
 });
 
@@ -206,12 +207,14 @@ export const competitions = mysqlTable("competitions", {
   inviteOnly: int("inviteOnly").notNull().default(0),
   // Admin
   createdBy: int("createdBy"),
+  archived: int("archived").notNull().default(0),
   createdAt: bigint("createdAt", { mode: "number" }).notNull(),
   updatedAt: bigint("updatedAt", { mode: "number" }).notNull(),
 }, (table) => [
   index("idx_comp_season").on(table.seasonId),
   index("idx_comp_status").on(table.status),
   index("idx_comp_start").on(table.startTime),
+  index("idx_comp_archived").on(table.archived),
 ]);
 
 /** Competition registrations (waitlist / selection) */
