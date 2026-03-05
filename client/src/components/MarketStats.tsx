@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { RANK_TIERS } from "@/lib/types";
-import type { AccountState, MatchState, SocialData, PredictionState, PollVoteData } from "@/lib/types";
+import type { AccountState, MatchState, SocialData, PredictionState, PollVoteData, TickerData } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 
 interface Props {
@@ -9,9 +9,10 @@ interface Props {
   match: MatchState;
   prediction?: PredictionState | null;
   pollData?: PollVoteData | null;
+  ticker?: TickerData | null;
 }
 
-function MarketStats({ social, account, match, prediction, pollData }: Props) {
+function MarketStats({ social, account, match, prediction, pollData, ticker }: Props) {
   const { t, lang } = useT();
   const longPct = Math.round(social.longPct * 10) / 10;
   const shortPct = Math.round(social.shortPct * 10) / 10;
@@ -85,6 +86,32 @@ function MarketStats({ social, account, match, prediction, pollData }: Props) {
           <StatItem label={t('stats.dominantDir')} value={social.recentDirectionBias === "long" ? t('stats.dirLong') : social.recentDirectionBias === "short" ? t('stats.dirShort') : t('stats.dirNeutral')} />
         </div>
       </div>
+
+      {/* Market Metrics — Funding Rate */}
+      {ticker && (
+        <div className="px-3 py-2.5 border-b border-[rgba(255,255,255,0.06)]">
+          <div className="text-[10px] text-[#848E9C] mb-1.5">{t('stats.fundingRate')}</div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+            <StatItem
+              label={t('stats.fundingRate')}
+              value={ticker.fundingRate != null ? (ticker.fundingRate * 100).toFixed(4) + '%' : '—'}
+              highlight
+              highlightColor={ticker.fundingRate >= 0 ? 'green' : 'red'}
+            />
+            <StatItem
+              label={t('stats.nextFunding')}
+              value={(() => {
+                if (!ticker.nextFundingTime) return '—';
+                const diff = ticker.nextFundingTime - Date.now();
+                if (diff <= 0) return '0:00';
+                const h = Math.floor(diff / 3600000);
+                const m = Math.floor((diff % 3600000) / 60000);
+                return `${h}:${m.toString().padStart(2, '0')}`;
+              })()}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Prediction & Voting Stats */}
       <div className="px-3 py-2.5 border-b border-[rgba(255,255,255,0.06)]">

@@ -21,9 +21,11 @@ class BinanceWSManager {
   private handlers: Map<string, StreamHandler> = new Map();
   private reconnectTimer: number | null = null;
   private batchTimer: number | null = null;
+  private recoveryTimer: number | null = null;
+  private visibilityHandler: (() => void) | null = null;
   private isConnected = false;
   private connectionAttempts = 0;
-  private maxAttempts = 5;
+  private maxAttempts = 15;
   private currentStreamsUrl = '';
 
   subscribe(stream: string, handler: StreamHandler) {
@@ -61,7 +63,10 @@ class BinanceWSManager {
 
   private connect() {
     if (this.handlers.size === 0) return;
-    if (this.connectionAttempts >= this.maxAttempts) return;
+    if (this.connectionAttempts >= this.maxAttempts) {
+      this.startRecoveryCheck();
+      return;
+    }
 
     const url = this.getStreamsUrl();
     this.currentStreamsUrl = url;
@@ -116,6 +121,14 @@ class BinanceWSManager {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
+    if (this.recoveryTimer) {
+      clearInterval(this.recoveryTimer);
+      this.recoveryTimer = null;
+    }
+    if (this.visibilityHandler) {
+      document.removeEventListener('visibilitychange', this.visibilityHandler);
+      this.visibilityHandler = null;
+    }
     if (this.ws) {
       this.ws.onclose = null;
       this.ws.onerror = null;
@@ -136,6 +149,38 @@ class BinanceWSManager {
       this.reconnectTimer = null;
       this.connect();
     }, delay);
+  }
+
+  private startRecoveryCheck() {
+    if (this.recoveryTimer) return;
+    this.recoveryTimer = window.setInterval(async () => {
+      try {
+        const res = await fetch(REST_BASE + '/ping');
+        if (res.ok) {
+          if (this.recoveryTimer) {
+            clearInterval(this.recoveryTimer);
+            this.recoveryTimer = null;
+          }
+          this.connectionAttempts = 0;
+          this.connect();
+        }
+      } catch { /* network still down */ }
+    }, 60000);
+
+    // Also listen for tab visibility to reconnect immediately
+    if (!this.visibilityHandler) {
+      this.visibilityHandler = () => {
+        if (document.visibilityState === 'visible' && !this.isConnected && this.handlers.size > 0) {
+          if (this.recoveryTimer) {
+            clearInterval(this.recoveryTimer);
+            this.recoveryTimer = null;
+          }
+          this.connectionAttempts = 0;
+          this.connect();
+        }
+      };
+      document.addEventListener('visibilitychange', this.visibilityHandler);
+    }
   }
 
   getConnectionState(): boolean {

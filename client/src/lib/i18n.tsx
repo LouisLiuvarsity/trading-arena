@@ -155,6 +155,9 @@ const translations: Record<Lang, Record<string, string>> = {
     'stats.avgRankChange': '30min 排名变化',
     'stats.noPredData': '暂无预测数据',
     'stats.noVoteData': '暂无投票数据',
+    // Funding rate
+    'stats.fundingRate': '资金费率',
+    'stats.nextFunding': '下次结算',
 
     // ── RankAnxietyStrip ──
     'rank.label': '⚔ RANK',
@@ -988,6 +991,9 @@ const translations: Record<Lang, Record<string, string>> = {
     'stats.avgRankChange': '30min rank change',
     'stats.noPredData': 'No prediction data',
     'stats.noVoteData': 'No vote data',
+    // Funding rate
+    'stats.fundingRate': 'Funding Rate',
+    'stats.nextFunding': 'Next Funding',
 
     // ── RankAnxietyStrip ──
     'rank.label': '⚔ RANK',

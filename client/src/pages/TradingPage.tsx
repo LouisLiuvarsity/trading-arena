@@ -443,7 +443,7 @@ export default function TradingPage({ authToken: authTokenProp, onLogout: onLogo
             <Leaderboard entries={leaderboard} myRank={account.rank} promotionLineRank={300} />
           )}
           {mobilePanel === 'stats' && (
-            <MarketStats social={social} account={account} match={match} prediction={prediction} pollData={pollData} />
+            <MarketStats social={social} account={account} match={match} prediction={prediction} pollData={pollData} ticker={ticker} />
           )}
           {mobilePanel === 'news' && (
             <NewsFeed news={news} />
@@ -558,7 +558,7 @@ export default function TradingPage({ authToken: authTokenProp, onLogout: onLogo
               <Leaderboard entries={leaderboard} myRank={account.rank} promotionLineRank={300} />
             </TabsContent>
             <TabsContent value="stats" className="flex-1 overflow-hidden mt-0">
-              <MarketStats social={social} account={account} match={match} prediction={prediction} pollData={pollData} />
+              <MarketStats social={social} account={account} match={match} prediction={prediction} pollData={pollData} ticker={ticker} />
             </TabsContent>
             <TabsContent value="news" className="flex-1 overflow-hidden mt-0">
               <NewsFeed news={news} />
