@@ -4,7 +4,7 @@ import { apiRequest } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { useProfile, useSaveProfile } from "@/hooks/useCompetitionData";
 import { useLocation } from "wouter";
-import { ArrowLeft, Loader2, Search, Check } from "lucide-react";
+import { ArrowLeft, Loader2, Search, Check, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 interface ProfileData {
@@ -20,6 +20,8 @@ interface ProfileData {
   department: string | null;
   graduationYear: number | null;
   participantType: string;
+  walletAddress: string | null;
+  walletNetwork: string | null;
 }
 
 interface Institution {
@@ -54,6 +56,14 @@ const PARTICIPANT_TYPES = [
   { value: "independent" },
 ];
 
+const WALLET_NETWORKS = [
+  { value: "base", label: "Base" },
+  { value: "eth", label: "Ethereum (ERC-20)" },
+  { value: "sol", label: "Solana" },
+  { value: "bnb", label: "BNB Smart Chain (BEP-20)" },
+  { value: "trx", label: "Tron (TRC-20)" },
+];
+
 export default function ProfileEditPage() {
   const { token } = useAuth();
   const { t } = useT();
@@ -74,6 +84,9 @@ export default function ProfileEditPage() {
   const [institutionName, setInstitutionName] = useState("");
   const [department, setDepartment] = useState("");
   const [graduationYear, setGraduationYear] = useState("");
+
+  const [walletAddress, setWalletAddress] = useState("");
+  const [walletNetwork, setWalletNetwork] = useState("");
 
   const [instSearchQuery, setInstSearchQuery] = useState("");
   const [instSearchResults, setInstSearchResults] = useState<Institution[]>([]);
@@ -98,6 +111,8 @@ export default function ProfileEditPage() {
       setInstSearchQuery(data.institutionName ?? "");
       setDepartment(data.department ?? "");
       setGraduationYear(data.graduationYear ? String(data.graduationYear) : "");
+      setWalletAddress(data.walletAddress ?? "");
+      setWalletNetwork(data.walletNetwork ?? "");
       setInitialized(true);
     }
   }, [profileData, initialized]);
@@ -167,6 +182,8 @@ export default function ProfileEditPage() {
         institutionName: institutionName.trim() || null,
         department: department.trim() || null,
         graduationYear: graduationYear ? Number(graduationYear) : null,
+        walletAddress: walletAddress.trim() || null,
+        walletNetwork: walletNetwork || null,
       });
       toast.success(t('profileEdit.saved'));
       navigate("/profile");
@@ -376,6 +393,46 @@ export default function ProfileEditPage() {
             />
           </div>
         </div>
+      </div>
+
+      {/* Wallet Section */}
+      <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-5 space-y-4">
+        <div className="flex items-center gap-2 mb-1">
+          <Wallet className="w-4 h-4 text-[#F0B90B]" />
+          <h2 className="text-sm font-display font-bold text-[#D1D4DC]">{t('profileEdit.walletTitle')}</h2>
+        </div>
+        <p className="text-[11px] text-[#848E9C] leading-relaxed">{t('profileEdit.walletDesc')}</p>
+
+        <div>
+          <label className={labelCls}>{t('profileEdit.walletNetwork')}</label>
+          <select
+            value={walletNetwork}
+            onChange={(e) => setWalletNetwork(e.target.value)}
+            className={inputCls}
+          >
+            <option value="">{t('profileEdit.walletNetworkPh')}</option>
+            {WALLET_NETWORKS.map((n) => (
+              <option key={n.value} value={n.value}>
+                {n.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className={labelCls}>{t('profileEdit.walletAddress')}</label>
+          <input
+            type="text"
+            value={walletAddress}
+            onChange={(e) => setWalletAddress(e.target.value)}
+            placeholder={t('profileEdit.walletAddressPh')}
+            className={`${inputCls} font-mono text-[12px]`}
+          />
+        </div>
+
+        <p className="text-[10px] text-[#F0B90B]/70 leading-relaxed">
+          {t('profileEdit.walletEligibility')}
+        </p>
       </div>
 
       <div className="flex gap-3">
