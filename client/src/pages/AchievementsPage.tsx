@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { apiRequest } from "@/lib/api";
+import { useT } from "@/lib/i18n";
+import { useAchievementsQuery } from "@/hooks/useCompetitionData";
 import { ACHIEVEMENT_CATALOG, type AchievementDef } from "@shared/achievements";
 import { Lock } from "lucide-react";
 
@@ -10,41 +9,23 @@ interface UserAchievement {
   competitionId: number | null;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  trading: "交易",
-  ranking: "排名",
-  tier: "段位",
-  milestone: "里程碑",
-  special: "特别",
-};
-
 const CATEGORY_ORDER = ["trading", "ranking", "tier", "milestone", "special"];
 
 export default function AchievementsPage() {
-  const { token } = useAuth();
-  const [unlocked, setUnlocked] = useState<Map<string, UserAchievement>>(new Map());
-  const [loading, setLoading] = useState(true);
+  const { t } = useT();
+  const { data: achievementsData, isLoading: loading } = useAchievementsQuery();
 
-  useEffect(() => {
-    if (!token) return;
-    // Fetch user achievements from API (GET /api/me/achievements will be backed by userAchievements table)
-    apiRequest<UserAchievement[]>("/api/me/achievements", { token })
-      .then((data) => {
-        const map = new Map<string, UserAchievement>();
-        for (const a of data) map.set(a.achievementKey, a);
-        setUnlocked(map);
-      })
-      .catch(() => {
-        // API may not exist yet — show all as locked
-      })
-      .finally(() => setLoading(false));
-  }, [token]);
+  const unlocked = new Map<string, UserAchievement>();
+  if (achievementsData) {
+    for (const a of achievementsData as UserAchievement[]) {
+      unlocked.set(a.achievementKey, a);
+    }
+  }
 
   const unlockedCount = unlocked.size;
   const totalCount = ACHIEVEMENT_CATALOG.length;
   const progress = totalCount > 0 ? Math.round((unlockedCount / totalCount) * 100) : 0;
 
-  // Group by category
   const grouped = new Map<string, AchievementDef[]>();
   for (const cat of CATEGORY_ORDER) grouped.set(cat, []);
   for (const ach of ACHIEVEMENT_CATALOG) {
@@ -53,17 +34,24 @@ export default function AchievementsPage() {
     grouped.set(ach.category, list);
   }
 
+  const CATEGORY_LABELS: Record<string, string> = {
+    trading: t('achieve.cat.trading'),
+    ranking: t('achieve.cat.ranking'),
+    tier: t('achieve.cat.tier'),
+    milestone: t('achieve.cat.milestone'),
+    special: t('achieve.cat.special'),
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-xl font-display font-bold text-white mb-1">成就陈列柜</h1>
-        <p className="text-[#848E9C] text-sm">已解锁 {unlockedCount} / {totalCount} 项成就</p>
+        <h1 className="text-xl font-display font-bold text-white mb-1">{t('achieve.title')}</h1>
+        <p className="text-[#848E9C] text-sm">{t('achieve.unlocked', { done: unlockedCount, total: totalCount })}</p>
       </div>
 
-      {/* Progress bar */}
       <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[#D1D4DC] text-sm font-semibold">总进度</span>
+          <span className="text-[#D1D4DC] text-sm font-semibold">{t('achieve.progress')}</span>
           <span className="text-[#F0B90B] font-mono text-sm font-bold">{progress}%</span>
         </div>
         <div className="h-2 bg-white/5 rounded-full overflow-hidden">
@@ -74,7 +62,6 @@ export default function AchievementsPage() {
         </div>
       </div>
 
-      {/* Achievement grid by category */}
       {CATEGORY_ORDER.map((cat) => {
         const achievements = grouped.get(cat) ?? [];
         if (achievements.length === 0) return null;
@@ -105,7 +92,7 @@ export default function AchievementsPage() {
                     </div>
                     {isUnlocked && data && (
                       <div className="mt-2 text-[9px] text-[#F0B90B]">
-                        {new Date(data.unlockedAt).toLocaleDateString("zh-CN")} 解锁
+                        {t('achieve.unlockedAt', { date: new Date(data.unlockedAt).toLocaleDateString("zh-CN") })}
                       </div>
                     )}
                   </div>

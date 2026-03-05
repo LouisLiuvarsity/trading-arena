@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
-import { getHubData } from "@/lib/competition-api";
+import { useT } from "@/lib/i18n";
+import { useHubData } from "@/hooks/useCompetitionData";
 import { RANK_TIERS, getRankTier } from "@/lib/types";
 import type { HubData } from "@shared/competitionTypes";
 import {
@@ -16,12 +16,12 @@ import {
   Target,
 } from "lucide-react";
 
-const STATUS_BADGE: Record<string, { label: string; color: string }> = {
-  pending: { label: "待审核", color: "#F0B90B" },
-  accepted: { label: "已通过", color: "#0ECB81" },
-  rejected: { label: "已拒绝", color: "#F6465D" },
-  withdrawn: { label: "已撤回", color: "#5E6673" },
-  waitlisted: { label: "候补中", color: "#848E9C" },
+const STATUS_BADGE_COLORS: Record<string, string> = {
+  pending: "#F0B90B",
+  accepted: "#0ECB81",
+  rejected: "#F6465D",
+  withdrawn: "#5E6673",
+  waitlisted: "#848E9C",
 };
 
 const TIER_COLORS: Record<string, string> = {
@@ -42,31 +42,19 @@ function formatTime(ts: number): string {
   });
 }
 
-function formatCountdown(seconds: number): string {
-  if (seconds <= 0) return "已结束";
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-}
-
 export default function HubPage() {
   const { token, username } = useAuth();
-  const [hub, setHub] = useState<HubData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { t } = useT();
+  const { data: hub, isLoading: loading, error: queryError } = useHubData();
+  const error = queryError ? (queryError as Error).message : null;
 
-  useEffect(() => {
-    if (!token) return;
-    setLoading(true);
-    getHubData(token)
-      .then((data) => {
-        setHub(data);
-        setError(null);
-      })
-      .catch((err) => setError(err.message ?? "加载失败"))
-      .finally(() => setLoading(false));
-  }, [token]);
+  function formatCountdown(seconds: number): string {
+    if (seconds <= 0) return t('common.ended');
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  }
 
   if (loading) {
     return (
@@ -81,12 +69,12 @@ export default function HubPage() {
       <div className="p-6 max-w-5xl mx-auto">
         <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-8 text-center">
           <AlertCircle className="w-8 h-8 text-[#F6465D] mx-auto mb-3" />
-          <p className="text-[#D1D4DC] text-sm">{error ?? "加载失败"}</p>
+          <p className="text-[#D1D4DC] text-sm">{error ?? t('common.loadFailed')}</p>
           <button
             onClick={() => window.location.reload()}
             className="mt-4 px-4 py-2 bg-[#F0B90B] text-[#0B0E11] text-xs font-bold rounded-lg hover:bg-[#F0B90B]/90 transition-colors"
           >
-            重试
+            {t('common.retry')}
           </button>
         </div>
       </div>
@@ -95,7 +83,6 @@ export default function HubPage() {
 
   const { activeCompetition, myRegistrations, upcomingCompetitions, season, recentResults, quickStats } = hub;
 
-  // Determine next upcoming competition for hero
   const nextComp = upcomingCompetitions.length > 0 ? upcomingCompetitions[0] : null;
 
   return (
@@ -103,15 +90,14 @@ export default function HubPage() {
       {/* Header */}
       <div className="mb-2">
         <h1 className="text-xl font-display font-bold text-white">
-          欢迎回来, {username}
+          {t('hub.welcome', { name: username })}
         </h1>
-        <p className="text-[#848E9C] text-[11px] mt-1">赛事大厅</p>
+        <p className="text-[#848E9C] text-[11px] mt-1">{t('hub.subtitle')}</p>
       </div>
 
       {/* Hero Card */}
       <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-6">
         {activeCompetition ? (
-          /* Status A: Active competition */
           <div>
             <div className="flex items-center gap-2 mb-3">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#0ECB81]/15 text-[#0ECB81] text-[11px] font-bold rounded-full">
@@ -124,21 +110,21 @@ export default function HubPage() {
             </div>
             <div className="flex items-center gap-6 mb-4">
               <div>
-                <p className="text-[10px] text-[#848E9C]">排名</p>
+                <p className="text-[10px] text-[#848E9C]">{t('hub.rank')}</p>
                 <p className="text-2xl font-mono font-bold text-white">
                   #{activeCompetition.myRank}
                   <span className="text-[11px] text-[#848E9C] ml-1">/ {activeCompetition.participantCount}</span>
                 </p>
               </div>
               <div>
-                <p className="text-[10px] text-[#848E9C]">收益率</p>
+                <p className="text-[10px] text-[#848E9C]">{t('hub.returnRate')}</p>
                 <p className={`text-2xl font-mono font-bold ${activeCompetition.myPnlPct >= 0 ? "text-[#0ECB81]" : "text-[#F6465D]"}`}>
                   {activeCompetition.myPnlPct >= 0 ? "+" : ""}
                   {activeCompetition.myPnlPct.toFixed(2)}%
                 </p>
               </div>
               <div>
-                <p className="text-[10px] text-[#848E9C]">剩余时间</p>
+                <p className="text-[10px] text-[#848E9C]">{t('hub.remaining')}</p>
                 <p className="text-lg font-mono text-white">
                   {formatCountdown(activeCompetition.remainingSeconds)}
                 </p>
@@ -148,15 +134,14 @@ export default function HubPage() {
               href={`/arena/${activeCompetition.id}`}
               className="inline-flex items-center gap-2 px-6 py-3 bg-[#0ECB81] text-[#0B0E11] text-sm font-bold rounded-lg hover:bg-[#0ECB81]/90 transition-colors"
             >
-              进入比赛 <ChevronRight className="w-4 h-4" />
+              {t('hub.enterArena')} <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
         ) : nextComp && nextComp.status === "registration_open" ? (
-          /* Status C: Next competition, registration open */
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Calendar className="w-4 h-4 text-[#F0B90B]" />
-              <span className="text-[#D1D4DC] text-sm font-display font-bold">下一场</span>
+              <span className="text-[#D1D4DC] text-sm font-display font-bold">{t('hub.nextComp')}</span>
             </div>
             <p className="text-white text-lg font-bold mb-1">{nextComp.title}</p>
             <p className="text-[#848E9C] text-[11px] mb-4">
@@ -166,27 +151,26 @@ export default function HubPage() {
               <span
                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold"
                 style={{
-                  backgroundColor: `${STATUS_BADGE[nextComp.myRegistrationStatus]?.color ?? "#848E9C"}20`,
-                  color: STATUS_BADGE[nextComp.myRegistrationStatus]?.color ?? "#848E9C",
+                  backgroundColor: `${STATUS_BADGE_COLORS[nextComp.myRegistrationStatus] ?? "#848E9C"}20`,
+                  color: STATUS_BADGE_COLORS[nextComp.myRegistrationStatus] ?? "#848E9C",
                 }}
               >
-                {STATUS_BADGE[nextComp.myRegistrationStatus]?.label ?? nextComp.myRegistrationStatus}
+                {t('common.status.' + nextComp.myRegistrationStatus)}
               </span>
             ) : (
               <Link
                 href={`/competitions/${nextComp.slug}`}
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#F0B90B] text-[#0B0E11] text-sm font-bold rounded-lg hover:bg-[#F0B90B]/90 transition-colors"
               >
-                立即报名 <ChevronRight className="w-4 h-4" />
+                {t('hub.registerNow')} <ChevronRight className="w-4 h-4" />
               </Link>
             )}
           </div>
         ) : nextComp ? (
-          /* Status B: Next competition with countdown */
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Clock className="w-4 h-4 text-[#F0B90B]" />
-              <span className="text-[#D1D4DC] text-sm font-display font-bold">即将开始</span>
+              <span className="text-[#D1D4DC] text-sm font-display font-bold">{t('hub.upcoming')}</span>
             </div>
             <p className="text-white text-lg font-bold mb-1">{nextComp.title}</p>
             <p className="text-[#848E9C] text-[11px] mb-2">
@@ -196,25 +180,24 @@ export default function HubPage() {
               <span
                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold"
                 style={{
-                  backgroundColor: `${STATUS_BADGE[nextComp.myRegistrationStatus]?.color ?? "#848E9C"}20`,
-                  color: STATUS_BADGE[nextComp.myRegistrationStatus]?.color ?? "#848E9C",
+                  backgroundColor: `${STATUS_BADGE_COLORS[nextComp.myRegistrationStatus] ?? "#848E9C"}20`,
+                  color: STATUS_BADGE_COLORS[nextComp.myRegistrationStatus] ?? "#848E9C",
                 }}
               >
-                我的状态: {STATUS_BADGE[nextComp.myRegistrationStatus]?.label ?? nextComp.myRegistrationStatus}
+                {t('hub.myStatus')}{t('common.status.' + nextComp.myRegistrationStatus)}
               </span>
             )}
           </div>
         ) : (
-          /* Status D: Nothing */
           <div className="text-center py-4">
             <Calendar className="w-8 h-8 text-[#848E9C] mx-auto mb-3" />
-            <p className="text-[#D1D4DC] text-sm font-bold">暂无安排</p>
-            <p className="text-[#848E9C] text-[11px] mt-1">关注赛程页面获取最新比赛信息</p>
+            <p className="text-[#D1D4DC] text-sm font-bold">{t('hub.noSchedule')}</p>
+            <p className="text-[#848E9C] text-[11px] mt-1">{t('hub.noScheduleHint')}</p>
             <Link
               href="/competitions"
               className="inline-flex items-center gap-1 mt-3 text-[#F0B90B] text-xs font-bold hover:underline"
             >
-              浏览赛程 <ChevronRight className="w-3 h-3" />
+              {t('hub.browseSchedule')} <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
         )}
@@ -225,7 +208,7 @@ export default function HubPage() {
         <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-5">
           <h2 className="text-sm font-display font-bold text-[#D1D4DC] mb-3 flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-[#F0B90B]" />
-            赛季进度
+            {t('hub.seasonProgress')}
             <span className="text-[10px] text-[#848E9C] font-normal ml-auto">{season.name}</span>
           </h2>
           <div className="mb-3">
@@ -266,10 +249,10 @@ export default function HubPage() {
           </div>
           <div className="flex items-center gap-3 text-[11px]">
             <span className="text-[#848E9C]">
-              比赛进度: {season.matchesCompleted}/{season.matchesTotal}
+              {t('hub.matchProgress', { done: season.matchesCompleted, total: season.matchesTotal })}
             </span>
             <span className={`font-bold ${season.grandFinalQualified ? "text-[#0ECB81]" : "text-[#F6465D]"}`}>
-              GF资格: {season.grandFinalQualified ? "已达标" : `未达标 (需${season.grandFinalLine}pts)`}
+              {season.grandFinalQualified ? t('hub.gfQualified') : t('hub.gfNotQualified', { pts: season.grandFinalLine })}
             </span>
           </div>
         </div>
@@ -280,11 +263,11 @@ export default function HubPage() {
         <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-5">
           <h2 className="text-sm font-display font-bold text-[#D1D4DC] mb-3 flex items-center gap-2">
             <Star className="w-4 h-4 text-[#F0B90B]" />
-            我的报名
+            {t('hub.myRegistrations')}
           </h2>
           <div className="space-y-2">
             {myRegistrations.map((reg) => {
-              const badge = STATUS_BADGE[reg.status] ?? { label: reg.status, color: "#848E9C" };
+              const badgeColor = STATUS_BADGE_COLORS[reg.status] ?? "#848E9C";
               return (
                 <div
                   key={reg.competitionId}
@@ -297,11 +280,11 @@ export default function HubPage() {
                   <span
                     className="text-[10px] font-bold px-2 py-0.5 rounded"
                     style={{
-                      backgroundColor: `${badge.color}20`,
-                      color: badge.color,
+                      backgroundColor: `${badgeColor}20`,
+                      color: badgeColor,
                     }}
                   >
-                    {badge.label}
+                    {t('common.status.' + reg.status)}
                   </span>
                 </div>
               );
@@ -316,10 +299,10 @@ export default function HubPage() {
         <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-5">
           <h2 className="text-sm font-display font-bold text-[#D1D4DC] mb-3 flex items-center gap-2">
             <Trophy className="w-4 h-4 text-[#F0B90B]" />
-            最近战绩
+            {t('hub.recentResults')}
           </h2>
           {recentResults.length === 0 ? (
-            <p className="text-[#848E9C] text-[11px]">暂无比赛记录</p>
+            <p className="text-[#848E9C] text-[11px]">{t('hub.noRecords')}</p>
           ) : (
             <div className="space-y-2">
               {recentResults.slice(0, 5).map((r) => (
@@ -329,7 +312,7 @@ export default function HubPage() {
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-[#848E9C] text-[10px] font-mono w-6">#{r.finalRank}</span>
-                    <span className="text-[#D1D4DC] text-[11px]">第{r.competitionNumber}场</span>
+                    <span className="text-[#D1D4DC] text-[11px]">{t('hub.matchN', { n: r.competitionNumber })}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <span
@@ -347,7 +330,7 @@ export default function HubPage() {
             href="/history"
             className="inline-flex items-center gap-1 text-[#F0B90B] text-[11px] font-bold mt-3 hover:underline"
           >
-            查看全部 <ChevronRight className="w-3 h-3" />
+            {t('common.viewAll')} <ChevronRight className="w-3 h-3" />
           </Link>
         </div>
 
@@ -355,33 +338,33 @@ export default function HubPage() {
         <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-5">
           <h2 className="text-sm font-display font-bold text-[#D1D4DC] mb-3 flex items-center gap-2">
             <Target className="w-4 h-4 text-[#F0B90B]" />
-            快速统计
+            {t('hub.quickStats')}
           </h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-[10px] text-[#848E9C]">参赛次数</p>
+              <p className="text-[10px] text-[#848E9C]">{t('hub.totalComps')}</p>
               <p className="text-lg font-mono font-bold text-white">{quickStats.totalCompetitions}</p>
             </div>
             <div>
-              <p className="text-[10px] text-[#848E9C]">胜率</p>
+              <p className="text-[10px] text-[#848E9C]">{t('hub.winRate')}</p>
               <p className="text-lg font-mono font-bold text-[#0ECB81]">
                 {(quickStats.winRate * 100).toFixed(1)}%
               </p>
             </div>
             <div>
-              <p className="text-[10px] text-[#848E9C]">总奖金</p>
+              <p className="text-[10px] text-[#848E9C]">{t('hub.totalPrize')}</p>
               <p className="text-lg font-mono font-bold text-[#F0B90B]">
                 {quickStats.totalPrizeWon.toFixed(0)}U
               </p>
             </div>
             <div>
-              <p className="text-[10px] text-[#848E9C]">最佳排名</p>
+              <p className="text-[10px] text-[#848E9C]">{t('hub.bestRank')}</p>
               <p className="text-lg font-mono font-bold text-white">
                 {quickStats.bestRank > 0 ? `#${quickStats.bestRank}` : "--"}
               </p>
             </div>
             <div className="col-span-2">
-              <p className="text-[10px] text-[#848E9C]">平均收益率</p>
+              <p className="text-[10px] text-[#848E9C]">{t('hub.avgPnl')}</p>
               <p className={`text-lg font-mono font-bold ${quickStats.avgPnlPct >= 0 ? "text-[#0ECB81]" : "text-[#F6465D]"}`}>
                 {quickStats.avgPnlPct >= 0 ? "+" : ""}{quickStats.avgPnlPct.toFixed(2)}%
               </p>

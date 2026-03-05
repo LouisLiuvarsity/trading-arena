@@ -1,7 +1,5 @@
-import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { apiRequest } from "@/lib/api";
 import { useT } from "@/lib/i18n";
+import { useNotificationsQuery, useMarkNotifRead, useMarkAllRead } from "@/hooks/useCompetitionData";
 import { useLocation } from "wouter";
 import { Loader2, CheckCheck, BellOff } from "lucide-react";
 
@@ -17,86 +15,51 @@ interface NotificationItem {
   createdAt: number;
 }
 
-interface NotificationsResponse {
-  items: NotificationItem[];
-  unreadCount: number;
-}
-
-function timeAgo(ts: number): string {
-  const diff = Date.now() - ts;
-  const seconds = Math.floor(diff / 1000);
-  if (seconds < 60) return "刚刚";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}分钟前`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}小时前`;
-  const days = Math.floor(hours / 24);
-  return `${days}天前`;
-}
-
 const TYPE_ICONS: Record<string, string> = {
-  competition_selected: "🟢",
-  competition_end: "🏁",
-  competition_start: "🚀",
-  prize_awarded: "💰",
-  rank_change: "📊",
-  achievement: "🏆",
-  system: "🔔",
+  competition_selected: "\uD83D\uDFE2",
+  competition_end: "\uD83C\uDFC1",
+  competition_start: "\uD83D\uDE80",
+  prize_awarded: "\uD83D\uDCB0",
+  rank_change: "\uD83D\uDCCA",
+  achievement: "\uD83C\uDFC6",
+  system: "\uD83D\uDD14",
 };
 
 export default function NotificationsPage() {
-  const { token } = useAuth();
+  const { t } = useT();
   const [, navigate] = useLocation();
 
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: notifData, isLoading: loading, error: queryError } = useNotificationsQuery(50);
+  const markReadMutation = useMarkNotifRead();
+  const markAllReadMutation = useMarkAllRead();
 
-  // Fetch all notifications
-  useEffect(() => {
-    if (!token) return;
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await apiRequest<NotificationsResponse>(
-          "/api/me/notifications?limit=50",
-          { token }
-        );
-        if (!cancelled) {
-          setNotifications(data.items);
-          setUnreadCount(data.unreadCount);
-        }
-      } catch (err) {
-        if (!cancelled) setError((err as Error).message);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [token]);
+  const notifications: NotificationItem[] = (notifData as any)?.items ?? [];
+  const unreadCount: number = (notifData as any)?.unreadCount ?? 0;
+
+  function timeAgo(ts: number): string {
+    const diff = Date.now() - ts;
+    const seconds = Math.floor(diff / 1000);
+    if (seconds < 60) return t('notifpage.justNow');
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return t('notifpage.minutesAgo', { n: minutes });
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return t('notifpage.hoursAgo', { n: hours });
+    const days = Math.floor(hours / 24);
+    return t('notifpage.daysAgo', { n: days });
+  }
 
   async function handleMarkAllRead() {
-    if (!token) return;
     try {
-      await apiRequest("/api/me/notifications/read-all", { method: "POST", token });
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: 1 })));
-      setUnreadCount(0);
+      await markAllReadMutation.mutateAsync();
     } catch {
       // silently ignore
     }
   }
 
   async function handleNotificationClick(n: NotificationItem) {
-    if (!n.isRead && token) {
+    if (!n.isRead) {
       try {
-        await apiRequest(`/api/me/notifications/${n.id}/read`, { method: "POST", token });
-        setNotifications((prev) =>
-          prev.map((item) => (item.id === n.id ? { ...item, isRead: 1 } : item))
-        );
-        setUnreadCount((prev) => Math.max(0, prev - 1));
+        await markReadMutation.mutateAsync(n.id);
       } catch {
         // silently ignore
       }
@@ -114,12 +77,12 @@ export default function NotificationsPage() {
     );
   }
 
-  if (error) {
+  if (queryError) {
     return (
       <div className="p-6 max-w-3xl mx-auto">
         <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-8 text-center">
-          <p className="text-[#F6465D] text-sm mb-2">加载失败</p>
-          <p className="text-[#848E9C] text-xs">{error}</p>
+          <p className="text-[#F6465D] text-sm mb-2">{t('common.loadFailed')}</p>
+          <p className="text-[#848E9C] text-xs">{(queryError as Error).message}</p>
         </div>
       </div>
     );
@@ -127,13 +90,12 @@ export default function NotificationsPage() {
 
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-4">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-display font-bold text-white">通知中心</h1>
+          <h1 className="text-xl font-display font-bold text-white">{t('notifpage.title')}</h1>
           {unreadCount > 0 && (
             <p className="text-[#848E9C] text-[10px] mt-0.5">
-              {unreadCount} 条未读
+              {t('notifpage.unread', { n: unreadCount })}
             </p>
           )}
         </div>
@@ -143,22 +105,21 @@ export default function NotificationsPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] text-[#F0B90B] hover:bg-[#F0B90B]/10 transition-colors border border-[rgba(255,255,255,0.08)]"
           >
             <CheckCheck className="w-3.5 h-3.5" />
-            全部已读
+            {t('notifpage.markAllRead')}
           </button>
         )}
       </div>
 
-      {/* Notification List */}
       {notifications.length === 0 ? (
         <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-12 text-center">
           <BellOff className="w-8 h-8 text-[#848E9C]/40 mx-auto mb-3" />
-          <p className="text-[#848E9C] text-sm">暂无通知</p>
-          <p className="text-[#848E9C]/60 text-xs mt-1">参加比赛后将收到相关通知</p>
+          <p className="text-[#848E9C] text-sm">{t('notifpage.empty')}</p>
+          <p className="text-[#848E9C]/60 text-xs mt-1">{t('notifpage.emptyHint')}</p>
         </div>
       ) : (
         <div className="space-y-2">
           {notifications.map((n) => {
-            const icon = TYPE_ICONS[n.type] ?? "🔔";
+            const icon = TYPE_ICONS[n.type] ?? "\uD83D\uDD14";
             return (
               <button
                 key={n.id}
@@ -170,7 +131,6 @@ export default function NotificationsPage() {
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  {/* Read indicator */}
                   <div className="mt-0.5 shrink-0">
                     <span
                       className={`inline-block w-2.5 h-2.5 rounded-full ${
@@ -181,7 +141,6 @@ export default function NotificationsPage() {
                     />
                   </div>
 
-                  {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <span className={`text-[12px] font-medium ${
@@ -202,7 +161,7 @@ export default function NotificationsPage() {
                     )}
                     {n.actionUrl && (
                       <span className="inline-block mt-1.5 text-[9px] text-[#F0B90B]">
-                        查看详情 →
+                        {t('common.viewDetails')}
                       </span>
                     )}
                   </div>

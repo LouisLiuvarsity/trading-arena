@@ -2,7 +2,7 @@ import { type ReactNode } from "react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/lib/i18n";
-import { Home, Calendar, Trophy, BarChart3, User, LogOut, Swords, Settings } from "lucide-react";
+import { Home, Calendar, Trophy, BarChart3, User, LogOut, Settings } from "lucide-react";
 import { useIsMobile } from "@/hooks/useMobile";
 import NotificationBell from "./NotificationBell";
 
@@ -17,10 +17,10 @@ export default function AppShell({ children }: Props) {
   const isMobile = useIsMobile();
 
   const navItems = [
-    { path: "/hub", label: "Hub", icon: Home },
-    { path: "/competitions", label: "赛程", icon: Calendar },
-    { path: "/leaderboard", label: "排行", icon: Trophy },
-    { path: "/stats", label: "统计", icon: BarChart3 },
+    { path: "/hub", label: t('nav.hub'), icon: Home },
+    { path: "/competitions", label: t('nav.competitions'), icon: Calendar },
+    { path: "/leaderboard", label: t('nav.leaderboard'), icon: Trophy },
+    { path: "/stats", label: t('nav.stats'), icon: BarChart3 },
   ];
 
   const isActive = (path: string) => location === path || location.startsWith(path + "/");
@@ -31,7 +31,7 @@ export default function AppShell({ children }: Props) {
       {!isMobile && (
         <header className="h-12 border-b border-[rgba(255,255,255,0.08)] bg-[#0D1017] flex items-center px-4 shrink-0">
           <Link href="/hub" className="text-[#F0B90B] font-display font-bold text-sm mr-6">
-            Otter Trader
+            {t('nav.brand')}
           </Link>
           <nav className="flex items-center gap-1">
             {navItems.map((item) => (
@@ -70,11 +70,11 @@ export default function AppShell({ children }: Props) {
       {isMobile && (
         <nav className="h-14 border-t border-[rgba(255,255,255,0.08)] bg-[#0D1017] flex items-center justify-around shrink-0 px-2">
           {[
-            { path: "/hub", label: "Hub", icon: Home },
-            { path: "/competitions", label: "赛程", icon: Calendar },
-            { path: "/competitions", label: "比赛", icon: Swords },
-            { path: "/leaderboard", label: "排行", icon: Trophy },
-            { path: "/profile", label: "我的", icon: User },
+            { path: "/hub", label: t('nav.hub'), icon: Home },
+            { path: "/competitions", label: t('nav.competitions'), icon: Calendar },
+            { path: "/stats", label: t('nav.stats'), icon: BarChart3 },
+            { path: "/leaderboard", label: t('nav.leaderboard'), icon: Trophy },
+            { path: "/profile", label: t('nav.profile'), icon: User },
           ].map((item) => (
             <Link
               key={item.path}

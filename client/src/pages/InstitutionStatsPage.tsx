@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
-import { apiRequest } from "@/lib/api";
+import { useState } from "react";
+import { useT } from "@/lib/i18n";
+import { useInstitutions } from "@/hooks/useCompetitionData";
 import { Building2, ChevronDown, ChevronUp } from "lucide-react";
 
 interface InstitutionRow {
@@ -19,17 +20,12 @@ function countryFlag(code: string): string {
 }
 
 export default function InstitutionStatsPage() {
-  const [data, setData] = useState<InstitutionRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { t } = useT();
+  const { data: rawData = [], isLoading: loading } = useInstitutions(50);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [sort, setSort] = useState<"members" | "pnl" | "prize">("members");
 
-  useEffect(() => {
-    apiRequest<InstitutionRow[]>("/api/stats/institutions?limit=50")
-      .then(setData)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const data = rawData as InstitutionRow[];
 
   const sorted = [...data].sort((a, b) => {
     if (sort === "members") return b.memberCount - a.memberCount;
@@ -40,16 +36,15 @@ export default function InstitutionStatsPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-4">
       <div>
-        <h1 className="text-xl font-display font-bold text-white mb-1">高校/机构排行</h1>
-        <p className="text-[#848E9C] text-sm">按高校和机构的参赛数据排名</p>
+        <h1 className="text-xl font-display font-bold text-white mb-1">{t('instpage.title')}</h1>
+        <p className="text-[#848E9C] text-sm">{t('instpage.subtitle')}</p>
       </div>
 
-      {/* Sort tabs */}
       <div className="flex gap-2">
         {([
-          { key: "members", label: "按人数" },
-          { key: "pnl", label: "按表现" },
-          { key: "prize", label: "按奖金" },
+          { key: "members", label: t('instpage.sortMembers') },
+          { key: "pnl", label: t('instpage.sortPnl') },
+          { key: "prize", label: t('instpage.sortPrize') },
         ] as const).map(({ key, label }) => (
           <button
             key={key}
@@ -74,8 +69,8 @@ export default function InstitutionStatsPage() {
       ) : sorted.length === 0 ? (
         <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-8 text-center">
           <Building2 className="w-8 h-8 text-[#5E6673] mx-auto mb-2" />
-          <p className="text-[#848E9C] text-sm">暂无高校/机构数据</p>
-          <p className="text-[#5E6673] text-xs mt-1">当参赛者在个人资料中填写学校信息后，数据会自动统计</p>
+          <p className="text-[#848E9C] text-sm">{t('instpage.empty')}</p>
+          <p className="text-[#5E6673] text-xs mt-1">{t('instpage.emptyHint')}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -89,7 +84,7 @@ export default function InstitutionStatsPage() {
                 <span className="text-xl leading-none">{countryFlag(row.country)}</span>
                 <div className="flex-1 min-w-0">
                   <div className="text-[#D1D4DC] text-sm font-semibold truncate">{row.name}</div>
-                  <div className="text-[#848E9C] text-[10px]">{row.memberCount}名选手 · {row.competitionCount}场参赛</div>
+                  <div className="text-[#848E9C] text-[10px]">{t('instpage.nPlayers', { n: row.memberCount })} · {t('instpage.nComps', { n: row.competitionCount })}</div>
                 </div>
                 <div className="text-right shrink-0">
                   <div className={`font-mono text-sm font-bold ${row.avgPnlPct >= 0 ? "text-[#0ECB81]" : "text-[#F6465D]"}`}>
@@ -106,19 +101,19 @@ export default function InstitutionStatsPage() {
                 <div className="px-5 pb-4 border-t border-[rgba(255,255,255,0.06)] pt-3">
                   <div className="grid grid-cols-4 gap-3 text-center text-[10px]">
                     <div>
-                      <div className="text-[#848E9C]">选手人数</div>
+                      <div className="text-[#848E9C]">{t('instpage.memberCount')}</div>
                       <div className="text-white font-mono font-bold">{row.memberCount}</div>
                     </div>
                     <div>
-                      <div className="text-[#848E9C]">参赛场次</div>
+                      <div className="text-[#848E9C]">{t('instpage.compCount')}</div>
                       <div className="text-white font-mono font-bold">{row.competitionCount}</div>
                     </div>
                     <div>
-                      <div className="text-[#848E9C]">最佳名次</div>
+                      <div className="text-[#848E9C]">{t('instpage.bestRank')}</div>
                       <div className="text-[#F0B90B] font-mono font-bold">#{row.bestRank}</div>
                     </div>
                     <div>
-                      <div className="text-[#848E9C]">总奖金</div>
+                      <div className="text-[#848E9C]">{t('instpage.totalPrize')}</div>
                       <div className="text-[#F0B90B] font-mono font-bold">{row.totalPrize}U</div>
                     </div>
                   </div>

@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { apiRequest } from "@/lib/api";
+import { useT } from "@/lib/i18n";
+import { useAnalytics } from "@/hooks/useCompetitionData";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, ScatterChart, Scatter, Legend,
@@ -23,7 +22,6 @@ interface DirStats {
 
 const COLORS = { green: "#0ECB81", red: "#F6465D", gold: "#F0B90B", purple: "#8B5CF6", blue: "#3B82F6" };
 const PIE_COLORS = ["#0ECB81", "#F6465D", "#F0B90B", "#8B5CF6", "#3B82F6"];
-const CLOSE_REASON_LABELS: Record<string, string> = { manual: "✋ 手动", tp: "🎯 止盈", sl: "🛑 止损", match_end: "⏰ 比赛结束", time_limit: "⏱ 超时" };
 
 function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
@@ -36,24 +34,21 @@ function StatCard({ label, value, sub }: { label: string; value: string | number
 }
 
 export default function AnalyticsPage() {
-  const { token } = useAuth();
-  const [data, setData] = useState<AnalyticsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { t } = useT();
+  const { data, isLoading: loading, error } = useAnalytics();
 
-  useEffect(() => {
-    if (!token) return;
-    setLoading(true);
-    apiRequest<AnalyticsData>("/api/me/analytics", { token })
-      .then(setData)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [token]);
+  const CLOSE_REASON_LABELS: Record<string, string> = {
+    manual: t('analytics.closeManual'),
+    tp: t('analytics.closeTp'),
+    sl: t('analytics.closeSl'),
+    match_end: t('analytics.closeEnd'),
+    time_limit: t('analytics.closeTimeout'),
+  };
 
   if (loading) {
     return (
       <div className="p-6 max-w-6xl mx-auto">
-        <h1 className="text-xl font-display font-bold text-white mb-6">交易分析</h1>
+        <h1 className="text-xl font-display font-bold text-white mb-6">{t('analytics.title')}</h1>
         <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-lg p-3 animate-pulse h-16" />
@@ -66,25 +61,27 @@ export default function AnalyticsPage() {
   if (error || !data) {
     return (
       <div className="p-6 max-w-6xl mx-auto">
-        <h1 className="text-xl font-display font-bold text-white mb-4">交易分析</h1>
-        <p className="text-[#F6465D] text-sm">{error ?? "无法加载数据"}</p>
+        <h1 className="text-xl font-display font-bold text-white mb-4">{t('analytics.title')}</h1>
+        <p className="text-[#F6465D] text-sm">{(error as Error)?.message ?? t('analytics.noData')}</p>
       </div>
     );
   }
 
-  if (data.summary.totalTrades === 0) {
+  const d = data as AnalyticsData;
+
+  if (d.summary.totalTrades === 0) {
     return (
       <div className="p-6 max-w-6xl mx-auto">
-        <h1 className="text-xl font-display font-bold text-white mb-4">交易分析</h1>
+        <h1 className="text-xl font-display font-bold text-white mb-4">{t('analytics.title')}</h1>
         <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-8 text-center">
-          <p className="text-[#848E9C] text-sm">暂无交易数据</p>
-          <p className="text-[#5E6673] text-xs mt-1">完成一些交易后，这里会显示详细分析</p>
+          <p className="text-[#848E9C] text-sm">{t('analytics.empty')}</p>
+          <p className="text-[#5E6673] text-xs mt-1">{t('analytics.emptyHint')}</p>
         </div>
       </div>
     );
   }
 
-  const { summary, pnlDistribution, byDirection, byCloseReason, equityCurve, streaks, byHour, holdDurationVsPnl } = data;
+  const { summary, pnlDistribution, byDirection, byCloseReason, equityCurve, streaks, byHour, holdDurationVsPnl } = d;
 
   const closeReasonPieData = Object.entries(byCloseReason).map(([key, val]) => ({
     name: CLOSE_REASON_LABELS[key] ?? key,
@@ -95,29 +92,26 @@ export default function AnalyticsPage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <h1 className="text-xl font-display font-bold text-white">交易分析</h1>
+      <h1 className="text-xl font-display font-bold text-white">{t('analytics.title')}</h1>
 
-      {/* Summary */}
       <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-        <StatCard label="总交易" value={summary.totalTrades} />
-        <StatCard label="胜率" value={`${summary.winRate}%`} />
-        <StatCard label="均PnL/笔" value={`${summary.avgPnlPerTrade > 0 ? "+" : ""}${summary.avgPnlPerTrade}`} />
-        <StatCard label="均持仓" value={`${Math.round(summary.avgHoldDuration / 60)}min`} />
-        <StatCard label="均权重" value={`${summary.avgHoldWeight}x`} />
-        <StatCard label="盈亏比" value={summary.profitFactor === Infinity ? "∞" : summary.profitFactor} />
+        <StatCard label={t('analytics.totalTrades')} value={summary.totalTrades} />
+        <StatCard label={t('analytics.winRate')} value={`${summary.winRate}%`} />
+        <StatCard label={t('analytics.avgPnl')} value={`${summary.avgPnlPerTrade > 0 ? "+" : ""}${summary.avgPnlPerTrade}`} />
+        <StatCard label={t('analytics.avgHold')} value={`${Math.round(summary.avgHoldDuration / 60)}min`} />
+        <StatCard label={t('analytics.avgWeight')} value={`${summary.avgHoldWeight}x`} />
+        <StatCard label={t('analytics.profitFactor')} value={summary.profitFactor === Infinity ? "\u221E" : summary.profitFactor} />
       </div>
 
-      {/* Streaks */}
       <div className="grid grid-cols-3 gap-3">
-        <StatCard label="当前连续" value={streaks.currentStreak > 0 ? `+${streaks.currentStreak}胜` : streaks.currentStreak < 0 ? `${streaks.currentStreak}负` : "—"} />
-        <StatCard label="最长连胜" value={`${streaks.longestWinStreak}连胜`} />
-        <StatCard label="最长连亏" value={`${streaks.longestLossStreak}连亏`} />
+        <StatCard label={t('analytics.currentStreak')} value={streaks.currentStreak > 0 ? `+${streaks.currentStreak}${t('analytics.winSuffix')}` : streaks.currentStreak < 0 ? `${streaks.currentStreak}${t('analytics.lossSuffix')}` : "\u2014"} />
+        <StatCard label={t('analytics.longestWin')} value={t('analytics.streakWin', { n: streaks.longestWinStreak })} />
+        <StatCard label={t('analytics.longestLoss')} value={t('analytics.streakLoss', { n: streaks.longestLossStreak })} />
       </div>
 
-      {/* Equity curve */}
       {equityCurve.length > 0 && (
         <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-4">
-          <h2 className="text-sm font-semibold text-[#D1D4DC] mb-3">Equity 曲线</h2>
+          <h2 className="text-sm font-semibold text-[#D1D4DC] mb-3">{t('analytics.equityCurve')}</h2>
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={equityCurve}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -131,9 +125,8 @@ export default function AnalyticsPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* PnL Distribution */}
         <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-4">
-          <h2 className="text-sm font-semibold text-[#D1D4DC] mb-3">PnL 分布</h2>
+          <h2 className="text-sm font-semibold text-[#D1D4DC] mb-3">{t('analytics.pnlDist')}</h2>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={pnlDistribution}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -145,9 +138,8 @@ export default function AnalyticsPage() {
           </ResponsiveContainer>
         </div>
 
-        {/* Direction */}
         <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-4">
-          <h2 className="text-sm font-semibold text-[#D1D4DC] mb-3">方向分析</h2>
+          <h2 className="text-sm font-semibold text-[#D1D4DC] mb-3">{t('analytics.dirAnalysis')}</h2>
           <div className="flex items-center gap-4 mb-3">
             <div className="flex-1">
               <div className="flex items-center justify-between text-[10px] mb-1">
@@ -168,28 +160,27 @@ export default function AnalyticsPage() {
           </div>
           <div className="grid grid-cols-2 gap-2 text-[10px]">
             <div className="text-center">
-              <div className="text-[#848E9C]">Long 胜率</div>
+              <div className="text-[#848E9C]">{t('analytics.longWR')}</div>
               <div className="text-[#0ECB81] font-mono font-bold">{byDirection.long.count ? Math.round((byDirection.long.wins / byDirection.long.count) * 100) : 0}%</div>
             </div>
             <div className="text-center">
-              <div className="text-[#848E9C]">Short 胜率</div>
+              <div className="text-[#848E9C]">{t('analytics.shortWR')}</div>
               <div className="text-[#F6465D] font-mono font-bold">{byDirection.short.count ? Math.round((byDirection.short.wins / byDirection.short.count) * 100) : 0}%</div>
             </div>
             <div className="text-center">
-              <div className="text-[#848E9C]">Long 均PnL</div>
+              <div className="text-[#848E9C]">{t('analytics.longAvgPnl')}</div>
               <div className={`font-mono font-bold ${byDirection.long.avgPnl >= 0 ? "text-[#0ECB81]" : "text-[#F6465D]"}`}>{byDirection.long.avgPnl > 0 ? "+" : ""}{byDirection.long.avgPnl}</div>
             </div>
             <div className="text-center">
-              <div className="text-[#848E9C]">Short 均PnL</div>
+              <div className="text-[#848E9C]">{t('analytics.shortAvgPnl')}</div>
               <div className={`font-mono font-bold ${byDirection.short.avgPnl >= 0 ? "text-[#0ECB81]" : "text-[#F6465D]"}`}>{byDirection.short.avgPnl > 0 ? "+" : ""}{byDirection.short.avgPnl}</div>
             </div>
           </div>
         </div>
 
-        {/* Close reason */}
         {closeReasonPieData.length > 0 && (
           <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-4">
-            <h2 className="text-sm font-semibold text-[#D1D4DC] mb-3">平仓原因</h2>
+            <h2 className="text-sm font-semibold text-[#D1D4DC] mb-3">{t('analytics.closeReason')}</h2>
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
                 <Pie data={closeReasonPieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value">
@@ -202,9 +193,8 @@ export default function AnalyticsPage() {
           </div>
         )}
 
-        {/* Hourly */}
         <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-4">
-          <h2 className="text-sm font-semibold text-[#D1D4DC] mb-3">交易时段 (UTC)</h2>
+          <h2 className="text-sm font-semibold text-[#D1D4DC] mb-3">{t('analytics.tradeHours')}</h2>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={byHour}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -217,14 +207,13 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Scatter */}
       {holdDurationVsPnl.length > 0 && (
         <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-4">
-          <h2 className="text-sm font-semibold text-[#D1D4DC] mb-3">持仓时长 vs PnL%</h2>
+          <h2 className="text-sm font-semibold text-[#D1D4DC] mb-3">{t('analytics.holdVsPnl')}</h2>
           <ResponsiveContainer width="100%" height={240}>
             <ScatterChart>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="holdSeconds" name="持仓(秒)" tick={{ fill: "#848E9C", fontSize: 10 }} />
+              <XAxis dataKey="holdSeconds" name={t('analytics.holdVsPnl')} tick={{ fill: "#848E9C", fontSize: 10 }} />
               <YAxis dataKey="pnlPct" name="PnL%" tick={{ fill: "#848E9C", fontSize: 10 }} />
               <Tooltip contentStyle={tooltipStyle} />
               <Scatter data={holdDurationVsPnl.filter((d) => d.pnlPct > 0)} fill={COLORS.green} opacity={0.6} />

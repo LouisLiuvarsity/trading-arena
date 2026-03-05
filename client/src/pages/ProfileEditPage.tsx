@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/api";
 import { useT } from "@/lib/i18n";
+import { useProfile, useSaveProfile } from "@/hooks/useCompetitionData";
 import { useLocation } from "wouter";
 import { ArrowLeft, Loader2, Search, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -33,35 +34,36 @@ interface Institution {
 }
 
 const COUNTRIES = [
-  { code: "CN", label: "中国" },
-  { code: "US", label: "美国" },
-  { code: "JP", label: "日本" },
-  { code: "KR", label: "韩国" },
-  { code: "HK", label: "香港" },
-  { code: "TW", label: "台湾" },
-  { code: "SG", label: "新加坡" },
-  { code: "GB", label: "英国" },
-  { code: "DE", label: "德国" },
-  { code: "FR", label: "法国" },
-  { code: "CA", label: "加拿大" },
-  { code: "AU", label: "澳大利亚" },
+  { code: "CN" },
+  { code: "US" },
+  { code: "JP" },
+  { code: "KR" },
+  { code: "HK" },
+  { code: "TW" },
+  { code: "SG" },
+  { code: "GB" },
+  { code: "DE" },
+  { code: "FR" },
+  { code: "CA" },
+  { code: "AU" },
 ];
 
 const PARTICIPANT_TYPES = [
-  { value: "student", label: "学生" },
-  { value: "professional", label: "职业人士" },
-  { value: "independent", label: "独立交易者" },
+  { value: "student" },
+  { value: "professional" },
+  { value: "independent" },
 ];
 
 export default function ProfileEditPage() {
   const { token } = useAuth();
+  const { t } = useT();
   const [, navigate] = useLocation();
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { data: profileData, isLoading: profileLoading, error: profileError } = useProfile();
+  const saveProfileMutation = useSaveProfile();
 
-  // Form fields
+  const [saving, setSaving] = useState(false);
+
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [country, setCountry] = useState("");
@@ -73,7 +75,6 @@ export default function ProfileEditPage() {
   const [department, setDepartment] = useState("");
   const [graduationYear, setGraduationYear] = useState("");
 
-  // Institution search
   const [instSearchQuery, setInstSearchQuery] = useState("");
   const [instSearchResults, setInstSearchResults] = useState<Institution[]>([]);
   const [instSearchOpen, setInstSearchOpen] = useState(false);
@@ -81,37 +82,26 @@ export default function ProfileEditPage() {
   const instSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const instDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Load current profile
-  useEffect(() => {
-    if (!token) return;
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const data = await apiRequest<ProfileData>("/api/me/profile", { token });
-        if (!cancelled) {
-          setDisplayName(data.displayName ?? "");
-          setBio(data.bio ?? "");
-          setCountry(data.country ?? "");
-          setRegion(data.region ?? "");
-          setCity(data.city ?? "");
-          setParticipantType(data.participantType ?? "independent");
-          setInstitutionId(data.institutionId ?? null);
-          setInstitutionName(data.institutionName ?? "");
-          setInstSearchQuery(data.institutionName ?? "");
-          setDepartment(data.department ?? "");
-          setGraduationYear(data.graduationYear ? String(data.graduationYear) : "");
-        }
-      } catch (err) {
-        if (!cancelled) setError((err as Error).message);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [token]);
+  const [initialized, setInitialized] = useState(false);
 
-  // Institution search with debounce
+  useEffect(() => {
+    if (profileData && !initialized) {
+      const data = profileData as ProfileData;
+      setDisplayName(data.displayName ?? "");
+      setBio(data.bio ?? "");
+      setCountry(data.country ?? "");
+      setRegion(data.region ?? "");
+      setCity(data.city ?? "");
+      setParticipantType(data.participantType ?? "independent");
+      setInstitutionId(data.institutionId ?? null);
+      setInstitutionName(data.institutionName ?? "");
+      setInstSearchQuery(data.institutionName ?? "");
+      setDepartment(data.department ?? "");
+      setGraduationYear(data.graduationYear ? String(data.graduationYear) : "");
+      setInitialized(true);
+    }
+  }, [profileData, initialized]);
+
   const searchInstitutions = useCallback(async (query: string) => {
     if (query.trim().length < 1) {
       setInstSearchResults([]);
@@ -134,7 +124,6 @@ export default function ProfileEditPage() {
   function handleInstSearchChange(value: string) {
     setInstSearchQuery(value);
     setInstSearchOpen(true);
-    // Clear current selection if user types
     setInstitutionId(null);
     setInstitutionName(value);
 
@@ -153,7 +142,6 @@ export default function ProfileEditPage() {
     setInstSearchOpen(false);
   }
 
-  // Close institution dropdown on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (instDropdownRef.current && !instDropdownRef.current.contains(e.target as Node)) {
@@ -164,37 +152,32 @@ export default function ProfileEditPage() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // Save handler
   async function handleSave() {
     if (!token) return;
     setSaving(true);
     try {
-      await apiRequest("/api/me/profile", {
-        method: "PUT",
-        token,
-        body: {
-          displayName: displayName.trim() || null,
-          bio: bio.trim() || null,
-          country: country || null,
-          region: region.trim() || null,
-          city: city.trim() || null,
-          participantType,
-          institutionId: institutionId ?? null,
-          institutionName: institutionName.trim() || null,
-          department: department.trim() || null,
-          graduationYear: graduationYear ? Number(graduationYear) : null,
-        },
+      await saveProfileMutation.mutateAsync({
+        displayName: displayName.trim() || null,
+        bio: bio.trim() || null,
+        country: country || null,
+        region: region.trim() || null,
+        city: city.trim() || null,
+        participantType,
+        institutionId: institutionId ?? null,
+        institutionName: institutionName.trim() || null,
+        department: department.trim() || null,
+        graduationYear: graduationYear ? Number(graduationYear) : null,
       });
-      toast.success("个人资料已保存");
+      toast.success(t('profileEdit.saved'));
       navigate("/profile");
     } catch (err) {
-      toast.error((err as Error).message || "保存失败");
+      toast.error((err as Error).message || t('profileEdit.saveFailed'));
     } finally {
       setSaving(false);
     }
   }
 
-  if (loading) {
+  if (profileLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-6 h-6 text-[#F0B90B] animate-spin" />
@@ -202,12 +185,12 @@ export default function ProfileEditPage() {
     );
   }
 
-  if (error) {
+  if (profileError) {
     return (
       <div className="p-6 max-w-2xl mx-auto">
         <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-8 text-center">
-          <p className="text-[#F6465D] text-sm mb-2">加载失败</p>
-          <p className="text-[#848E9C] text-xs">{error}</p>
+          <p className="text-[#F6465D] text-sm mb-2">{t('common.loadFailed')}</p>
+          <p className="text-[#848E9C] text-xs">{(profileError as Error).message}</p>
         </div>
       </div>
     );
@@ -219,7 +202,6 @@ export default function ProfileEditPage() {
 
   return (
     <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-4">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <button
           onClick={() => navigate("/profile")}
@@ -227,27 +209,25 @@ export default function ProfileEditPage() {
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
-        <h1 className="text-xl font-display font-bold text-white">编辑个人资料</h1>
+        <h1 className="text-xl font-display font-bold text-white">{t('profileEdit.title')}</h1>
       </div>
 
       <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-5 space-y-5">
-        {/* Display Name */}
         <div>
-          <label className={labelCls}>显示名称</label>
+          <label className={labelCls}>{t('profileEdit.displayName')}</label>
           <input
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="输入显示名称..."
+            placeholder={t('profileEdit.displayNamePh')}
             maxLength={64}
             className={inputCls}
           />
         </div>
 
-        {/* Bio */}
         <div>
           <label className={labelCls}>
-            个人简介
+            {t('profileEdit.bio')}
             <span className="ml-2 text-[9px] text-[#848E9C]/60">
               {bio.length}/280
             </span>
@@ -255,59 +235,56 @@ export default function ProfileEditPage() {
           <textarea
             value={bio}
             onChange={(e) => setBio(e.target.value.slice(0, 280))}
-            placeholder="简单介绍自己..."
+            placeholder={t('profileEdit.bioPh')}
             maxLength={280}
             rows={3}
             className={`${inputCls} resize-none`}
           />
         </div>
 
-        {/* Country */}
         <div>
-          <label className={labelCls}>国家/地区</label>
+          <label className={labelCls}>{t('profileEdit.country')}</label>
           <select
             value={country}
             onChange={(e) => setCountry(e.target.value)}
             className={inputCls}
           >
-            <option value="">选择国家/地区</option>
+            <option value="">{t('profileEdit.countryPh')}</option>
             {COUNTRIES.map((c) => (
               <option key={c.code} value={c.code}>
-                {c.label}
+                {t('profileEdit.country.' + c.code)}
               </option>
             ))}
           </select>
         </div>
 
-        {/* Region + City */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={labelCls}>省/州</label>
+            <label className={labelCls}>{t('profileEdit.region')}</label>
             <input
               type="text"
               value={region}
               onChange={(e) => setRegion(e.target.value)}
-              placeholder="如: 北京"
+              placeholder={t('profileEdit.regionPh')}
               maxLength={64}
               className={inputCls}
             />
           </div>
           <div>
-            <label className={labelCls}>城市</label>
+            <label className={labelCls}>{t('profileEdit.city')}</label>
             <input
               type="text"
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              placeholder="如: 海淀区"
+              placeholder={t('profileEdit.cityPh')}
               maxLength={64}
               className={inputCls}
             />
           </div>
         </div>
 
-        {/* Participant Type */}
         <div>
-          <label className={labelCls}>参赛身份</label>
+          <label className={labelCls}>{t('profileEdit.participantType')}</label>
           <div className="flex gap-3">
             {PARTICIPANT_TYPES.map((pt) => (
               <button
@@ -320,15 +297,14 @@ export default function ProfileEditPage() {
                 }`}
               >
                 {participantType === pt.value && <Check className="w-3 h-3 inline mr-1" />}
-                {pt.label}
+                {t('profileEdit.' + pt.value)}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Institution Search */}
         <div className="relative" ref={instDropdownRef}>
-          <label className={labelCls}>学校/机构</label>
+          <label className={labelCls}>{t('profileEdit.institution')}</label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#848E9C]" />
             <input
@@ -341,7 +317,7 @@ export default function ProfileEditPage() {
                   searchInstitutions(instSearchQuery);
                 }
               }}
-              placeholder="搜索学校或机构名称..."
+              placeholder={t('profileEdit.institutionPh')}
               className={`${inputCls} pl-9`}
             />
             {instSearchLoading && (
@@ -369,32 +345,31 @@ export default function ProfileEditPage() {
           )}
           {instSearchOpen && instSearchQuery.trim().length > 0 && instSearchResults.length === 0 && !instSearchLoading && (
             <div className="absolute z-20 top-full mt-1 w-full bg-[#1C2030] border border-[rgba(255,255,255,0.12)] rounded-lg shadow-xl p-3 text-center">
-              <p className="text-[10px] text-[#848E9C]">未找到匹配的机构</p>
-              <p className="text-[9px] text-[#848E9C]/60 mt-1">将使用手动输入的名称</p>
+              <p className="text-[10px] text-[#848E9C]">{t('profileEdit.noInstitution')}</p>
+              <p className="text-[9px] text-[#848E9C]/60 mt-1">{t('profileEdit.manualInput')}</p>
             </div>
           )}
         </div>
 
-        {/* Department + Graduation Year */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={labelCls}>院系/部门</label>
+            <label className={labelCls}>{t('profileEdit.department')}</label>
             <input
               type="text"
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
-              placeholder="如: 计算机科学"
+              placeholder={t('profileEdit.departmentPh')}
               maxLength={128}
               className={inputCls}
             />
           </div>
           <div>
-            <label className={labelCls}>毕业年份</label>
+            <label className={labelCls}>{t('profileEdit.gradYear')}</label>
             <input
               type="number"
               value={graduationYear}
               onChange={(e) => setGraduationYear(e.target.value)}
-              placeholder="如: 2026"
+              placeholder={t('profileEdit.gradYearPh')}
               min={1990}
               max={2040}
               className={inputCls}
@@ -403,13 +378,12 @@ export default function ProfileEditPage() {
         </div>
       </div>
 
-      {/* Save Button */}
       <div className="flex gap-3">
         <button
           onClick={() => navigate("/profile")}
           className="flex-1 px-4 py-2.5 rounded-lg border border-[rgba(255,255,255,0.08)] text-[#848E9C] text-sm hover:border-[rgba(255,255,255,0.15)] transition-colors"
         >
-          取消
+          {t('common.cancel')}
         </button>
         <button
           onClick={handleSave}
@@ -419,10 +393,10 @@ export default function ProfileEditPage() {
           {saving ? (
             <span className="flex items-center justify-center gap-2">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              保存中...
+              {t('common.saving')}
             </span>
           ) : (
-            "保存"
+            t('common.save')
           )}
         </button>
       </div>
