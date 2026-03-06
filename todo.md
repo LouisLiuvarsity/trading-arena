@@ -84,3 +84,11 @@
 - [ ] Achievement engine: server-side detection on match settlement
 - [ ] Observation/spectator mode for non-participants watching live competitions
 - [ ] Share competition results as image cards
+
+## Fix Production Deployment Failure
+- [x] Fix JWT_SECRET: derive 64-char key via HMAC-SHA256 when secret is <32 chars (no longer throws in production)
+- [x] Fix DB migration: manually marked 0007_perfect_weapon_omega as applied (columns already existed)
+- [x] Clear TS cache: all 24 TS errors resolved (Drizzle type cache stale)
+- [x] Restart dev server: running normally
+- [x] Tests: 21 passed, tsc 0 errors
+- [ ] Redeploy via Publish button

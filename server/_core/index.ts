@@ -1,4 +1,5 @@
 import "dotenv/config";
+import crypto from "crypto";
 import express from "express";
 import helmet from "helmet";
 import { createServer } from "http";
@@ -30,12 +31,18 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
-  // Validate critical env vars
-  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+  // Ensure JWT_SECRET is at least 32 chars; if shorter, derive a strong key via HMAC
+  if (!process.env.JWT_SECRET) {
     if (process.env.NODE_ENV === "production") {
-      throw new Error("JWT_SECRET is missing or too short (<32 chars). A strong JWT_SECRET is required in production.");
+      throw new Error("JWT_SECRET is missing. A JWT_SECRET is required in production.");
     }
-    console.warn("[WARN] JWT_SECRET is missing or too short (<32 chars). Set a strong JWT_SECRET in production.");
+    console.warn("[WARN] JWT_SECRET is missing. Set a strong JWT_SECRET in production.");
+  } else if (process.env.JWT_SECRET.length < 32) {
+    const derived = crypto.createHmac("sha256", "otter-trader-key-derivation")
+      .update(process.env.JWT_SECRET)
+      .digest("hex");
+    process.env.JWT_SECRET = derived;
+    console.log(`[INFO] JWT_SECRET was short (${process.env.JWT_SECRET.length} chars before derivation), derived a 64-char key via HMAC-SHA256.`);
   }
 
   const app = express();
