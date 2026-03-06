@@ -118,3 +118,6 @@
 - [x] Run npx drizzle-kit generate to generate migration for email column (0009_real_madripoor.sql)
 - [x] Run drizzle-kit migrate to apply migration to database
 - [x] Verify email column exists (varchar 128) and server runs correctly
+
+## Admin Account Creation
+- [x] Create admin account (Louis123) in arena_accounts — id=1, role=admin, email=admin@genfi.world
