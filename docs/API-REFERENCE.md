@@ -161,12 +161,19 @@ If `acceptedCount < comp.minParticipants` at `startCompetition`, the status is s
 
 ### From `server/index.ts`
 
-**`loginSchema`**
+**`registerSchema`**
 ```typescript
 {
-  inviteCode: z.string().trim().min(4).max(32),  // 4-32 chars after trim
-  username:   z.string().trim().min(2).max(20),   // 2-20 chars after trim
-  password:   z.string().min(4).max(128),          // 4-128 chars (no trim)
+  email:    z.string().trim().email().max(128),  // valid email, max 128 chars
+  username: z.string().trim().min(2).max(20),    // 2-20 chars after trim (nickname)
+  password: z.string().min(4).max(128),           // 4-128 chars (no trim)
+}
+```
+
+**`checkUsernameSchema`**
+```typescript
+{
+  username: z.string().trim().min(2).max(20),  // 2-20 chars after trim
 }
 ```
 
@@ -376,14 +383,14 @@ All window-based per IP, defined in `server/index.ts`:
 
 **Auth:** None
 **Rate Limit:** Auth (10/min)
-**Side Effects:** Creates an `arena_accounts` row (if new user via invite code), creates an `arena_sessions` row.
+**Side Effects:** Creates an `arena_accounts` row (new user registration via email), creates an `arena_sessions` row.
 
-**Request Body:** `loginSchema`
+**Request Body:** `registerSchema`
 ```json
 {
-  "inviteCode": "string",  // 4-32 chars
-  "username": "string",    // 2-20 chars
-  "password": "string"     // 4-128 chars
+  "email": "string",     // valid email, max 128 chars
+  "username": "string",  // 2-20 chars (nickname)
+  "password": "string"   // 4-128 chars
 }
 ```
 
@@ -401,11 +408,39 @@ All window-based per IP, defined in `server/index.ts`:
 **Error Responses:**
 | Status | Body | When |
 |---|---|---|
-| 400 | `{ "error": "Invalid invite code or username" }` | Zod validation fails |
+| 400 | `{ "error": "Invalid email or username" }` | Zod validation fails |
 | 400 | `{ "error": "Username length must be between 2 and 20" }` | Server-side length check fails |
-| 400 | `{ "error": "Invalid invite code" }` | Code is empty or < 4 chars |
+| 400 | `{ "error": "Email is required" }` | Email is empty |
 | 400 | `{ "error": "Password must be at least 4 characters" }` | Password < 4 chars |
-| 400 | `{ "error": "<any error from registerArenaAccount>" }` | DB registration error |
+| 400 | `{ "error": "Username already taken" }` | Nickname already exists |
+| 400 | `{ "error": "Email already registered" }` | Email already exists |
+
+---
+
+### `POST /api/auth/check-username`
+
+**Auth:** None
+**Rate Limit:** Auth (10/min)
+**Side Effects:** None (read-only).
+
+**Request Body:** `checkUsernameSchema`
+```json
+{
+  "username": "string"  // 2-20 chars (nickname to check)
+}
+```
+
+**Response (200):**
+```json
+{
+  "available": true  // boolean — true if nickname is not taken
+}
+```
+
+**Error Responses:**
+| Status | Body | When |
+|---|---|---|
+| 400 | `{ "error": "Invalid username" }` | Zod validation fails |
 
 ---
 
@@ -418,7 +453,7 @@ All window-based per IP, defined in `server/index.ts`:
 **Request Body:** `quickLoginSchema`
 ```json
 {
-  "username": "string",  // 2-20 chars
+  "username": "string",  // 2-20 chars (nickname)
   "password": "string"   // 1-128 chars
 }
 ```
@@ -440,8 +475,8 @@ All window-based per IP, defined in `server/index.ts`:
 | 400 | `{ "error": "Invalid username" }` | Zod validation fails |
 | 400 | `{ "error": "Invalid username" }` | Server-side length check fails |
 | 400 | `{ "error": "Password is required" }` | Empty password |
-| 400 | `{ "error": "Account not found. Please register with an invite code first." }` | Username not in DB |
-| 400 | `{ "error": "Account has no password set. Please re-register with your invite code to set a password." }` | No passwordHash stored |
+| 400 | `{ "error": "Account not found. Please register first." }` | Nickname not in DB |
+| 400 | `{ "error": "Account has no password set. Please re-register to set a password." }` | No passwordHash stored |
 | 400 | `{ "error": "Incorrect password" }` | Password mismatch |
 
 ---
@@ -1959,7 +1994,7 @@ Below is a comprehensive list of every error message string used across the code
 - `"Admin access required"`
 
 ### Zod Validation Error Messages (from route handlers)
-- `"Invalid invite code or username"`
+- `"Invalid email or username"`
 - `"Invalid username"`
 - `"Invalid open payload"`
 - `"Invalid TP/SL payload"`
@@ -1986,14 +2021,16 @@ Below is a comprehensive list of every error message string used across the code
 - `"Please login (10001)"` (`UNAUTHED_ERR_MSG`)
 - `"You do not have required permission (10002)"` (`NOT_ADMIN_ERR_MSG`)
 
-### Engine Login Errors
+### Engine Registration/Login Errors
 - `"Username length must be between 2 and 20"`
-- `"Invalid invite code"`
+- `"Email is required"`
 - `"Password must be at least 4 characters"`
+- `"Username already taken"`
+- `"Email already registered"`
 - `"Invalid username"` (loginByUsername)
 - `"Password is required"`
-- `"Account not found. Please register with an invite code first."`
-- `"Account has no password set. Please re-register with your invite code to set a password."`
+- `"Account not found. Please register first."`
+- `"Account has no password set. Please re-register to set a password."`
 - `"Incorrect password"`
 
 ### Trading Errors

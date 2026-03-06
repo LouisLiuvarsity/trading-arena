@@ -35,7 +35,7 @@
 | 维度 | 当前 (v1) | 新模型 (v2) |
 |------|-----------|-------------|
 | 比赛创建 | `ensureActiveMatch()` 自动轮转 | 管理员预排期，手动或定时触发 |
-| 参赛方式 | 注册即参赛（invite code） | 报名 → 审核 → 入选 → 参赛 |
+| 参赛方式 | 注册即参赛（邮箱+昵称） | 报名 → 审核 → 入选 → 参赛 |
 | 比赛间隙 | 不存在（永远有一场在进行） | 核心体验：浏览赛程、回顾、准备 |
 | 用户首页 | 直接进 TradingPage | HubPage 赛事大厅 |
 | 管理能力 | 无 | 完整后台：创建/审核/调度 |
@@ -290,10 +290,10 @@ CREATE TABLE user_profiles (
 
 ### 2.2 修改现有表
 
-#### `arena_accounts` — 不变
+#### `arena_accounts` — 新增 `email` 列
 
-保留 `seasonPoints`、`capital`、`inviteCode` 等字段。
-`inviteCode` 仍然控制**平台准入**，`competition_registrations` 控制**比赛准入**。
+保留 `seasonPoints`、`capital` 等字段。新增 `email` varchar(128) 列用于注册。
+`inviteCode` 列保留用于向后兼容，注册时自动生成。`email` 控制**平台准入**，`competition_registrations` 控制**比赛准入**。
 
 #### `positions` — 加 `competitionId`
 
@@ -621,12 +621,10 @@ POST /api/admin/institutions              → Institution
 PUT  /api/admin/institutions/:id          → Institution
 POST /api/admin/institutions/:id/verify   → 标记已验证
 
--- 邀请码管理（平台准入仍用 invite code）
-POST /api/admin/invite-codes/generate
-     body: { count: number, prefix?: string }
-     → { codes: string[] }
-GET  /api/admin/invite-codes?status=unused|consumed
-     → InviteCode[]
+-- 用户昵称检查（注册时实时检测唯一性）
+POST /api/auth/check-username
+     body: { username: string }
+     → { available: boolean }
 ```
 
 ### 4.4 核心返回类型
@@ -819,7 +817,6 @@ const routes = [
   { path: '/admin/competitions/:id/registrations', element: <AdminRegistrationsPage /> },
   { path: '/admin/seasons',               element: <AdminSeasonsPage /> },
   { path: '/admin/institutions',          element: <AdminInstitutionsPage /> },
-  { path: '/admin/invite-codes',          element: <AdminInviteCodesPage /> },
 ];
 ```
 
@@ -1833,7 +1830,6 @@ function App() {
             <Route path="/admin/competitions/:id/registrations" element={<AdminRegistrationsPage />} />
             <Route path="/admin/seasons" element={<AdminSeasonsPage />} />
             <Route path="/admin/institutions" element={<AdminInstitutionsPage />} />
-            <Route path="/admin/invite-codes" element={<AdminInviteCodesPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -1856,7 +1852,7 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
-  login: (inviteCode: string, username: string, password: string) => Promise<void>;
+  login: (email: string, username: string, password: string) => Promise<void>;
   quickLogin: (username: string, password: string) => Promise<void>;
   logout: () => void;
 }

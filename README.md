@@ -18,7 +18,7 @@ Trading Arena 是一个 **加密货币交易比赛平台**。v2.0 从"永动机"
 | 比赛间隙 | 不存在 | 浏览赛程、回顾、准备 |
 | 管理后台 | 无 | 完整 CRUD + 审核 |
 | 通知系统 | 无 | 全生命周期通知 |
-| 用户画像 | 仅 username | 国家/地区/高校/专业 |
+| 用户画像 | 仅 nickname | 国家/地区/高校/专业 |
 | 统计展示 | 无 | 地区排行、高校排行 |
 | 比赛结果 | 瞬态（丢失） | 持久化到 match_results |
 | 交易分析 | 无 | 完整 recharts 图表 |
@@ -65,7 +65,7 @@ draft → announced → registration_open → registration_closed → live → s
 ```
 公开页面
 /                        LandingPage          公开首页
-/login                   LoginPage            注册/登录
+/login                   LoginPage            注册（邮箱+昵称+密码）/登录（昵称+密码）
 /rules                   RulesPage            规则说明
 /stats                   StatsOverviewPage    平台统计（国家/高校排行）
 /stats/institutions      InstitutionStatsPage 高校排行详情
@@ -209,7 +209,7 @@ trading-arena/
 | 表 | 用途 |
 |---|---|
 | `users` | OAuth 用户 |
-| `arena_accounts` | 竞技场账户（username, inviteCode, seasonPoints, role） |
+| `arena_accounts` | 竞技场账户（username, email, seasonPoints, role） |
 | `arena_sessions` | 会话 token |
 | `matches` | 比赛轮次（ArenaEngine 桥梁） |
 | `positions` | 当前持仓 |

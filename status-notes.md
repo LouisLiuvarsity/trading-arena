@@ -1,4 +1,18 @@
-# Status Notes — 2026-03-04
+# Status Notes — 2026-03-06
+
+## v2.1 Registration Flow Redesign
+
+### 注册/登录流程重构
+
+**核心改动：**
+- 注册：邀请码 → 邮箱（email + 昵称 + 密码）
+- 登录：昵称 + 密码（保持不变）
+- 新增注册确认弹窗（AlertDialog，显示邮箱和脱敏密码供用户核对）
+- 新增昵称唯一性实时检测（防抖 500ms，POST /api/auth/check-username）
+- 新增密码可见/隐藏切换（Eye/EyeOff 图标）
+- schema 新增 `email` varchar(128) 列，`inviteCode` 保留自动生成
+- 用户名标签全局改为"昵称"（Nickname）
+- i18n 中英文翻译同步更新
 
 ## v2.0 Implementation Complete
 

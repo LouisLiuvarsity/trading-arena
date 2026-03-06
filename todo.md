@@ -74,8 +74,19 @@
 
 ---
 
-## Next Steps (Post v2.0)
-- [ ] `pnpm db:push` — migrate schema to database
+## v2.1 Registration Flow Redesign ✅ Complete (2026-03-06)
+- [x] Replace invite code with email field in registration
+- [x] Rename "Username" labels to "Nickname" (昵称) throughout UI and i18n
+- [x] Add registration confirmation dialog (AlertDialog showing email + masked password)
+- [x] Add real-time nickname uniqueness check (debounced 500ms, POST /api/auth/check-username)
+- [x] Add password visibility toggle (Eye/EyeOff icon) on both registration and login forms
+- [x] Add `email` column to `arena_accounts` schema (varchar 128)
+- [x] Update server: registerSchema (email validation), engine.register(), checkUsernameAvailable()
+- [x] Update client: api.ts, AuthContext, LoginPage, i18n (zh + en)
+- [x] Update all documentation (README, API-REFERENCE, SYSTEM_DESIGN_V2, status-notes)
+
+## Next Steps (Post v2.1)
+- [ ] `pnpm db:push` — migrate schema to database (email column)
 - [ ] Set first admin: `UPDATE arena_accounts SET role='admin' WHERE username='xxx'`
 - [ ] Create first season + competition for end-to-end testing
 - [ ] i18n: add ~200 translation keys for new pages
