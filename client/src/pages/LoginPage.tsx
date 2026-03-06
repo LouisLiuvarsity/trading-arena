@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'wouter';
-import { Trophy, ChevronRight, ChevronLeft, UserPlus, LogIn, Sparkles, BarChart3, Target, Users, Check, X, Loader2 } from 'lucide-react';
+import { Trophy, ChevronRight, ChevronLeft, UserPlus, LogIn, Sparkles, BarChart3, Target, Users, Check, X, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useT } from '@/lib/i18n';
 import LanguageToggle from '@/components/LanguageToggle';
 import { useAuth } from '@/contexts/AuthContext';
@@ -101,6 +101,10 @@ export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickL
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+
+  // Password visibility state
+  const [showPassword, setShowPassword] = useState(false);
+  const [showQuickPassword, setShowQuickPassword] = useState(false);
 
   // Confirmation dialog state
   const [showConfirm, setShowConfirm] = useState(false);
@@ -318,15 +322,25 @@ export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickL
                 <label className="block text-[#848E9C] text-xs uppercase tracking-wider mb-2 mt-4">
                   {t('login.password')}
                 </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={t('login.passwordPlaceholder')}
-                  maxLength={128}
-                  className="w-full bg-[#0B0E11] border border-[rgba(255,255,255,0.1)] rounded-lg px-4 py-3 text-white placeholder:text-[#5E6673] focus:outline-none focus:border-[#F0B90B]/50 transition-colors text-sm"
-                  style={{ fontFamily: "'DM Mono', monospace" }}
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={t('login.passwordPlaceholder')}
+                    maxLength={128}
+                    className="w-full bg-[#0B0E11] border border-[rgba(255,255,255,0.1)] rounded-lg px-4 py-3 pr-10 text-white placeholder:text-[#5E6673] focus:outline-none focus:border-[#F0B90B]/50 transition-colors text-sm"
+                    style={{ fontFamily: "'DM Mono', monospace" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5E6673] hover:text-[#848E9C] transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
 
                 <button
                   type="submit"
@@ -368,15 +382,25 @@ export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickL
                 <label className="block text-[#848E9C] text-xs uppercase tracking-wider mb-2 mt-4">
                   {t('login.password')}
                 </label>
-                <input
-                  type="password"
-                  value={quickPassword}
-                  onChange={(e) => setQuickPassword(e.target.value)}
-                  placeholder={t('login.passwordPlaceholder')}
-                  maxLength={128}
-                  className="w-full bg-[#0B0E11] border border-[rgba(255,255,255,0.1)] rounded-lg px-4 py-3 text-white placeholder:text-[#5E6673] focus:outline-none focus:border-[#F0B90B]/50 transition-colors text-sm"
-                  style={{ fontFamily: "'DM Mono', monospace" }}
-                />
+                <div className="relative">
+                  <input
+                    type={showQuickPassword ? 'text' : 'password'}
+                    value={quickPassword}
+                    onChange={(e) => setQuickPassword(e.target.value)}
+                    placeholder={t('login.passwordPlaceholder')}
+                    maxLength={128}
+                    className="w-full bg-[#0B0E11] border border-[rgba(255,255,255,0.1)] rounded-lg px-4 py-3 pr-10 text-white placeholder:text-[#5E6673] focus:outline-none focus:border-[#F0B90B]/50 transition-colors text-sm"
+                    style={{ fontFamily: "'DM Mono', monospace" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickPassword(!showQuickPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5E6673] hover:text-[#848E9C] transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showQuickPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
 
                 <button
                   type="submit"
