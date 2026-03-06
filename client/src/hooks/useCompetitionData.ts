@@ -10,6 +10,7 @@ import {
   getCompetitions,
   getCompetitionDetail,
   getCompetitionLeaderboard,
+  getCompetitionResults,
   getHubData,
   getMatchHistory,
   getNotifications,
@@ -19,7 +20,7 @@ import {
   registerForCompetition,
   withdrawFromCompetition,
 } from "@/lib/competition-api";
-import type { HubData, CompetitionSummary, MatchResultSummary, NotificationItem } from "@shared/competitionTypes";
+import type { HubData, CompetitionSummary, NotificationItem } from "@shared/competitionTypes";
 
 // ─── Query Hooks (Read) ─────────────────────────────────────
 
@@ -139,7 +140,7 @@ export function useResultsLeaderboard(competitionId: string) {
   const { token } = useAuth();
   return useQuery({
     queryKey: ["results-leaderboard", competitionId, token],
-    queryFn: () => apiRequest<any>(`/api/competitions/${competitionId}/leaderboard`, { token: token! }),
+    queryFn: () => getCompetitionResults(competitionId, token),
     enabled: !!token && !!competitionId,
   });
 }
@@ -148,9 +149,9 @@ export function useResultsHistory(competitionId: string) {
   const { token } = useAuth();
   return useQuery({
     queryKey: ["results-history", token],
-    queryFn: () => apiRequest<{ results: MatchResultSummary[] }>("/api/me/history", { token: token! }),
+    queryFn: () => getMatchHistory(token!),
     enabled: !!token,
-    select: (data) => data.results?.find((r) => String(r.competitionId) === String(competitionId)) ?? null,
+    select: (data) => data.find((r) => String(r.competitionId) === String(competitionId)) ?? null,
   });
 }
 

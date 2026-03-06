@@ -88,7 +88,7 @@ export async function registerArenaRoutes(app: Express) {
 
   const market = new MarketService();
   await market.start();
-  const engine = new ArenaEngine(market, { legacyAutoRotate: true });
+  const engine = new ArenaEngine(market, { legacyAutoRotate: false });
   await engine.init();
   engineInstance = engine;
 
@@ -250,7 +250,7 @@ export async function registerArenaRoutes(app: Express) {
     try {
       const arenaAccountId = (req as any).arenaAccountId as number;
       const compCtx = await getActiveCompetitionForUser(arenaAccountId);
-      await engine.openPosition(arenaAccountId, parsed.data, compCtx?.competitionId ?? null);
+      await engine.openPosition(arenaAccountId, parsed.data, compCtx);
       await engine.recordBehaviorEvent(arenaAccountId, "order_open", parsed.data);
       res.json({ ok: true });
     } catch (error) {
@@ -293,7 +293,8 @@ export async function registerArenaRoutes(app: Express) {
     }
     try {
       const arenaAccountId = (req as any).arenaAccountId as number;
-      await engine.sendChatMessage(arenaAccountId, parsed.data.message);
+      const compCtx = await getActiveCompetitionForUser(arenaAccountId);
+      await engine.sendChatMessage(arenaAccountId, parsed.data.message, compCtx?.competitionId ?? null);
       await engine.recordBehaviorEvent(arenaAccountId, "chat_send", { length: parsed.data.message.length });
       res.json({ ok: true });
     } catch (error) {
@@ -329,7 +330,8 @@ export async function registerArenaRoutes(app: Express) {
     }
     try {
       const arenaAccountId = (req as any).arenaAccountId as number;
-      await engine.submitPrediction(arenaAccountId, parsed.data.direction, parsed.data.confidence);
+      const compCtx = await getActiveCompetitionForUser(arenaAccountId);
+      await engine.submitPrediction(arenaAccountId, parsed.data.direction, parsed.data.confidence, compCtx);
       await engine.recordBehaviorEvent(arenaAccountId, "prediction_submit", parsed.data);
       res.json({ ok: true });
     } catch (error) {
@@ -395,7 +397,7 @@ export async function registerArenaRoutes(app: Express) {
     }
     try {
       const compCtx = await getActiveCompetitionForUser(account.id);
-      await engine.openPosition(account.id, parsed.data, compCtx?.competitionId ?? null);
+      await engine.openPosition(account.id, parsed.data, compCtx);
       await engine.recordBehaviorEvent(account.id, "order_open", parsed.data);
       res.json({ ok: true });
     } catch (error) {
@@ -474,7 +476,8 @@ export async function registerArenaRoutes(app: Express) {
       return;
     }
     try {
-      await engine.sendChatMessage(account.id, parsed.data.message);
+      const compCtx = await getActiveCompetitionForUser(account.id);
+      await engine.sendChatMessage(account.id, parsed.data.message, compCtx?.competitionId ?? null);
       await engine.recordBehaviorEvent(account.id, "chat_send", { length: parsed.data.message.length });
       res.json({ ok: true });
     } catch (error) {
@@ -534,7 +537,8 @@ export async function registerArenaRoutes(app: Express) {
       return;
     }
     try {
-      await engine.submitPrediction(account.id, parsed.data.direction, parsed.data.confidence);
+      const compCtx = await getActiveCompetitionForUser(account.id);
+      await engine.submitPrediction(account.id, parsed.data.direction, parsed.data.confidence, compCtx);
       await engine.recordBehaviorEvent(account.id, "prediction_submit", parsed.data);
       res.json({ ok: true });
     } catch (error) {

@@ -31,6 +31,12 @@ export async function getCompetitionLeaderboard(slug: string, token?: string | n
   });
 }
 
+export async function getCompetitionResults(identifier: string, token?: string | null) {
+  return apiRequest<any>(`/api/competitions/${identifier}/results`, {
+    token: token ?? undefined,
+  });
+}
+
 export async function registerForCompetition(slug: string, token: string) {
   return apiRequest<{ ok: true }>(`/api/competitions/${slug}/register`, {
     method: "POST",

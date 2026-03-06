@@ -77,6 +77,47 @@ export function registerCompetitionRoutes(
   engine: CompetitionEngine,
   arenaEngine: ArenaEngine,
 ) {
+  const getCompetitionByIdentifier = async (identifier: string) => {
+    if (/^\d+$/.test(identifier)) {
+      return compDb.getCompetitionById(parseIntParam(identifier));
+    }
+    return compDb.getCompetitionBySlug(identifier);
+  };
+
+  const getCurrentAccountId = async (req: Request) => {
+    const token = getAuthToken(req);
+    if (!token) return null;
+    const account = await arenaEngine.getAccountByToken(token);
+    return account?.id ?? null;
+  };
+
+  const toLeaderboardRows = (
+    rows: Array<{
+      arenaAccountId: number;
+      rank: number;
+      username: string;
+      pnlPct: number;
+      pnl: number;
+      weightedPnl: number;
+      matchPoints: number;
+      prizeEligible: boolean;
+      prizeAmount: number;
+      rankTier?: string;
+    }>,
+    accountId: number | null,
+  ) => rows.map((row) => ({
+    rank: row.rank,
+    username: row.username,
+    pnlPct: row.pnlPct,
+    pnl: row.pnl,
+    weightedPnl: row.weightedPnl,
+    matchPoints: row.matchPoints,
+    prizeEligible: row.prizeEligible,
+    prizeAmount: row.prizeAmount,
+    rankTier: row.rankTier,
+    isYou: accountId !== null && row.arenaAccountId === accountId,
+    isBot: false,
+  }));
   // ─── Public Endpoints ───────────────────────────────────────
 
   /** List competitions */
@@ -129,9 +170,9 @@ export function registerCompetitionRoutes(
   });
 
   /** Get competition detail */
-  app.get("/api/competitions/:slug", async (req: Request, res: Response) => {
+  app.get("/api/competitions/:identifier", async (req: Request, res: Response) => {
     try {
-      const comp = await compDb.getCompetitionBySlug(req.params.slug);
+      const comp = await getCompetitionByIdentifier(req.params.identifier);
       if (!comp) {
         res.status(404).json({ error: "Competition not found" });
         return;
@@ -164,45 +205,90 @@ export function registerCompetitionRoutes(
   });
 
   /** Competition leaderboard */
-  app.get("/api/competitions/:slug/leaderboard", async (req: Request, res: Response) => {
+  app.get("/api/competitions/:identifier/leaderboard", async (req: Request, res: Response) => {
     try {
-      const comp = await compDb.getCompetitionBySlug(req.params.slug);
+      const comp = await getCompetitionByIdentifier(req.params.identifier);
       if (!comp) {
         res.status(404).json({ error: "Competition not found" });
         return;
       }
 
+      const accountId = await getCurrentAccountId(req);
       if (comp.status === "completed") {
-        // Return persisted results
         const results = await compDb.getMatchResultsForCompetition(comp.id);
-        res.json(results.map((r) => ({
-          rank: r.finalRank,
-          username: "", // TODO: join
-          pnl: r.totalPnl,
-          pnlPct: r.totalPnlPct,
-          weightedPnl: r.totalWeightedPnl,
-          pointsEarned: r.pointsEarned,
-          prizeWon: r.prizeWon,
-        })));
+        res.json(toLeaderboardRows(
+          results.map((r) => ({
+            arenaAccountId: r.arenaAccountId,
+            rank: r.finalRank,
+            username: r.username ?? `#${r.arenaAccountId}`,
+            pnl: r.totalPnl,
+            pnlPct: r.totalPnlPct,
+            weightedPnl: r.totalWeightedPnl,
+            matchPoints: r.pointsEarned,
+            prizeEligible: !!r.prizeEligible,
+            prizeAmount: r.prizeWon,
+            rankTier: r.rankTierAtTime ?? undefined,
+          })),
+          accountId,
+        ));
       } else if (comp.status === "live" && comp.matchId) {
-        // Return real-time leaderboard scoped to competition participants only
         const acceptedIds = new Set(await compDb.getAcceptedAccountIds(comp.id));
-        const lb = (await arenaEngine.buildLeaderboard(comp.matchId, acceptedIds)).slice(0, 100).map((row) => ({
-          rank: row.rank,
-          username: row.username,
-          pnlPct: row.pnlPct,
-          pnl: row.pnl,
-          weightedPnl: row.weightedPnl,
-          matchPoints: row.matchPoints,
-          prizeEligible: row.prizeEligible,
-          prizeAmount: row.prizeAmount,
-          rankTier: row.rankTier,
-          isBot: false,
-        }));
-        res.json(lb);
+        const lb = await arenaEngine.buildLeaderboard(comp.matchId, acceptedIds, comp.id);
+        res.json(toLeaderboardRows(lb.slice(0, 100), accountId));
       } else {
         res.json([]);
       }
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  /** Competition results payload for the results page */
+  app.get("/api/competitions/:identifier/results", async (req: Request, res: Response) => {
+    try {
+      const comp = await getCompetitionByIdentifier(req.params.identifier);
+      if (!comp) {
+        res.status(404).json({ error: "Competition not found" });
+        return;
+      }
+
+      const accountId = await getCurrentAccountId(req);
+      let leaderboard: ReturnType<typeof toLeaderboardRows> = [];
+      let participantCount = 0;
+
+      if (comp.status === "completed") {
+        const results = await compDb.getMatchResultsForCompetition(comp.id);
+        participantCount = results[0]?.participantCount ?? results.length;
+        leaderboard = toLeaderboardRows(
+          results.map((r) => ({
+            arenaAccountId: r.arenaAccountId,
+            rank: r.finalRank,
+            username: r.username ?? `#${r.arenaAccountId}`,
+            pnl: r.totalPnl,
+            pnlPct: r.totalPnlPct,
+            weightedPnl: r.totalWeightedPnl,
+            matchPoints: r.pointsEarned,
+            prizeEligible: !!r.prizeEligible,
+            prizeAmount: r.prizeWon,
+            rankTier: r.rankTierAtTime ?? undefined,
+          })),
+          accountId,
+        );
+      } else if ((comp.status === "live" || comp.status === "settling") && comp.matchId) {
+        const acceptedIds = new Set(await compDb.getAcceptedAccountIds(comp.id));
+        const rows = await arenaEngine.buildLeaderboard(comp.matchId, acceptedIds, comp.id);
+        participantCount = rows.length;
+        leaderboard = toLeaderboardRows(rows.slice(0, 100), accountId);
+      }
+
+      res.json({
+        competitionId: comp.id,
+        title: comp.title,
+        status: comp.status,
+        participantCount,
+        prizePool: comp.prizePool,
+        leaderboard,
+      });
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
     }

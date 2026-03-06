@@ -2,12 +2,15 @@ import crypto from "node:crypto";
 import { nanoid } from "nanoid";
 import * as dbHelpers from "./db";
 import { db } from "./db";
+import * as compDb from "./competition-db";
 import {
   CLOSE_ONLY_SECONDS,
   FEE_RATE,
+  MATCH_POINTS_TABLE,
   MATCH_DURATION_MS,
   MAX_TRADES_PER_MATCH,
   MIN_TRADES_FOR_PRIZE,
+  REGULAR_PRIZE_TABLE,
   STARTING_CAPITAL,
   getHoldWeight,
   getPointsForRank,
@@ -34,6 +37,7 @@ type MatchRow = {
 
 type PositionRow = {
   arenaAccountId: number;
+  competitionId?: number | null;
   direction: string;
   size: number;
   entryPrice: number;
@@ -57,9 +61,37 @@ type LeaderboardRow = {
   prizeAmount: number;
 };
 
+type CompetitionContext = {
+  competitionId: number;
+  matchId: number;
+  participantIds: Set<number>;
+};
+
+type PrizeRule = { rankMin: number; rankMax: number; prize: number };
+type PointsRule = { rankMin: number; rankMax: number; points: number };
+
+type MatchRules = {
+  matchId: number;
+  competitionId: number | null;
+  symbol: string;
+  startingCapital: number;
+  maxTradesPerMatch: number;
+  closeOnlySeconds: number;
+  feeRate: number;
+  prizePool: number;
+  participantIds?: Set<number>;
+  prizeTable: PrizeRule[];
+  pointsTable: PointsRule[];
+};
+
 function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }
+
+const DEFAULT_PRIZE_POOL = REGULAR_PRIZE_TABLE.reduce(
+  (sum, row) => sum + (row.rankMax - row.rankMin + 1) * row.prize,
+  0,
+);
 
 function sanitizeHtml(str: string): string {
   return str
@@ -168,6 +200,164 @@ export class ArenaEngine {
     };
   }
 
+  private parsePrizeTable(prizeTableJson: string | null, prizePool: number): PrizeRule[] {
+    if (prizeTableJson) {
+      try {
+        const parsed = JSON.parse(prizeTableJson);
+        if (Array.isArray(parsed)) {
+          const rows = parsed
+            .map((row) => ({
+              rankMin: Number((row as any).rankMin),
+              rankMax: Number((row as any).rankMax),
+              prize: Number((row as any).prize),
+            }))
+            .filter((row) => Number.isFinite(row.rankMin) && Number.isFinite(row.rankMax) && Number.isFinite(row.prize));
+          if (rows.length > 0) return rows;
+        }
+      } catch {
+        // Fall back to the default table when the stored JSON is malformed.
+      }
+    }
+
+    const scale = DEFAULT_PRIZE_POOL > 0 ? prizePool / DEFAULT_PRIZE_POOL : 1;
+    return REGULAR_PRIZE_TABLE.map((row) => ({
+      rankMin: row.rankMin,
+      rankMax: row.rankMax,
+      prize: round2(row.prize * scale),
+    }));
+  }
+
+  private parsePointsTable(pointsTableJson: string | null): PointsRule[] {
+    if (pointsTableJson) {
+      try {
+        const parsed = JSON.parse(pointsTableJson);
+        if (Array.isArray(parsed)) {
+          const rows = parsed
+            .map((row) => ({
+              rankMin: Number((row as any).rankMin),
+              rankMax: Number((row as any).rankMax),
+              points: Number((row as any).points),
+            }))
+            .filter((row) => Number.isFinite(row.rankMin) && Number.isFinite(row.rankMax) && Number.isFinite(row.points));
+          if (rows.length > 0) return rows;
+        }
+      } catch {
+        // Fall back to the default table when the stored JSON is malformed.
+      }
+    }
+
+    return MATCH_POINTS_TABLE.map((row) => ({
+      rankMin: row.rankMin,
+      rankMax: row.rankMax,
+      points: row.points,
+    }));
+  }
+
+  private getPrizeForRankFromRules(rank: number, rules?: MatchRules): number {
+    if (!rules) return getPrizeForRank(rank);
+    for (const row of rules.prizeTable) {
+      if (rank >= row.rankMin && rank <= row.rankMax) return row.prize;
+    }
+    return 0;
+  }
+
+  private getPointsForRankFromRules(rank: number, rules?: MatchRules): number {
+    if (!rules) return getPointsForRank(rank);
+    for (const row of rules.pointsTable) {
+      if (rank >= row.rankMin && rank <= row.rankMax) return row.points;
+    }
+    return 0;
+  }
+
+  private async getLegacyActiveMatch(): Promise<MatchRow | null> {
+    const row = await dbHelpers.getActiveMatch();
+    if (row) return row;
+    if (!this.legacyAutoRotate) return null;
+    const now = Date.now();
+    const id = await dbHelpers.createMatch(1, now, now + MATCH_DURATION_MS);
+    return { id, matchNumber: 1, startTime: now, endTime: now + MATCH_DURATION_MS };
+  }
+
+  private async getLegacyMatchRules(): Promise<MatchRules> {
+    const active = await this.getLegacyActiveMatch();
+    if (!active) {
+      throw new Error("No active match");
+    }
+
+    return {
+      matchId: active.id,
+      competitionId: null,
+      symbol: this.market.getSymbol(),
+      startingCapital: STARTING_CAPITAL,
+      maxTradesPerMatch: MAX_TRADES_PER_MATCH,
+      closeOnlySeconds: CLOSE_ONLY_SECONDS,
+      feeRate: FEE_RATE,
+      prizePool: DEFAULT_PRIZE_POOL,
+      prizeTable: this.parsePrizeTable(null, DEFAULT_PRIZE_POOL),
+      pointsTable: this.parsePointsTable(null),
+    };
+  }
+
+  private async getCompetitionMatchRules(
+    competitionId: number,
+    context?: CompetitionContext | null,
+  ): Promise<MatchRules> {
+    const competition = await compDb.getCompetitionById(competitionId);
+    if (!competition) {
+      throw new Error("Competition not found");
+    }
+    if (!competition.matchId) {
+      throw new Error("Competition is not live yet");
+    }
+
+    return {
+      matchId: context?.matchId ?? competition.matchId,
+      competitionId: competition.id,
+      symbol: competition.symbol,
+      startingCapital: competition.startingCapital,
+      maxTradesPerMatch: competition.maxTradesPerMatch,
+      closeOnlySeconds: competition.closeOnlySeconds,
+      feeRate: competition.feeRate,
+      prizePool: competition.prizePool,
+      participantIds: context?.participantIds,
+      prizeTable: this.parsePrizeTable(competition.prizeTableJson ?? null, competition.prizePool),
+      pointsTable: this.parsePointsTable(competition.pointsTableJson ?? null),
+    };
+  }
+
+  private async getMatchRules(input?: {
+    competitionId?: number | null;
+    competitionContext?: CompetitionContext | null;
+  }): Promise<MatchRules> {
+    if (input?.competitionContext) {
+      return this.getCompetitionMatchRules(input.competitionContext.competitionId, input.competitionContext);
+    }
+    if (input?.competitionId) {
+      return this.getCompetitionMatchRules(input.competitionId);
+    }
+    return this.getLegacyMatchRules();
+  }
+
+  private async getPositionMatchRules(pos: Pick<PositionRow, "competitionId">): Promise<MatchRules> {
+    return this.getMatchRules({ competitionId: pos.competitionId ?? null });
+  }
+
+  private async getPublicMatchRules(): Promise<MatchRules | null> {
+    const liveCompetitions = await compDb.getLiveCompetitions();
+    const live = liveCompetitions.find((comp) => comp.matchId);
+    if (live?.matchId) {
+      const participantIds = new Set(await compDb.getAcceptedAccountIds(live.id));
+      return this.getCompetitionMatchRules(live.id, {
+        competitionId: live.id,
+        matchId: live.matchId,
+        participantIds,
+      });
+    }
+
+    const active = await this.getLegacyActiveMatch();
+    return active ? this.getLegacyMatchRules() : null;
+  }
+
   async recordBehaviorEvent(arenaAccountId: number, eventType: string, payload: unknown, source = "client") {
     await dbHelpers.insertBehaviorEvent({
       arenaAccountId,
@@ -178,7 +368,7 @@ export class ArenaEngine {
     });
   }
 
-  async sendChatMessage(arenaAccountId: number, messageInput: string) {
+  async sendChatMessage(arenaAccountId: number, messageInput: string, competitionId?: number | null) {
     const message = messageInput.trim();
     if (!message) return;
     const account = await dbHelpers.getArenaAccountById(arenaAccountId);
@@ -186,6 +376,7 @@ export class ArenaEngine {
     await dbHelpers.insertChatMessage({
       id: `chat-${nanoid(12)}`,
       arenaAccountId,
+      competitionId: competitionId ?? null,
       username: account.username,
       message: sanitizeHtml(message).slice(0, 280),
       type: "user",
@@ -196,12 +387,16 @@ export class ArenaEngine {
   async openPosition(
     arenaAccountId: number,
     input: { direction: "long" | "short"; size: number; tp?: number | null; sl?: number | null },
-    competitionId?: number | null,
+    competitionContext?: CompetitionContext | null,
   ) {
     await this.rotateMatchIfNeeded();
-    const active = await this.getActiveMatch();
-    const remainingSeconds = Math.floor((active.endTime - Date.now()) / 1000);
-    if (remainingSeconds <= CLOSE_ONLY_SECONDS) {
+    const rules = await this.getMatchRules({ competitionContext });
+    const matchRow = await dbHelpers.getMatchById(rules.matchId);
+    if (!matchRow) {
+      throw new Error("Match not found");
+    }
+    const remainingSeconds = Math.floor((matchRow.endTime - Date.now()) / 1000);
+    if (remainingSeconds <= rules.closeOnlySeconds) {
       throw new Error("Close-only mode in last 30 minutes");
     }
 
@@ -246,14 +441,18 @@ export class ArenaEngine {
         throw new Error("Only one position is allowed");
       }
 
-      const tradesUsed = await dbHelpers.getTradeCountForUserMatch(arenaAccountId, active.id, tx);
-      if (tradesUsed >= MAX_TRADES_PER_MATCH) {
+      const tradesUsed = await dbHelpers.getTradeCountForUserMatch(arenaAccountId, rules.matchId, tx);
+      if (tradesUsed >= rules.maxTradesPerMatch) {
         throw new Error("Trade limit reached");
       }
 
-      const leaderboard = await this.buildLeaderboard(active.id);
+      const leaderboard = await this.buildLeaderboard(
+        rules.matchId,
+        competitionContext?.participantIds,
+        rules.competitionId,
+      );
       const me = leaderboard.find((row) => row.arenaAccountId === arenaAccountId);
-      const equity = STARTING_CAPITAL + (me?.pnl ?? 0);
+      const equity = rules.startingCapital + (me?.pnl ?? 0);
       if (size > equity) {
         throw new Error("Insufficient equity");
       }
@@ -266,7 +465,7 @@ export class ArenaEngine {
       await dbHelpers.insertPosition(
         {
           arenaAccountId,
-          competitionId: competitionId ?? null,
+          competitionId: rules.competitionId,
           direction: input.direction,
           size: notionalSize,
           entryPrice: price,
@@ -289,6 +488,7 @@ export class ArenaEngine {
     return this.closePositionInternal(
       {
         arenaAccountId: pos.arenaAccountId,
+        competitionId: pos.competitionId,
         direction: pos.direction,
         size: pos.size,
         entryPrice: pos.entryPrice,
@@ -341,14 +541,29 @@ export class ArenaEngine {
   }
 
   async getPublicSummary() {
-    const active = await this.getActiveMatch();
-    const leaderboard = await this.buildLeaderboard(active.id);
+    const rules = await this.getPublicMatchRules();
+    if (!rules) {
+      return {
+        participants: 0,
+        matchNumber: 0,
+        prizePool: 0,
+        symbol: this.market.getSymbol(),
+        leader: null,
+      };
+    }
+
+    const matchRow = await dbHelpers.getMatchById(rules.matchId);
+    if (!matchRow) {
+      throw new Error("Match not found");
+    }
+
+    const leaderboard = await this.buildLeaderboard(rules.matchId, rules.participantIds, rules.competitionId);
     const top = leaderboard[0];
     return {
       participants: leaderboard.length,
-      matchNumber: ((active.matchNumber - 1) % 15) + 1,
-      prizePool: 500,
-      symbol: this.market.getSymbol(),
+      matchNumber: ((matchRow.matchNumber - 1) % 15) + 1,
+      prizePool: rules.prizePool,
+      symbol: rules.symbol,
       leader: top
         ? {
             username: top.username,
@@ -360,8 +575,9 @@ export class ArenaEngine {
   }
 
   async getPublicLeaderboard(limit = 50) {
-    const active = await this.getActiveMatch();
-    return (await this.buildLeaderboard(active.id)).slice(0, limit).map((row) => ({
+    const rules = await this.getPublicMatchRules();
+    if (!rules) return [];
+    return (await this.buildLeaderboard(rules.matchId, rules.participantIds, rules.competitionId)).slice(0, limit).map((row) => ({
       rank: row.rank,
       username: row.username,
       pnlPct: row.pnlPct,
@@ -377,18 +593,16 @@ export class ArenaEngine {
 
   async getStateForUser(
     arenaAccountId: number,
-    competitionContext?: { competitionId: number; matchId: number; participantIds: Set<number> } | null,
+    competitionContext?: CompetitionContext | null,
   ) {
     await this.rotateMatchIfNeeded();
-    let active: { id: number; matchNumber: number; startTime: number; endTime: number };
-    if (competitionContext) {
-      const matchRow = await dbHelpers.getMatchById(competitionContext.matchId);
-      active = matchRow ?? await this.getActiveMatch();
-    } else {
-      active = await this.getActiveMatch();
+    const rules = await this.getMatchRules({ competitionContext });
+    const active = await dbHelpers.getMatchById(rules.matchId);
+    if (!active) {
+      throw new Error("Match not found");
     }
-    const participantIds = competitionContext?.participantIds;
-    const leaderboard = await this.buildLeaderboard(active.id, participantIds);
+    const participantIds = competitionContext?.participantIds ?? rules.participantIds;
+    const leaderboard = await this.buildLeaderboard(active.id, participantIds, rules.competitionId);
     const me = leaderboard.find((row) => row.arenaAccountId === arenaAccountId);
     const myRank = me?.rank ?? Math.max(leaderboard.length, 1);
 
@@ -400,6 +614,7 @@ export class ArenaEngine {
       ? this.toPositionView(
           {
             arenaAccountId: position.arenaAccountId,
+            competitionId: position.competitionId,
             direction: position.direction,
             size: position.size,
             entryPrice: position.entryPrice,
@@ -409,6 +624,7 @@ export class ArenaEngine {
             tradeNumber: position.tradeNumber,
           },
           accountRow.seasonPoints,
+          rules.feeRate,
         )
       : null;
 
@@ -418,15 +634,15 @@ export class ArenaEngine {
     const unrealizedWeighted = positionView ? positionView.unrealizedPnl * positionView.holdDurationWeight : 0;
     const totalPnl = round2(realized.pnl + unrealized);
     const totalWeightedPnl = round2(realized.weighted + unrealizedWeighted);
-    const pnlPct = round2((totalPnl / accountRow.capital) * 100);
+    const pnlPct = round2((totalPnl / rules.startingCapital) * 100);
     const tradesUsed = position
       ? position.tradeNumber
       : await dbHelpers.getTradeCountForUserMatch(arenaAccountId, active.id);
-    const matchPoints = getPointsForRank(myRank);
+    const matchPoints = this.getPointsForRankFromRules(myRank, rules);
     const seasonPoints = round2(accountRow.seasonPoints + matchPoints);
     const tier = getRankTier(seasonPoints);
     const prizeEligible = tradesUsed >= MIN_TRADES_FOR_PRIZE;
-    const prizeAmount = prizeEligible ? getPrizeForRank(myRank) : 0;
+    const prizeAmount = prizeEligible ? this.getPrizeForRankFromRules(myRank, rules) : 0;
 
     const previousRank = this.rankSnapshot.get(arenaAccountId) ?? myRank;
     const tradersOvertakenYou = Math.max(0, myRank - previousRank);
@@ -455,18 +671,15 @@ export class ArenaEngine {
 
     const userTrades = await dbHelpers.getTradesForUserMatch(arenaAccountId, active.id);
 
-    // Prediction state
-    const predictionState = await this.getPredictionState(arenaAccountId);
-
     return {
       account: {
-        capital: accountRow.capital,
-        equity: round2(accountRow.capital + totalPnl),
+        capital: rules.startingCapital,
+        equity: round2(rules.startingCapital + totalPnl),
         pnl: totalPnl,
         pnlPct,
         weightedPnl: totalWeightedPnl,
         tradesUsed,
-        tradesMax: MAX_TRADES_PER_MATCH,
+        tradesMax: rules.maxTradesPerMatch,
         rank: myRank,
         matchPoints,
         seasonPoints,
@@ -570,17 +783,17 @@ export class ArenaEngine {
         endTime: active.endTime,
         elapsed,
         remainingSeconds,
-        symbol: this.market.getSymbol(),
+        symbol: rules.symbol,
         participantCount,
-        prizePool: 500,
-        isCloseOnly: remainingSeconds <= CLOSE_ONLY_SECONDS,
+        prizePool: rules.prizePool,
+        isCloseOnly: remainingSeconds <= rules.closeOnlySeconds,
         monthLabel: monthLabelCn(active.startTime),
       },
-      tradingPair: getBinanceSymbolConfig(this.market.getSymbol()) ?? getSymbolConfig(this.market.getSymbol()),
-      chatMessages: await dbHelpers.getRecentChatMessages(120),
+      tradingPair: getBinanceSymbolConfig(rules.symbol) ?? getSymbolConfig(rules.symbol),
+      chatMessages: await dbHelpers.getRecentChatMessages(120, rules.competitionId),
       ticker: this.market.getTicker(),
       orderBook: this.market.getOrderBook(),
-      prediction: predictionState,
+      prediction: await this.getPredictionState(arenaAccountId, competitionContext),
       pollData: await this.getPollData(arenaAccountId),
     };
   }
@@ -623,24 +836,29 @@ export class ArenaEngine {
     return secondsPastHour >= 300 && secondsPastHour <= 330;
   }
 
-  async submitPrediction(arenaAccountId: number, direction: "up" | "down", confidence: number) {
+  async submitPrediction(
+    arenaAccountId: number,
+    direction: "up" | "down",
+    confidence: number,
+    competitionContext?: CompetitionContext | null,
+  ) {
     if (!this.isInPredictionWindow()) {
       throw new Error("Prediction window is closed");
     }
 
+    const rules = await this.getMatchRules({ competitionContext });
     const roundKey = this.getPredictionRoundKey();
-    const existing = await dbHelpers.getPredictionForRound(arenaAccountId, roundKey);
+    const existing = await dbHelpers.getPredictionForRound(arenaAccountId, rules.matchId, roundKey);
     if (existing) {
       throw new Error("Already submitted prediction for this round");
     }
 
-    const active = await this.getActiveMatch();
     const price = this.market.getLastPrice();
     const position = await dbHelpers.getPosition(arenaAccountId);
 
     await dbHelpers.insertPrediction({
       arenaAccountId,
-      matchId: active.id,
+      matchId: rules.matchId,
       roundKey,
       direction,
       confidence: Math.min(5, Math.max(1, confidence)),
@@ -650,11 +868,11 @@ export class ArenaEngine {
     });
   }
 
-  async getPredictionState(arenaAccountId: number) {
-    const active = await this.getActiveMatch();
+  async getPredictionState(arenaAccountId: number, competitionContext?: CompetitionContext | null) {
+    const rules = await this.getMatchRules({ competitionContext });
     const roundKey = this.getPredictionRoundKey();
-    const existingPrediction = await dbHelpers.getPredictionForRound(arenaAccountId, roundKey);
-    const stats = await dbHelpers.getPredictionStats(arenaAccountId, active.id);
+    const existingPrediction = await dbHelpers.getPredictionForRound(arenaAccountId, rules.matchId, roundKey);
+    const stats = await dbHelpers.getPredictionStats(arenaAccountId, rules.matchId);
     const resolved = stats.total - stats.pending;
 
     return {
@@ -677,10 +895,13 @@ export class ArenaEngine {
   private async resolvePredictions() {
     if (!this.shouldResolvePredictions()) return;
 
+    const rules = await this.getPublicMatchRules();
+    if (!rules) return;
+
     const roundKey = this.getPredictionRoundKey();
     if (this.lastResolvedRound === roundKey) return;
 
-    const pendingPredictions = await dbHelpers.getPendingPredictionsForRound(roundKey);
+    const pendingPredictions = await dbHelpers.getPendingPredictionsForRound(roundKey, rules.matchId);
     if (pendingPredictions.length === 0) {
       this.lastResolvedRound = roundKey;
       return;
@@ -700,17 +921,7 @@ export class ArenaEngine {
 
   // ─── Internal Helpers ───────────────────────────────────────────────────────
 
-  private async getActiveMatch(): Promise<MatchRow> {
-    const row = await dbHelpers.getActiveMatch();
-    if (!row) {
-      const now = Date.now();
-      const id = await dbHelpers.createMatch(1, now, now + MATCH_DURATION_MS);
-      return { id, matchNumber: 1, startTime: now, endTime: now + MATCH_DURATION_MS };
-    }
-    return row;
-  }
-
-  private toPositionView(pos: PositionRow, _seasonPoints: number) {
+  private toPositionView(pos: PositionRow, _seasonPoints: number, feeRate: number) {
     const price = this.market.getLastPrice();
     const holdSeconds = Math.max(0, (Date.now() - pos.openTime) / 1000);
     const weight = getHoldWeight(holdSeconds);
@@ -718,7 +929,7 @@ export class ArenaEngine {
     // pos.size already includes leverage (applied at open time)
     const rawPnl = sign * ((price - pos.entryPrice) / pos.entryPrice) * pos.size;
     // Estimated fee: open side + close side (both 0.05%)
-    const estFee = round2(pos.size * FEE_RATE + pos.size * (price / pos.entryPrice) * FEE_RATE);
+    const estFee = round2(pos.size * feeRate + pos.size * (price / pos.entryPrice) * feeRate);
     const pnl = rawPnl - estFee;
     const pnlPct = (pnl / pos.size) * 100;
     return {
@@ -741,7 +952,7 @@ export class ArenaEngine {
     reason: "manual" | "sl" | "tp" | "match_end",
     exitPrice?: number,
   ) {
-    const active = await this.getActiveMatch();
+    const rules = await this.getPositionMatchRules(pos);
     const closePrice = exitPrice ?? this.market.getLastPrice();
     const holdDuration = Math.max(0, (Date.now() - pos.openTime) / 1000);
     const weight = getHoldWeight(holdDuration);
@@ -749,7 +960,7 @@ export class ArenaEngine {
     // pos.size already includes leverage (applied at open time)
     const rawPnl = sign * ((closePrice - pos.entryPrice) / pos.entryPrice) * pos.size;
     // Fee: 0.05% per side (open + close = 0.1% round trip)
-    const fee = round2(pos.size * FEE_RATE + pos.size * (closePrice / pos.entryPrice) * FEE_RATE);
+    const fee = round2(pos.size * rules.feeRate + pos.size * (closePrice / pos.entryPrice) * rules.feeRate);
     const pnl = rawPnl - fee;
     const pnlPct = (pnl / pos.size) * 100;
     const weighted = pnl * weight;
@@ -768,7 +979,7 @@ export class ArenaEngine {
         {
           id: tradeId,
           arenaAccountId: pos.arenaAccountId,
-          matchId: active.id,
+          matchId: rules.matchId,
           direction: pos.direction,
           size: pos.size,
           entryPrice: pos.entryPrice,
@@ -828,7 +1039,7 @@ export class ArenaEngine {
       if (shouldClose) {
         try {
           await this.closePositionInternal(
-            { ...pos, arenaAccountId: pos.arenaAccountId },
+            { ...pos, arenaAccountId: pos.arenaAccountId, competitionId: pos.competitionId },
             reason,
             closePrice,
           );
@@ -863,7 +1074,7 @@ export class ArenaEngine {
       for (const pos of openPositions) {
         try {
           await this.closePositionInternal(
-            { ...pos, arenaAccountId: pos.arenaAccountId },
+            { ...pos, arenaAccountId: pos.arenaAccountId, competitionId: pos.competitionId },
             "match_end",
           );
         } catch (err) {
@@ -877,7 +1088,7 @@ export class ArenaEngine {
       const finalLeaderboard = await this.buildLeaderboard(recheck.id);
       await db.transaction(async (tx) => {
         for (const row of finalLeaderboard) {
-          const points = getPointsForRank(row.rank);
+          const points = this.getPointsForRankFromRules(row.rank);
           if (points > 0) {
             await dbHelpers.updateSeasonPoints(row.arenaAccountId, points, tx);
           }
@@ -891,21 +1102,26 @@ export class ArenaEngine {
     }
   }
 
-  async buildLeaderboard(matchId: number, participantIds?: Set<number>): Promise<LeaderboardRow[]> {
+  async buildLeaderboard(
+    matchId: number,
+    participantIds?: Set<number>,
+    competitionId?: number | null,
+  ): Promise<LeaderboardRow[]> {
+    const rules = await this.getMatchRules({ competitionId });
     // Return cached result if still fresh (cache only for unfiltered/legacy builds)
     const now = Date.now();
-    if (!participantIds && this.leaderboardCache && this.leaderboardCache.matchId === matchId && now - this.leaderboardCache.at < ArenaEngine.LEADERBOARD_CACHE_TTL_MS) {
+    if (!participantIds && !competitionId && this.leaderboardCache && this.leaderboardCache.matchId === matchId && now - this.leaderboardCache.at < ArenaEngine.LEADERBOARD_CACHE_TTL_MS) {
       return this.leaderboardCache.rows;
     }
 
     // Deduplicate concurrent unfiltered builds: if one is already in progress, await it
-    if (!participantIds && this.leaderboardBuilding) {
+    if (!participantIds && !competitionId && this.leaderboardBuilding) {
       return this.leaderboardBuilding;
     }
 
-    const buildPromise = this._buildLeaderboardInternal(matchId, participantIds);
+    const buildPromise = this._buildLeaderboardInternal(matchId, participantIds, rules);
 
-    if (!participantIds) {
+    if (!participantIds && !competitionId) {
       this.leaderboardBuilding = buildPromise;
       try {
         return await buildPromise;
@@ -917,7 +1133,11 @@ export class ArenaEngine {
     return buildPromise;
   }
 
-  private async _buildLeaderboardInternal(matchId: number, participantIds?: Set<number>): Promise<LeaderboardRow[]> {
+  private async _buildLeaderboardInternal(
+    matchId: number,
+    participantIds: Set<number> | undefined,
+    rules: MatchRules,
+  ): Promise<LeaderboardRow[]> {
     let allAccounts = await dbHelpers.getAllArenaAccountsWithCapital();
     if (participantIds) {
       allAccounts = allAccounts.filter(a => participantIds.has(a.id));
@@ -951,7 +1171,8 @@ export class ArenaEngine {
         // position.size already includes leverage (applied at open time)
         const rawUnrealized =
           sign * ((lastPrice - position.entryPrice) / position.entryPrice) * position.size;
-        const estFee = position.size * FEE_RATE + position.size * (lastPrice / position.entryPrice) * FEE_RATE;
+        const estFee =
+          position.size * rules.feeRate + position.size * (lastPrice / position.entryPrice) * rules.feeRate;
         const unrealized = rawUnrealized - estFee;
         pnl += unrealized;
         weighted += unrealized * w;
@@ -963,7 +1184,7 @@ export class ArenaEngine {
         username: account.username,
         pnl: round2(pnl),
         weightedPnl: round2(weighted),
-        pnlPct: round2((pnl / account.capital) * 100),
+        pnlPct: round2((pnl / rules.startingCapital) * 100),
         tradesUsed,
         rankTier: tier.tier,
         rank: 0,
@@ -981,12 +1202,12 @@ export class ArenaEngine {
 
     rows.forEach((row, idx) => {
       row.rank = idx + 1;
-      row.matchPoints = getPointsForRank(row.rank);
-      row.prizeAmount = row.prizeEligible ? getPrizeForRank(row.rank) : 0;
+      row.matchPoints = this.getPointsForRankFromRules(row.rank, rules);
+      row.prizeAmount = row.prizeEligible ? this.getPrizeForRankFromRules(row.rank, rules) : 0;
     });
 
     // Cache only unfiltered (legacy) results
-    if (!participantIds) {
+    if (!participantIds && !rules.competitionId) {
       this.leaderboardCache = { matchId, rows, at: Date.now() };
     }
     return rows;

@@ -398,6 +398,7 @@ export async function getPosition(
 ): Promise<{
   id: number;
   arenaAccountId: number;
+  competitionId: number | null;
   direction: string;
   size: number;
   entryPrice: number;
@@ -420,6 +421,7 @@ export async function getAllPositions(
   Array<{
     id: number;
     arenaAccountId: number;
+    competitionId: number | null;
     direction: string;
     size: number;
     entryPrice: number;
@@ -611,16 +613,21 @@ export async function updateSeasonPoints(
 export async function insertChatMessage(input: {
   id: string;
   arenaAccountId: number;
+  competitionId?: number | null;
   username: string;
   message: string;
   type: string;
   timestamp: number;
 }): Promise<void> {
-  await db.insert(chatMessages).values(input);
+  await db.insert(chatMessages).values({
+    ...input,
+    competitionId: input.competitionId ?? null,
+  });
 }
 
 export async function getRecentChatMessages(
   limit: number = 120,
+  competitionId?: number | null,
 ): Promise<
   Array<{
     id: string;
@@ -630,6 +637,12 @@ export async function getRecentChatMessages(
     type: string;
   }>
 > {
+  const whereClause =
+    competitionId === undefined
+      ? undefined
+      : competitionId === null
+        ? sql`${chatMessages.competitionId} IS NULL`
+        : eq(chatMessages.competitionId, competitionId);
   const rows = await db
     .select({
       id: chatMessages.id,
@@ -639,6 +652,7 @@ export async function getRecentChatMessages(
       type: chatMessages.type,
     })
     .from(chatMessages)
+    .where(whereClause)
     .orderBy(desc(chatMessages.timestamp))
     .limit(limit);
   return rows.reverse();
@@ -790,18 +804,26 @@ export async function insertPrediction(input: {
 
 export async function getPredictionForRound(
   arenaAccountId: number,
+  matchId: number,
   roundKey: string,
 ): Promise<{ id: number; direction: string } | null> {
   const rows = await db
     .select({ id: predictions.id, direction: predictions.direction })
     .from(predictions)
-    .where(and(eq(predictions.arenaAccountId, arenaAccountId), eq(predictions.roundKey, roundKey)))
+    .where(
+      and(
+        eq(predictions.arenaAccountId, arenaAccountId),
+        eq(predictions.matchId, matchId),
+        eq(predictions.roundKey, roundKey),
+      ),
+    )
     .limit(1);
   return rows[0] ?? null;
 }
 
 export async function getPendingPredictionsForRound(
   roundKey: string,
+  matchId: number,
 ): Promise<Array<{ id: number; arenaAccountId: number; direction: string; confidence: number; priceAtPrediction: number }>> {
   return db
     .select({
@@ -812,7 +834,7 @@ export async function getPendingPredictionsForRound(
       priceAtPrediction: predictions.priceAtPrediction,
     })
     .from(predictions)
-    .where(and(eq(predictions.roundKey, roundKey), eq(predictions.status, "pending")));
+    .where(and(eq(predictions.roundKey, roundKey), eq(predictions.matchId, matchId), eq(predictions.status, "pending")));
 }
 
 export async function resolvePrediction(

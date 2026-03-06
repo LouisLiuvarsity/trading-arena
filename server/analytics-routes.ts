@@ -9,6 +9,7 @@ import type { ArenaEngine } from "./engine";
 import { db } from "./db";
 import { trades } from "../drizzle/schema";
 import { eq, and, sql, desc } from "drizzle-orm";
+import * as compDb from "./competition-db";
 
 function getAuthToken(req: Request): string | null {
   const header = req.headers.authorization;
@@ -35,12 +36,49 @@ export function registerAnalyticsRoutes(app: Express, arenaEngine: ArenaEngine) 
 
     try {
       const accountId = account.id;
+      const competitionId = req.query.competitionId ? Number(req.query.competitionId) : null;
+      let matchId: number | null = null;
+      let startingCapital = 5000;
+
+      if (competitionId !== null) {
+        if (!Number.isInteger(competitionId) || competitionId <= 0) {
+          res.status(400).json({ error: "Invalid competitionId" });
+          return;
+        }
+
+        const competition = await compDb.getCompetitionById(competitionId);
+        if (!competition) {
+          res.status(404).json({ error: "Competition not found" });
+          return;
+        }
+
+        matchId = competition.matchId ?? null;
+        startingCapital = competition.startingCapital;
+        if (matchId === null) {
+          res.json({
+            summary: { totalTrades: 0, winRate: 0, avgPnlPerTrade: 0, avgHoldDuration: 0, avgHoldWeight: 0, profitFactor: 0 },
+            pnlDistribution: [],
+            byDirection: { long: { count: 0, wins: 0, losses: 0, totalPnl: 0, avgPnl: 0, avgHoldDuration: 0 }, short: { count: 0, wins: 0, losses: 0, totalPnl: 0, avgPnl: 0, avgHoldDuration: 0 } },
+            byCloseReason: {},
+            holdDurationVsPnl: [],
+            equityCurve: [],
+            streaks: { currentStreak: 0, longestWinStreak: 0, longestLossStreak: 0 },
+            byHour: [],
+          });
+          return;
+        }
+      }
 
       // Fetch all trades for this user (or filtered by competition)
       const allTrades = await db
         .select()
         .from(trades)
-        .where(eq(trades.arenaAccountId, accountId))
+        .where(
+          and(
+            eq(trades.arenaAccountId, accountId),
+            matchId !== null ? eq(trades.matchId, matchId) : undefined,
+          ),
+        )
         .orderBy(desc(trades.closeTime))
         .limit(2000);
 
@@ -129,7 +167,7 @@ export function registerAnalyticsRoutes(app: Express, arenaEngine: ArenaEngine) 
 
       // Equity curve (cumulative)
       const sorted = [...allTrades].sort((a, b) => a.closeTime - b.closeTime);
-      let equity = 5000;
+      let equity = startingCapital;
       const equityCurve = sorted.map((t, i) => {
         equity += t.pnl;
         return { tradeIndex: i + 1, equity: Math.round(equity * 100) / 100, timestamp: t.closeTime };

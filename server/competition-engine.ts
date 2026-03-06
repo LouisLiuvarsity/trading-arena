@@ -14,7 +14,7 @@ import type { MarketService } from "./market";
 import * as compDb from "./competition-db";
 import * as db from "./db";
 import { db as dbInstance } from "./db";
-import { getPointsForRank, getPrizeForRank, getRankTier, MATCH_DURATION_MS, MIN_TRADES_FOR_PRIZE } from "./constants";
+import { getRankTier } from "./constants";
 import { TRADING_PAIR } from "../shared/tradingPair";
 
 type CompetitionRow = Awaited<ReturnType<typeof compDb.getCompetitionById>>;
@@ -50,7 +50,11 @@ export class CompetitionEngine {
     const toOpen = await compDb.getCompetitionsByStatus("announced");
     for (const comp of toOpen) {
       if (comp.registrationOpenAt && now >= comp.registrationOpenAt) {
-        await this.transitionStatus(comp.id, "registration_open");
+        try {
+          await this.transitionStatus(comp.id, "registration_open");
+        } catch (error) {
+          console.error(`[competition:auto-open:${comp.id}]`, error);
+        }
       }
     }
 
@@ -58,7 +62,11 @@ export class CompetitionEngine {
     const toClose = await compDb.getCompetitionsByStatus("registration_open");
     for (const comp of toClose) {
       if (comp.registrationCloseAt && now >= comp.registrationCloseAt) {
-        await this.transitionStatus(comp.id, "registration_closed");
+        try {
+          await this.transitionStatus(comp.id, "registration_closed");
+        } catch (error) {
+          console.error(`[competition:auto-close:${comp.id}]`, error);
+        }
       }
     }
 
@@ -66,7 +74,11 @@ export class CompetitionEngine {
     const toStart = await compDb.getCompetitionsByStatus("registration_closed");
     for (const comp of toStart) {
       if (now >= comp.startTime) {
-        await this.startCompetition(comp);
+        try {
+          await this.startCompetition(comp);
+        } catch (error) {
+          console.error(`[competition:auto-start:${comp.id}]`, error);
+        }
       }
     }
   }
@@ -76,7 +88,11 @@ export class CompetitionEngine {
     const live = await compDb.getLiveCompetitions();
     for (const comp of live) {
       if (now >= comp.endTime) {
-        await this.settleCompetition(comp);
+        try {
+          await this.settleCompetition(comp);
+        } catch (error) {
+          console.error(`[competition:settle:${comp.id}]`, error);
+        }
       }
     }
   }
@@ -109,6 +125,16 @@ export class CompetitionEngine {
   // ─── Competition Start ─────────────────────────────────────
 
   private async startCompetition(comp: NonNullable<CompetitionRow>): Promise<void> {
+    if (Date.now() >= comp.endTime) {
+      await compDb.updateCompetitionStatus(comp.id, "cancelled");
+      throw new Error(`Competition "${comp.title}" already passed its end time`);
+    }
+
+    const blockingLive = (await compDb.getLiveCompetitions()).find((live) => live.id !== comp.id);
+    if (blockingLive) {
+      throw new Error(`Cannot start "${comp.title}" while "${blockingLive.title}" is still live`);
+    }
+
     // Verify minimum participants
     const acceptedCount = await compDb.countRegistrations(comp.id, "accepted");
     if (acceptedCount < comp.minParticipants) {
@@ -181,6 +207,7 @@ export class CompetitionEngine {
           await this.arena.closePositionInternal(
             {
               arenaAccountId: pos.arenaAccountId,
+              competitionId: pos.competitionId,
               direction: pos.direction,
               size: pos.size,
               entryPrice: pos.entryPrice,
@@ -199,7 +226,7 @@ export class CompetitionEngine {
       }
 
       // 2. Build final leaderboard scoped to competition participants only
-      const leaderboard = await this.arena.buildLeaderboard(comp.matchId!, acceptedIds);
+      const leaderboard = await this.arena.buildLeaderboard(comp.matchId!, acceptedIds, comp.id);
       const participantLeaderboard = leaderboard;
 
       // 3-5. Write match_results, award season points, complete match — all in one transaction
@@ -278,7 +305,8 @@ export class CompetitionEngine {
       await compDb.updateCompetitionStatus(comp.id, "completed");
 
       // 8. Reset market feed to default symbol
-      this.market.setSymbol(TRADING_PAIR.symbol);
+      const remainingLive = (await compDb.getLiveCompetitions()).filter((live) => live.id !== comp.id);
+      this.market.setSymbol(remainingLive[0]?.symbol ?? TRADING_PAIR.symbol);
     } finally {
       this.settlingLock.delete(comp.id);
     }
@@ -406,7 +434,7 @@ export class CompetitionEngine {
       const reg = await compDb.getRegistration(comp.id, arenaAccountId);
       if (reg && reg.status === "accepted" && comp.matchId) {
         const acceptedIds = new Set(await compDb.getAcceptedAccountIds(comp.id));
-        const leaderboard = await this.arena.buildLeaderboard(comp.matchId!, acceptedIds);
+        const leaderboard = await this.arena.buildLeaderboard(comp.matchId!, acceptedIds, comp.id);
         const me = leaderboard.find((r: any) => r.arenaAccountId === arenaAccountId);
         activeCompetition = {
           id: comp.id,
@@ -516,16 +544,7 @@ export class CompetitionEngine {
 
     return {
       activeCompetition,
-      myRegistrations: myRegistrations
-        .filter((r: any) => r.status !== "withdrawn")
-        .map((r: any) => ({
-          competitionId: r.competitionId,
-          competitionTitle: "", // TODO: join with competition
-          competitionType: "regular",
-          status: r.status,
-          startTime: 0,
-          appliedAt: r.appliedAt,
-        })),
+      myRegistrations: myRegistrations.filter((r: any) => r.status !== "withdrawn"),
       upcomingCompetitions,
       season: season
         ? {

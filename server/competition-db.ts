@@ -7,6 +7,7 @@
 
 import { eq, and, desc, sql, lt, inArray } from "drizzle-orm";
 import {
+  arenaAccounts,
   seasons,
   competitions,
   competitionRegistrations,
@@ -362,24 +363,100 @@ export async function insertMatchResult(
 
 export async function getMatchResultsForCompetition(
   competitionId: number,
-): Promise<Array<typeof matchResults.$inferSelect>> {
-  return db
-    .select()
+): Promise<Array<typeof matchResults.$inferSelect & { username: string | null; participantCount: number }>> {
+  const rows = await db
+    .select({
+      id: matchResults.id,
+      competitionId: matchResults.competitionId,
+      arenaAccountId: matchResults.arenaAccountId,
+      finalRank: matchResults.finalRank,
+      totalPnl: matchResults.totalPnl,
+      totalPnlPct: matchResults.totalPnlPct,
+      totalWeightedPnl: matchResults.totalWeightedPnl,
+      tradesCount: matchResults.tradesCount,
+      winCount: matchResults.winCount,
+      lossCount: matchResults.lossCount,
+      bestTradePnl: matchResults.bestTradePnl,
+      worstTradePnl: matchResults.worstTradePnl,
+      avgHoldDuration: matchResults.avgHoldDuration,
+      avgHoldWeight: matchResults.avgHoldWeight,
+      pointsEarned: matchResults.pointsEarned,
+      prizeWon: matchResults.prizeWon,
+      prizeEligible: matchResults.prizeEligible,
+      rankTierAtTime: matchResults.rankTierAtTime,
+      finalEquity: matchResults.finalEquity,
+      closeReasonStats: matchResults.closeReasonStats,
+      createdAt: matchResults.createdAt,
+      username: arenaAccounts.username,
+    })
     .from(matchResults)
+    .leftJoin(arenaAccounts, eq(matchResults.arenaAccountId, arenaAccounts.id))
     .where(eq(matchResults.competitionId, competitionId))
     .orderBy(matchResults.finalRank);
+
+  const participantCount = rows.length;
+  return rows.map((row) => ({ ...row, participantCount }));
 }
 
 export async function getMatchResultsForUser(
   arenaAccountId: number,
   limit: number = 50,
-): Promise<Array<typeof matchResults.$inferSelect>> {
-  return db
-    .select()
+): Promise<Array<typeof matchResults.$inferSelect & {
+  competitionTitle: string;
+  competitionNumber: number;
+  participantCount: number;
+}>> {
+  const rows = await db
+    .select({
+      id: matchResults.id,
+      competitionId: matchResults.competitionId,
+      arenaAccountId: matchResults.arenaAccountId,
+      finalRank: matchResults.finalRank,
+      totalPnl: matchResults.totalPnl,
+      totalPnlPct: matchResults.totalPnlPct,
+      totalWeightedPnl: matchResults.totalWeightedPnl,
+      tradesCount: matchResults.tradesCount,
+      winCount: matchResults.winCount,
+      lossCount: matchResults.lossCount,
+      bestTradePnl: matchResults.bestTradePnl,
+      worstTradePnl: matchResults.worstTradePnl,
+      avgHoldDuration: matchResults.avgHoldDuration,
+      avgHoldWeight: matchResults.avgHoldWeight,
+      pointsEarned: matchResults.pointsEarned,
+      prizeWon: matchResults.prizeWon,
+      prizeEligible: matchResults.prizeEligible,
+      rankTierAtTime: matchResults.rankTierAtTime,
+      finalEquity: matchResults.finalEquity,
+      closeReasonStats: matchResults.closeReasonStats,
+      createdAt: matchResults.createdAt,
+      competitionTitle: competitions.title,
+      competitionNumber: competitions.competitionNumber,
+    })
     .from(matchResults)
+    .leftJoin(competitions, eq(matchResults.competitionId, competitions.id))
     .where(eq(matchResults.arenaAccountId, arenaAccountId))
     .orderBy(desc(matchResults.createdAt))
     .limit(limit);
+
+  const competitionIds = Array.from(new Set(rows.map((row) => row.competitionId)));
+  const participantCounts = competitionIds.length > 0
+    ? await db
+        .select({
+          competitionId: matchResults.competitionId,
+          count: sql<number>`COUNT(*)`,
+        })
+        .from(matchResults)
+        .where(inArray(matchResults.competitionId, competitionIds))
+        .groupBy(matchResults.competitionId)
+    : [];
+  const participantCountMap = new Map(participantCounts.map((row) => [row.competitionId, row.count]));
+
+  return rows.map((row) => ({
+    ...row,
+    competitionTitle: row.competitionTitle ?? `Competition #${row.competitionId}`,
+    competitionNumber: row.competitionNumber ?? 0,
+    participantCount: participantCountMap.get(row.competitionId) ?? 0,
+  }));
 }
 
 export async function getMatchResult(
