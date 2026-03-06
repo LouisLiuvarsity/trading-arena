@@ -376,11 +376,12 @@ export async function createMatch(
   matchNumber: number,
   startTime: number,
   endTime: number,
+  matchType: string = "regular",
   dbOrTx: DbOrTx = db,
 ): Promise<number> {
   const result = await dbOrTx.insert(matches).values({
     matchNumber,
-    matchType: "regular",
+    matchType,
     startTime,
     endTime,
     status: "active",

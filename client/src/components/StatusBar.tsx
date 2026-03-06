@@ -163,7 +163,7 @@ export default function StatusBar({ account, match, season, onLogout }: Props) {
         </span>
         <div className="h-2.5 w-px bg-white/10" />
         <span className="text-[#848E9C]">
-          {t('status.matchesPlayed')} <span className="font-mono text-[#D1D4DC]">{season.matchesPlayed}/15</span>
+          {t('status.matchesPlayed')} <span className="font-mono text-[#D1D4DC]">{season.matchesPlayed}/{season.matchesTotal}</span>
         </span>
         <div className="h-2.5 w-px bg-white/10" />
         <span className={season.grandFinalQualified ? 'text-[#0ECB81]' : 'text-[#848E9C]'}>

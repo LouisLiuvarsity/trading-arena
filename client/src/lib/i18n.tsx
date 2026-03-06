@@ -21,7 +21,7 @@ const translations: Record<Lang, Record<string, string>> = {
 
     // ── StatusBar ──
     'status.grandFinal': '总决赛',
-    'status.matchNum': '第 {n}/15 场',
+    'status.matchNum': '第 {n}/{total} 场',
     'status.tier': '段位',
     'status.equity': '权益',
     'status.pnl': '盈亏',
@@ -559,6 +559,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'common.compStatus.live': '进行中',
     'common.compStatus.settling': '结算中',
     'common.compStatus.completed': '已结束',
+    'common.compStatus.ended_early': '提前结束',
     'common.compStatus.cancelled': '已取消',
 
     // ── HubPage ──
@@ -874,7 +875,7 @@ const translations: Record<Lang, Record<string, string>> = {
 
     // ── StatusBar ──
     'status.grandFinal': 'Grand Final',
-    'status.matchNum': 'Match {n}/15',
+    'status.matchNum': 'Match {n}/{total}',
     'status.tier': 'Tier',
     'status.equity': 'Equity',
     'status.pnl': 'PnL',
@@ -1410,6 +1411,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'common.compStatus.live': 'Live',
     'common.compStatus.settling': 'Settling',
     'common.compStatus.completed': 'Completed',
+    'common.compStatus.ended_early': 'Ended Early',
     'common.compStatus.cancelled': 'Cancelled',
 
     // ── HubPage ──

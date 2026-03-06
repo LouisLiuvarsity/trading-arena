@@ -44,6 +44,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   live: { label: "进行中", color: "#0ECB81" },
   settling: { label: "结算中", color: "#F0B90B" },
   completed: { label: "已完成", color: "#0ECB81" },
+  ended_early: { label: "提前结束", color: "#FF6B35" },
   cancelled: { label: "已取消", color: "#F6465D" },
 };
 
@@ -59,7 +60,7 @@ function formatTime(ts: number): string {
 function matchesFilter(comp: CompetitionSummary, filter: FilterTab): boolean {
   if (filter === "all") return true;
   if (filter === "live") return comp.status === "live" || comp.status === "settling";
-  if (filter === "completed") return comp.status === "completed";
+  if (filter === "completed") return comp.status === "completed" || comp.status === "ended_early";
   if (filter === "cancelled") return comp.status === "cancelled";
   if (filter === "registration_open") return comp.status === "registration_open" || comp.status === "registration_closed";
   return comp.status === filter;
@@ -303,28 +304,17 @@ export default function AdminCompetitionsPage() {
                     {comp.status === "live" && (
                       <>
                         <button
-                          onClick={() => handleTransition(comp.id, "settling", "进入结算")}
+                          onClick={() => handleTransition(comp.id, "ended_early", "提前结束比赛")}
                           disabled={isActioning}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 text-[10px] font-bold text-[#F0B90B] border border-[#F0B90B]/30 rounded-lg hover:bg-[#F0B90B]/10 transition-colors disabled:opacity-50"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-[10px] font-bold text-[#FF6B35] border border-[#FF6B35]/30 rounded-lg hover:bg-[#FF6B35]/10 transition-colors disabled:opacity-50"
                         >
-                          <StopCircle className="w-3 h-3" /> 结束比赛
+                          <StopCircle className="w-3 h-3" /> 提前结束比赛
                         </button>
                       </>
                     )}
 
-                    {/* Settling */}
-                    {comp.status === "settling" && (
-                      <button
-                        onClick={() => handleTransition(comp.id, "completed", "完成结算")}
-                        disabled={isActioning}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 text-[10px] font-bold text-[#0ECB81] border border-[#0ECB81]/30 rounded-lg hover:bg-[#0ECB81]/10 transition-colors disabled:opacity-50"
-                      >
-                        <PlayCircle className="w-3 h-3" /> 完成结算
-                      </button>
-                    )}
-
                     {/* Completed / Cancelled */}
-                    {(comp.status === "completed" || comp.status === "cancelled") && (
+                    {(comp.status === "completed" || comp.status === "ended_early" || comp.status === "cancelled") && (
                       <button
                         onClick={() => handleDuplicate(comp.id)}
                         disabled={isActioning}

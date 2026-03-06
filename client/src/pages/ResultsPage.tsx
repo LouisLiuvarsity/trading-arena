@@ -348,6 +348,7 @@ export default function ResultsPage({ competitionId }: Props) {
   const statusBadge = useMemo(() => {
     const map: Record<string, { label: string; color: string }> = {
       completed: { label: t('results.settled'), color: "bg-[#0ECB81]/20 text-[#0ECB81]" },
+      ended_early: { label: t('common.compStatus.ended_early'), color: "bg-[#FF6B35]/20 text-[#FF6B35]" },
       settling: { label: t('results.settling'), color: "bg-[#F0B90B]/20 text-[#F0B90B]" },
       live: { label: t('results.live'), color: "bg-[#0ECB81]/20 text-[#0ECB81]" },
       cancelled: { label: t('results.cancelled'), color: "bg-[#F6465D]/20 text-[#F6465D]" },

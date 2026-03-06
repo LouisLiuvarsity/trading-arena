@@ -16,6 +16,7 @@ export type CompetitionStatus =
   | "live"
   | "settling"
   | "completed"
+  | "ended_early"
   | "cancelled";
 
 export type CompetitionType = "regular" | "grand_final" | "special" | "practice";

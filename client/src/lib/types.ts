@@ -85,14 +85,17 @@ export interface CompletedTrade {
   closeTime: number;
 }
 
-// v5.0: Match types
-export type MatchType = 'regular' | 'grand_final';
+import type { CompetitionType, RankTier } from '../../../shared/competitionTypes';
+export type { CompetitionType, RankTier };
+
+// v5.0: Match types mirror competition types
+export type MatchType = CompetitionType;
 
 export interface MatchState {
   matchId: string;
-  matchNumber: number; // 1-15 for regular, 16 for grand final
+  matchNumber: number;
   matchType: MatchType;
-  totalRegularMatches: 15;
+  totalRegularMatches: number;
   startTime: number;
   endTime: number;
   elapsed: number; // 0-1
@@ -103,10 +106,6 @@ export interface MatchState {
   isCloseOnly: boolean; // true in last 30 min
   monthLabel: string; // e.g. "2026年3月"
 }
-
-// Import + re-export RankTier from shared (canonical definition)
-import type { RankTier } from '../../../shared/competitionTypes';
-export type { RankTier };
 
 export const RANK_TIERS = [
   { tier: 'iron' as const, minPoints: 0, maxPoints: 99, label: '黑铁', labelEn: 'Iron', leverage: 1, color: '#5E6673', icon: '⚙️' },
@@ -161,7 +160,7 @@ export interface SeasonState {
   seasonId: string;
   month: string; // "2026-03"
   matchesPlayed: number;
-  matchesTotal: 15;
+  matchesTotal: number;
   grandFinalScheduled: boolean;
   matches: Array<{
     matchNumber: number;

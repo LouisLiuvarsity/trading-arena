@@ -59,7 +59,7 @@ const createCompetitionSchema = z.object({
 const updateCompetitionSchema = createCompetitionSchema.partial();
 
 const transitionSchema = z.object({
-  status: z.enum(["announced", "registration_open", "registration_closed", "live", "cancelled"]),
+  status: z.enum(["announced", "registration_open", "registration_closed", "live", "ended_early", "cancelled"]),
 });
 
 const reviewSchema = z.object({
@@ -140,7 +140,7 @@ export function registerCompetitionRoutes(
         (c) => c.status === "announced" || c.status === "registration_open" || c.status === "registration_closed",
       );
       const completed = visibleComps
-        .filter((c) => c.status === "completed" || c.status === "settling")
+        .filter((c) => c.status === "completed" || c.status === "ended_early" || c.status === "settling")
         .slice(0, 5); // Last 5 completed
 
       const mapComp = async (c: (typeof visibleComps)[0]) => {
@@ -269,7 +269,7 @@ export function registerCompetitionRoutes(
       }
 
       const accountId = await getCurrentAccountId(req);
-      if (comp.status === "completed") {
+      if (comp.status === "completed" || comp.status === "ended_early") {
         const results = await compDb.getMatchResultsForCompetition(comp.id);
         res.json(toLeaderboardRows(
           results.map((r) => ({
@@ -311,7 +311,7 @@ export function registerCompetitionRoutes(
       let leaderboard: ReturnType<typeof toLeaderboardRows> = [];
       let participantCount = 0;
 
-      if (comp.status === "completed") {
+      if (comp.status === "completed" || comp.status === "ended_early") {
         const results = await compDb.getMatchResultsForCompetition(comp.id);
         participantCount = results[0]?.participantCount ?? results.length;
         leaderboard = toLeaderboardRows(

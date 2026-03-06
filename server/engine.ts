@@ -47,6 +47,8 @@ type PositionRow = {
   tradeNumber: number;
 };
 
+type CompetitionRecord = NonNullable<Awaited<ReturnType<typeof compDb.getCompetitionById>>>;
+
 type LeaderboardRow = {
   arenaAccountId: number;
   username: string;
@@ -110,6 +112,29 @@ function monthLabel(ts: number): string {
 function monthLabelCn(ts: number): string {
   const d = new Date(ts);
   return `${d.getFullYear()}年${d.getMonth() + 1}月`;
+}
+
+function isTerminalCompetitionStatus(status: string): boolean {
+  return status === "completed" || status === "ended_early";
+}
+
+function compareCompetitionOrder(a: CompetitionRecord, b: CompetitionRecord): number {
+  if (a.startTime !== b.startTime) return a.startTime - b.startTime;
+  if (a.competitionNumber !== b.competitionNumber) return a.competitionNumber - b.competitionNumber;
+  return a.id - b.id;
+}
+
+function competitionTypeLabel(type: string): string {
+  switch (type) {
+    case "grand_final":
+      return "总决赛";
+    case "practice":
+      return "练习赛";
+    case "special":
+      return "特别赛";
+    default:
+      return "常规赛";
+  }
 }
 
 export class ArenaEngine {
@@ -358,6 +383,39 @@ export class ArenaEngine {
     return active ? this.getLegacyMatchRules() : null;
   }
 
+  private async getCompetitionProgressState(competitionId?: number | null): Promise<{
+    competition: CompetitionRecord;
+    sameTypeCompetitions: CompetitionRecord[];
+    currentIndex: number;
+    total: number;
+  } | null> {
+    if (!competitionId) return null;
+
+    const competition = await compDb.getCompetitionById(competitionId);
+    if (!competition) return null;
+
+    const seasonCompetitions = await compDb.listCompetitions({ seasonId: competition.seasonId });
+    const sameTypeCompetitions = seasonCompetitions
+      .filter((item): item is CompetitionRecord =>
+        item.competitionType === competition.competitionType && item.status !== "cancelled",
+      )
+      .sort(compareCompetitionOrder);
+
+    if (!sameTypeCompetitions.some((item) => item.id === competition.id)) {
+      sameTypeCompetitions.push(competition);
+      sameTypeCompetitions.sort(compareCompetitionOrder);
+    }
+
+    const currentIndex = Math.max(0, sameTypeCompetitions.findIndex((item) => item.id === competition.id)) + 1;
+
+    return {
+      competition,
+      sameTypeCompetitions,
+      currentIndex,
+      total: Math.max(sameTypeCompetitions.length, 1),
+    };
+  }
+
   async recordBehaviorEvent(arenaAccountId: number, eventType: string, payload: unknown, source = "client") {
     await dbHelpers.insertBehaviorEvent({
       arenaAccountId,
@@ -559,9 +617,10 @@ export class ArenaEngine {
 
     const leaderboard = await this.buildLeaderboard(rules.matchId, rules.participantIds, rules.competitionId);
     const top = leaderboard[0];
+    const competitionProgress = await this.getCompetitionProgressState(rules.competitionId);
     return {
       participants: leaderboard.length,
-      matchNumber: ((matchRow.matchNumber - 1) % 15) + 1,
+      matchNumber: competitionProgress?.currentIndex ?? ((matchRow.matchNumber - 1) % 15) + 1,
       prizePool: rules.prizePool,
       symbol: rules.symbol,
       leader: top
@@ -654,7 +713,10 @@ export class ArenaEngine {
     const now = Date.now();
     const remainingSeconds = Math.max(0, Math.floor((active.endTime - now) / 1000));
     const elapsed = Math.max(0, Math.min(1, (now - active.startTime) / (active.endTime - active.startTime)));
-    const cycleMatchNumber = ((active.matchNumber - 1) % 15) + 1;
+    const competitionProgress = await this.getCompetitionProgressState(rules.competitionId);
+    const currentCompetition = competitionProgress?.competition ?? null;
+    const cycleMatchNumber = competitionProgress?.currentIndex ?? ((active.matchNumber - 1) % 15) + 1;
+    const totalMatches = competitionProgress?.total ?? 15;
     const participantCount = Math.max(leaderboard.length, 1);
     const directionCounts = await dbHelpers.getPositionCountByDirection(participantIds);
     const totalOpen = directionCounts.long + directionCounts.short;
@@ -675,6 +737,43 @@ export class ArenaEngine {
     const grandFinalLine = await dbHelpers.getGrandFinalLine(500, activeSeason?.id);
 
     const userTrades = await dbHelpers.getTradesForUserMatch(arenaAccountId, active.id);
+    const seasonMatches = competitionProgress
+      ? competitionProgress.sameTypeCompetitions.map((item, idx) => {
+          const number = idx + 1;
+          if (item.id === currentCompetition?.id) {
+            return {
+              matchNumber: number,
+              matchType: item.competitionType,
+              status: "active" as const,
+              rank: myRank,
+              weightedPnl: totalWeightedPnl,
+              pnlPct,
+              pointsEarned: matchPoints,
+              prizeWon: prizeAmount,
+            };
+          }
+          if (isTerminalCompetitionStatus(item.status)) {
+            return { matchNumber: number, matchType: item.competitionType, status: "completed" as const };
+          }
+          return { matchNumber: number, matchType: item.competitionType, status: "pending" as const };
+        })
+      : Array.from({ length: 15 }, (_, idx) => {
+          const number = idx + 1;
+          if (number < cycleMatchNumber) return { matchNumber: number, matchType: "regular", status: "completed" as const };
+          if (number === cycleMatchNumber) {
+            return {
+              matchNumber: number,
+              matchType: "regular" as const,
+              status: "active" as const,
+              rank: myRank,
+              weightedPnl: totalWeightedPnl,
+              pnlPct,
+              pointsEarned: matchPoints,
+              prizeWon: prizeAmount,
+            };
+          }
+          return { matchNumber: number, matchType: "regular" as const, status: "pending" as const };
+        });
 
     return {
       account: {
@@ -756,34 +855,18 @@ export class ArenaEngine {
       season: {
         seasonId: `season-${monthLabel(active.startTime)}`,
         month: monthLabel(active.startTime),
-        matchesPlayed: cycleMatchNumber - 1,
-        matchesTotal: 15,
+        matchesPlayed: cycleMatchNumber,
+        matchesTotal: totalMatches,
         grandFinalScheduled: true,
-        matches: Array.from({ length: 15 }, (_, idx) => {
-          const number = idx + 1;
-          if (number < cycleMatchNumber) return { matchNumber: number, matchType: "regular", status: "completed" };
-          if (number === cycleMatchNumber) {
-            return {
-              matchNumber: number,
-              matchType: "regular",
-              status: "active",
-              rank: myRank,
-              weightedPnl: totalWeightedPnl,
-              pnlPct,
-              pointsEarned: matchPoints,
-              prizeWon: prizeAmount,
-            };
-          }
-          return { matchNumber: number, matchType: "regular", status: "pending" };
-        }),
+        matches: seasonMatches,
         totalPoints: seasonPoints,
         grandFinalQualified: seasonPoints >= 200,
       },
       match: {
         matchId: `match-${active.id}`,
         matchNumber: cycleMatchNumber,
-        matchType: "regular",
-        totalRegularMatches: 15,
+        matchType: currentCompetition?.competitionType ?? "regular",
+        totalRegularMatches: totalMatches,
         startTime: active.startTime,
         endTime: active.endTime,
         elapsed,
@@ -792,7 +875,9 @@ export class ArenaEngine {
         participantCount,
         prizePool: rules.prizePool,
         isCloseOnly: remainingSeconds <= rules.closeOnlySeconds,
-        monthLabel: monthLabelCn(active.startTime),
+        monthLabel: currentCompetition
+          ? `${monthLabelCn(active.startTime)} · ${competitionTypeLabel(currentCompetition.competitionType)}`
+          : monthLabelCn(active.startTime),
       },
       tradingPair: getBinanceSymbolConfig(rules.symbol) ?? getSymbolConfig(rules.symbol),
       chatMessages: await dbHelpers.getRecentChatMessages(120, rules.competitionId),
@@ -1100,7 +1185,7 @@ export class ArenaEngine {
         }
         await dbHelpers.completeMatch(recheck.id, tx);
         const rotateNow = Date.now();
-        await dbHelpers.createMatch(recheck.matchNumber + 1, rotateNow, rotateNow + MATCH_DURATION_MS, tx);
+        await dbHelpers.createMatch(recheck.matchNumber + 1, rotateNow, rotateNow + MATCH_DURATION_MS, "regular", tx);
       });
     } finally {
       this.rotationLock = false;

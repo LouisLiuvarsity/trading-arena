@@ -35,6 +35,7 @@ const STATUS_STYLE: Record<string, { color: string; bg: string; icon: typeof Cir
   live: { color: "#0ECB81", bg: "rgba(14,203,129,0.12)", icon: CircleDot },
   settling: { color: "#F0B90B", bg: "rgba(240,185,11,0.12)", icon: Clock },
   completed: { color: "#848E9C", bg: "rgba(132,142,156,0.12)", icon: CheckCircle2 },
+  ended_early: { color: "#FF6B35", bg: "rgba(255,107,53,0.12)", icon: CheckCircle2 },
   cancelled: { color: "#F6465D", bg: "rgba(246,70,93,0.12)", icon: AlertCircle },
 };
 
@@ -49,7 +50,7 @@ const REG_STATUS_COLOR: Record<string, string> = {
 function matchesFilter(comp: CompetitionSummary, filter: FilterTab): boolean {
   if (filter === "all") return true;
   if (filter === "live") return comp.status === "live" || comp.status === "settling";
-  if (filter === "completed") return comp.status === "completed" || comp.status === "cancelled";
+  if (filter === "completed") return comp.status === "completed" || comp.status === "ended_early" || comp.status === "cancelled";
   if (filter === "registration_open") return comp.status === "registration_open" || comp.status === "announced";
   return comp.status === filter;
 }
@@ -60,7 +61,7 @@ function groupByStatus(
 ): { label: string; icon: typeof CircleDot; comps: CompetitionSummary[]; colorKey: string }[] {
   const live = comps.filter((c) => c.status === "live" || c.status === "settling");
   const regOpen = comps.filter((c) => c.status === "registration_open" || c.status === "announced" || c.status === "registration_closed");
-  const completed = comps.filter((c) => c.status === "completed" || c.status === "cancelled");
+  const completed = comps.filter((c) => c.status === "completed" || c.status === "ended_early" || c.status === "cancelled");
   const draft = comps.filter((c) => c.status === "draft");
 
   const groups: { label: string; icon: typeof CircleDot; comps: CompetitionSummary[]; colorKey: string }[] = [];
@@ -255,7 +256,7 @@ function CompetitionCard({
             )}
             <span className="flex items-center gap-1">
               <Users className="w-3 h-3" />
-              {comp.status === "completed"
+              {comp.status === "completed" || comp.status === "ended_early"
                 ? t("common.people", { n: comp.acceptedCount })
                 : t("common.people", { n: `${comp.registeredCount}/${comp.maxParticipants}` })}
             </span>
@@ -271,7 +272,7 @@ function CompetitionCard({
           </div>
 
           {/* Registration status */}
-          {regColor && regLabel && comp.status !== "completed" && (
+          {regColor && regLabel && comp.status !== "completed" && comp.status !== "ended_early" && (
             <div className="mt-2">
               <span
                 className="text-[10px] font-bold px-2 py-0.5 rounded"
@@ -313,7 +314,7 @@ function CompetitionCard({
                 {isWithdrawing ? t("comp.withdrawing") : t("comp.withdraw")}
               </button>
             )}
-          {comp.status === "completed" && (
+          {(comp.status === "completed" || comp.status === "ended_early") && (
             <Link
               href={`/results/${comp.id}`}
               className="inline-flex items-center gap-1 px-4 py-2 text-[11px] font-bold text-[#D1D4DC] border border-[rgba(255,255,255,0.08)] rounded-lg hover:bg-white/5 transition-colors"
@@ -321,7 +322,7 @@ function CompetitionCard({
               {t("comp.viewResults")} <ChevronRight className="w-3 h-3" />
             </Link>
           )}
-          {comp.status !== "live" && comp.status !== "completed" && comp.status !== "registration_open" && (
+          {comp.status !== "live" && comp.status !== "completed" && comp.status !== "ended_early" && comp.status !== "registration_open" && (
             <Link
               href={`/competitions/${comp.slug}`}
               className="inline-flex items-center gap-1 px-3 py-2 text-[11px] font-bold text-[#848E9C] hover:text-[#D1D4DC] transition-colors"

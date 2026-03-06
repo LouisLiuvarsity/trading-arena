@@ -36,6 +36,7 @@ const STATUS_STYLE: Record<string, { color: string; bg: string; label: string }>
   announced: { color: "#F0B90B", bg: "rgba(240,185,11,0.15)", label: "已公布" },
   registration_closed: { color: "#848E9C", bg: "rgba(132,142,156,0.15)", label: "报名截止" },
   completed: { color: "#5E6673", bg: "rgba(94,102,115,0.15)", label: "已结束" },
+  ended_early: { color: "#FF6B35", bg: "rgba(255,107,53,0.15)", label: "提前结束" },
   settling: { color: "#848E9C", bg: "rgba(132,142,156,0.15)", label: "结算中" },
   draft: { color: "#848E9C", bg: "rgba(132,142,156,0.15)", label: "草稿" },
 };

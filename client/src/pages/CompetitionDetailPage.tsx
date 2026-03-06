@@ -41,6 +41,7 @@ const STATUS_COLORS: Record<string, string> = {
   live: "#0ECB81",
   settling: "#F0B90B",
   completed: "#848E9C",
+  ended_early: "#FF6B35",
   cancelled: "#F6465D",
 };
 
@@ -249,7 +250,7 @@ export default function CompetitionDetailPage({ slug }: Props) {
         )}
 
         {/* Completed: link to results */}
-        {comp.status === "completed" && (
+        {(comp.status === "completed" || comp.status === "ended_early") && (
           <div className="border-t border-[rgba(255,255,255,0.08)] pt-4 mt-4">
             <Link
               href={`/results/${comp.id}`}

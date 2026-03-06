@@ -24,7 +24,7 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   announced: ["registration_open", "cancelled"],
   registration_open: ["registration_closed", "cancelled"],
   registration_closed: ["live", "cancelled"],
-  live: ["settling"],
+  live: ["ended_early"],
   settling: ["completed"],
 };
 
@@ -36,6 +36,26 @@ export class CompetitionEngine {
     private readonly arena: ArenaEngine,
     private readonly market: MarketService,
   ) {}
+
+  private async getCompetitionTypeProgress(comp: NonNullable<CompetitionRow>): Promise<{
+    total: number;
+    currentIndex: number;
+  }> {
+    const sameTypeCompetitions = (await compDb.listCompetitions({ seasonId: comp.seasonId }))
+      .filter((item) => item.competitionType === comp.competitionType && item.status !== "cancelled")
+      .sort((a, b) => {
+        if (a.startTime !== b.startTime) return a.startTime - b.startTime;
+        if (a.competitionNumber !== b.competitionNumber) return a.competitionNumber - b.competitionNumber;
+        return a.id - b.id;
+      });
+
+    const currentIndex = Math.max(0, sameTypeCompetitions.findIndex((item) => item.id === comp.id)) + 1;
+
+    return {
+      total: Math.max(sameTypeCompetitions.length, 1),
+      currentIndex: currentIndex || 1,
+    };
+  }
 
   // ─── Tick (called every second) ─────────────────────────────
 
@@ -145,6 +165,11 @@ export class CompetitionEngine {
       return;
     }
 
+    if (targetStatus === "ended_early") {
+      await this.settleCompetition(comp, { finalStatus: "ended_early" });
+      return;
+    }
+
     await compDb.updateCompetitionStatus(competitionId, targetStatus);
 
     // Send notifications on key transitions
@@ -193,6 +218,7 @@ export class CompetitionEngine {
       comp.competitionNumber,
       comp.startTime,
       comp.endTime,
+      comp.competitionType,
     );
 
     // Bridge: link competition to match
@@ -215,16 +241,21 @@ export class CompetitionEngine {
 
   // ─── Competition Settlement ─────────────────────────────────
 
-  private async settleCompetition(comp: NonNullable<CompetitionRow>): Promise<void> {
+  private async settleCompetition(
+    comp: NonNullable<CompetitionRow>,
+    opts: { finalStatus?: "completed" | "ended_early" } = {},
+  ): Promise<void> {
     if (this.settlingLock.has(comp.id)) return;
     this.settlingLock.add(comp.id);
+    const finalStatus = opts.finalStatus ?? "completed";
+    const endedEarly = finalStatus === "ended_early";
 
     try {
       await compDb.updateCompetitionStatus(comp.id, "settling");
 
       if (!comp.matchId) {
         console.error(`[settle] Competition ${comp.id} has no matchId bridge`);
-        await compDb.updateCompetitionStatus(comp.id, "completed");
+        await compDb.updateCompetitionStatus(comp.id, finalStatus);
         return;
       }
 
@@ -324,16 +355,16 @@ export class CompetitionEngine {
         const prizeText = row.prizeAmount > 0 ? ` · 奖金 ${row.prizeAmount}U` : "";
         await compDb.insertNotification({
           arenaAccountId: row.arenaAccountId,
-          type: "competition_ended",
-          title: `${comp.title} 已结束`,
+          type: endedEarly ? "competition_ended_early" : "competition_ended",
+          title: endedEarly ? `${comp.title} 已提前结束` : `${comp.title} 已结束`,
           message: `第${row.rank}名 · PnL ${row.pnlPct > 0 ? "+" : ""}${row.pnlPct.toFixed(1)}% · +${row.matchPoints}pts${prizeText}`,
           competitionId: comp.id,
           actionUrl: `/results/${comp.id}`,
         });
       }
 
-      // 7. Mark completed
-      await compDb.updateCompetitionStatus(comp.id, "completed");
+      // 7. Mark terminal status
+      await compDb.updateCompetitionStatus(comp.id, finalStatus);
 
       // 8. Reset market feed to default symbol
       const remainingLive = (await compDb.getLiveCompetitions()).filter((live) => live.id !== comp.id);
@@ -389,7 +420,7 @@ export class CompetitionEngine {
     if (reg.status === "withdrawn") throw new Error("Already withdrawn");
 
     const comp = await compDb.getCompetitionById(competitionId);
-    if (comp && (comp.status === "live" || comp.status === "settling" || comp.status === "completed")) {
+    if (comp && (comp.status === "live" || comp.status === "settling" || comp.status === "completed" || comp.status === "ended_early")) {
       throw new Error("Cannot withdraw from an active or completed competition");
     }
 
@@ -460,6 +491,7 @@ export class CompetitionEngine {
 
     // Active competition (user is participating in a live competition)
     let activeCompetition: any = null;
+    let activeCompetitionProgress: { total: number; currentIndex: number } | null = null;
     const liveComps = await compDb.getLiveCompetitions();
     for (const comp of liveComps) {
       const reg = await compDb.getRegistration(comp.id, arenaAccountId);
@@ -467,6 +499,7 @@ export class CompetitionEngine {
         const acceptedIds = new Set(await compDb.getAcceptedAccountIds(comp.id));
         const leaderboard = await this.arena.buildLeaderboard(comp.matchId!, acceptedIds, comp.id);
         const me = leaderboard.find((r: any) => r.arenaAccountId === arenaAccountId);
+        activeCompetitionProgress = await this.getCompetitionTypeProgress(comp);
         activeCompetition = {
           id: comp.id,
           slug: comp.slug,
@@ -594,8 +627,8 @@ export class CompetitionEngine {
             id: season.id,
             name: season.name,
             slug: season.slug,
-            matchesTotal: 15,
-            matchesCompleted: allResults.length,
+            matchesTotal: activeCompetitionProgress?.total ?? 15,
+            matchesCompleted: activeCompetitionProgress?.currentIndex ?? allResults.length,
             mySeasonPoints: account.seasonPoints,
             myRankTier: tier.tier,
             pointsToNextTier: Math.max(0, nextTierMin - account.seasonPoints),

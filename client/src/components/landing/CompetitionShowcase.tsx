@@ -49,6 +49,7 @@ const STATUS_CONFIG: Record<string, { label: string; labelEn: string; color: str
   registration_open: { label: '报名中', labelEn: 'Open', color: '#F0B90B', bg: 'rgba(240,185,11,0.15)' },
   registration_closed: { label: '报名截止', labelEn: 'Closed', color: '#848E9C', bg: 'rgba(132,142,156,0.15)' },
   completed: { label: '已结束', labelEn: 'Done', color: '#5E6673', bg: 'rgba(94,102,115,0.15)' },
+  ended_early: { label: '提前结束', labelEn: 'Ended Early', color: '#FF6B35', bg: 'rgba(255,107,53,0.15)' },
   settling: { label: '结算中', labelEn: 'Settling', color: '#848E9C', bg: 'rgba(132,142,156,0.15)' },
 };
 
