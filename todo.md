@@ -101,3 +101,9 @@
 - [x] Sync latest GitHub changes (84b0d11 - CompetitionShowcase upgrade)
 - [x] Clear all user data from all 17 tables (TRUNCATE with FK checks disabled)
 - [x] Verify database is clean (all tables 0 rows) and server runs correctly
+
+## Email Column Migration
+- [x] Sync latest GitHub changes (675f4f8 - email registration flow)
+- [x] Run npx drizzle-kit generate to generate migration for email column (0009_real_madripoor.sql)
+- [x] Run drizzle-kit migrate to apply migration to database
+- [x] Verify email column exists (varchar 128) and server runs correctly

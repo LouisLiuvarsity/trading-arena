@@ -1,0 +1,1 @@
+ALTER TABLE `arena_accounts` ADD `email` varchar(128);
