@@ -1,8 +1,25 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
+import { motion } from 'framer-motion';
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  Coins,
+  Sparkles,
+  Star,
+  Users,
+  Zap,
+} from 'lucide-react';
+
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  type CarouselApi,
+} from '@/components/ui/carousel';
 import { useT } from '@/lib/i18n';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Trophy, Users, Clock, Coins, Star, Zap } from 'lucide-react';
 
 interface CompetitionCard {
   id: number;
@@ -35,94 +52,172 @@ const STATUS_CONFIG: Record<string, { label: string; labelEn: string; color: str
   settling: { label: '结算中', labelEn: 'Settling', color: '#848E9C', bg: 'rgba(132,142,156,0.15)' },
 };
 
-const TYPE_ICONS: Record<string, string> = {
-  regular: '',
-  grand_final: '',
-  special: '',
-  practice: '',
+const TYPE_META: Record<string, { label: string; eyebrow: string; gradient: string; accent: string }> = {
+  grand_final: {
+    label: 'Grand Final',
+    eyebrow: 'Season Finale',
+    gradient: 'from-[#F0B90B]/45 via-[#FF7A00]/24 to-[#131A2B]',
+    accent: '#F0B90B',
+  },
+  special: {
+    label: 'Special Event',
+    eyebrow: 'Limited Event',
+    gradient: 'from-[#5EEAD4]/28 via-[#2563EB]/22 to-[#121A2A]',
+    accent: '#5EEAD4',
+  },
+  regular: {
+    label: 'Regular Match',
+    eyebrow: 'Campus Series',
+    gradient: 'from-[#25C2A0]/28 via-[#0D5BFF]/18 to-[#121A2A]',
+    accent: '#25C2A0',
+  },
+  practice: {
+    label: 'Practice',
+    eyebrow: 'Warmup Session',
+    gradient: 'from-[#94A3B8]/20 via-[#475569]/18 to-[#101725]',
+    accent: '#94A3B8',
+  },
 };
 
 function formatTime(ts: number): string {
   return new Date(ts).toLocaleString('zh-CN', {
-    month: 'short',
+    month: 'numeric',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   });
 }
 
-function CompetitionCardView({ card, index }: { card: CompetitionCard; index: number }) {
-  const statusConf = STATUS_CONFIG[card.status] ?? STATUS_CONFIG.completed;
-  const isLive = card.status === 'live';
-  const baseAsset = card.symbol.replace(/USDT|USDC/, '');
+function getBaseAsset(symbol: string): string {
+  return symbol.replace(/USDT|USDC/, '');
+}
 
-  const gradients: Record<string, string> = {
-    grand_final: 'from-[#F0B90B]/30 via-[#FF6B35]/15 to-[#1C2030]',
-    special: 'from-[#8B5CF6]/30 via-[#6366F1]/15 to-[#1C2030]',
-    regular: 'from-[#0ECB81]/20 via-[#0ECB81]/8 to-[#1C2030]',
-    practice: 'from-[#848E9C]/20 via-[#848E9C]/8 to-[#1C2030]',
-  };
+function getRegistrationPct(card: CompetitionCard): number {
+  if (!card.maxParticipants) return 0;
+  return Math.min(100, Math.round((card.registeredCount / card.maxParticipants) * 100));
+}
+
+function CompetitionCardView({ card }: { card: CompetitionCard }) {
+  const statusConf = STATUS_CONFIG[card.status] ?? STATUS_CONFIG.completed;
+  const typeMeta = TYPE_META[card.competitionType] ?? TYPE_META.regular;
+  const baseAsset = getBaseAsset(card.symbol);
+  const registrationPct = getRegistrationPct(card);
 
   return (
-    <div className={`relative w-full h-full bg-[#1C2030] border border-white/[0.08] rounded-2xl overflow-hidden ${
-      isLive ? 'ring-1 ring-[#0ECB81]/30' : ''
-    }`}>
-      {/* Cover image — top half */}
-      <div className="relative h-[160px] overflow-hidden">
+    <article className="relative overflow-hidden rounded-[28px] border border-white/[0.1] bg-[#0E1422] shadow-[0_28px_90px_rgba(0,0,0,0.4)]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0))]" />
+
+      <div className={`relative h-[280px] overflow-hidden bg-gradient-to-br ${typeMeta.gradient}`}>
         {card.coverImageUrl ? (
-          <img src={card.coverImageUrl} alt={card.title} className="w-full h-full object-cover" />
+          <>
+            <img src={card.coverImageUrl} alt={card.title} className="h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,10,18,0.08),rgba(6,10,18,0.88))]" />
+          </>
         ) : (
-          <div className={`w-full h-full bg-gradient-to-b ${gradients[card.competitionType] ?? gradients.regular}`}>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Trophy className="w-12 h-12 text-white/10" />
+          <>
+            <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(13,17,28,0.08),rgba(13,17,28,0.85))]" />
+            <div
+              className="absolute -right-6 top-5 text-[82px] font-black uppercase tracking-[0.18em] text-white/[0.06] sm:text-[110px]"
+              aria-hidden="true"
+            >
+              {baseAsset}
             </div>
-          </div>
+            <div
+              className="absolute -left-14 bottom-5 h-32 w-32 rounded-full blur-3xl"
+              style={{ backgroundColor: `${typeMeta.accent}55` }}
+              aria-hidden="true"
+            />
+          </>
         )}
-        {/* Status badge on image */}
-        <div className="absolute top-3 left-3">
-          <span
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-full backdrop-blur-sm"
-            style={{ backgroundColor: statusConf.bg, color: statusConf.color }}
-          >
-            {isLive && <span className="w-2 h-2 rounded-full bg-current animate-pulse" />}
-            {statusConf.label}
-          </span>
-        </div>
-        {card.prizePool > 0 && (
-          <div className="absolute top-3 right-3">
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-black/50 backdrop-blur-sm text-[#F0B90B] text-[11px] font-bold rounded-full">
-              <Coins className="w-3 h-3" /> {card.prizePool}U
+
+        <div className="absolute inset-x-5 top-5 flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold backdrop-blur-sm"
+              style={{ backgroundColor: statusConf.bg, color: statusConf.color }}
+            >
+              {card.status === 'live' && <span className="h-2 w-2 rounded-full bg-current animate-pulse" />}
+              {statusConf.label}
+            </span>
+            <span className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[11px] font-medium text-white/72 backdrop-blur-sm">
+              {typeMeta.label}
             </span>
           </div>
-        )}
-      </div>
 
-      {/* Text content — bottom half */}
-      <div className="p-4 space-y-3">
-        <h3 className="text-base font-display font-bold text-white leading-snug truncate">
-          {card.title}
-        </h3>
+          {card.prizePool > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-[#F0B90B]/25 bg-black/45 px-3 py-1 text-[11px] font-bold text-[#F0B90B] backdrop-blur-sm">
+              <Coins className="h-3 w-3" />
+              {card.prizePool}U
+            </span>
+          )}
+        </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <div className="flex items-center gap-1.5">
-            <Clock className="w-3 h-3 text-[#848E9C]" />
-            <span className="text-[11px] text-[#D1D4DC] font-mono">{formatTime(card.startTime)}</span>
+        <div className="absolute inset-x-5 bottom-5">
+          <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-white/55">
+            <span>{typeMeta.eyebrow}</span>
+            <span className="h-1 w-1 rounded-full bg-white/35" />
+            <span>{statusConf.labelEn}</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Zap className="w-3 h-3 text-[#F0B90B]" />
-            <span className="text-[11px] text-[#D1D4DC] font-mono font-bold">{baseAsset}/USDT</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Users className="w-3 h-3 text-[#0ECB81]" />
-            <span className="text-[11px] text-[#D1D4DC] font-mono">{card.registeredCount}/{card.maxParticipants}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Star className="w-3 h-3 text-[#0ECB81]" />
-            <span className="text-[10px] text-[#0ECB81]">Season Points</span>
+
+          <h3 className="mt-3 max-w-[12ch] text-3xl font-display font-black leading-[0.95] text-white sm:text-[42px]">
+            {card.title}
+          </h3>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="rounded-full border border-white/12 bg-white/[0.08] px-3 py-1 text-[11px] font-mono font-bold text-white/85">
+              {baseAsset}/USDT
+            </span>
+            <span className="rounded-full border border-white/12 bg-white/[0.08] px-3 py-1 text-[11px] font-medium text-white/72">
+              #{card.id.toString().padStart(2, '0')}
+            </span>
           </div>
         </div>
       </div>
-    </div>
+
+      <div className="grid gap-3 border-t border-white/[0.06] bg-[#0B111D]/92 p-5 sm:grid-cols-2">
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-3">
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-[#7E8798]">
+            <Clock3 className="h-3.5 w-3.5 text-[#F0B90B]" />
+            开赛时间
+          </div>
+          <p className="mt-2 text-sm font-semibold text-white">{formatTime(card.startTime)}</p>
+        </div>
+
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-3">
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-[#7E8798]">
+            <Zap className="h-3.5 w-3.5 text-[#25C2A0]" />
+            交易对
+          </div>
+          <p className="mt-2 text-sm font-semibold text-white">{card.symbol}</p>
+        </div>
+
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-3">
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-[#7E8798]">
+            <Users className="h-3.5 w-3.5 text-[#25C2A0]" />
+            报名进度
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-3 text-sm font-semibold text-white">
+            <span>{card.registeredCount}/{card.maxParticipants}</span>
+            <span className="text-xs text-[#9CA5B5]">{registrationPct}%</span>
+          </div>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+            <div
+              className="h-full rounded-full"
+              style={{ width: `${registrationPct}%`, backgroundColor: typeMeta.accent }}
+            />
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-3">
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-[#7E8798]">
+            <Star className="h-3.5 w-3.5 text-[#F0B90B]" />
+            奖励说明
+          </div>
+          <p className="mt-2 text-sm font-semibold text-white">Season Points + Prize Pool</p>
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -130,8 +225,8 @@ export default function CompetitionShowcase() {
   const { t } = useT();
   const [data, setData] = useState<ShowcaseData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [api, setApi] = useState<CarouselApi>();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState(0);
 
   useEffect(() => {
     fetch('/api/public/competitions')
@@ -143,27 +238,37 @@ export default function CompetitionShowcase() {
       .catch(() => setLoading(false));
   }, []);
 
-  const allCards = data
-    ? [...data.live, ...data.upcoming, ...data.completed]
-    : [];
+  const allCards = data ? [...data.live, ...data.upcoming, ...data.completed] : [];
+  const activeCard = allCards[currentIndex] ?? allCards[0];
 
-  const goNext = useCallback(() => {
-    if (allCards.length === 0) return;
-    setDirection(1);
-    setCurrentIndex((prev) => (prev + 1) % allCards.length);
-  }, [allCards.length]);
+  useEffect(() => {
+    if (!api) return;
 
-  const goPrev = useCallback(() => {
-    if (allCards.length === 0) return;
-    setDirection(-1);
-    setCurrentIndex((prev) => (prev - 1 + allCards.length) % allCards.length);
-  }, [allCards.length]);
+    const syncIndex = () => {
+      setCurrentIndex(api.selectedScrollSnap());
+    };
+
+    syncIndex();
+    api.on('select', syncIndex);
+    api.on('reInit', syncIndex);
+
+    return () => {
+      api.off('select', syncIndex);
+      api.off('reInit', syncIndex);
+    };
+  }, [api]);
+
+  useEffect(() => {
+    if (currentIndex < allCards.length) return;
+    setCurrentIndex(0);
+    api?.scrollTo(0);
+  }, [api, allCards.length, currentIndex]);
 
   if (loading) {
     return (
       <section id="competitions" className="py-20">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <div className="w-8 h-8 border-2 border-[#F0B90B]/30 border-t-[#F0B90B] rounded-full animate-spin mx-auto" />
+        <div className="mx-auto max-w-7xl px-6 text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[#F0B90B]/30 border-t-[#F0B90B]" />
         </div>
       </section>
     );
@@ -172,60 +277,53 @@ export default function CompetitionShowcase() {
   if (!data || allCards.length === 0) {
     return (
       <section id="competitions" className="py-20">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="mx-auto max-w-7xl px-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="text-center"
           >
-            <h2 className="text-2xl sm:text-3xl font-display font-bold text-white">
+            <h2 className="text-2xl font-display font-bold text-white sm:text-3xl">
               {t('land.comp.title')}
             </h2>
-            <p className="mt-3 text-[14px] text-[#848E9C]">
-              {t('land.comp.empty')}
-            </p>
+            <p className="mt-3 text-[14px] text-[#848E9C]">{t('land.comp.empty')}</p>
           </motion.div>
         </div>
       </section>
     );
   }
 
-  const variants = {
-    enter: (dir: number) => ({
-      x: dir > 0 ? 300 : -300,
-      opacity: 0,
-      scale: 0.9,
-      rotateY: dir > 0 ? 15 : -15,
-    }),
-    center: {
-      x: 0,
-      opacity: 1,
-      scale: 1,
-      rotateY: 0,
-    },
-    exit: (dir: number) => ({
-      x: dir > 0 ? -300 : 300,
-      opacity: 0,
-      scale: 0.9,
-      rotateY: dir > 0 ? -15 : 15,
-    }),
-  };
+  const activeStatus = STATUS_CONFIG[activeCard.status] ?? STATUS_CONFIG.completed;
+  const activeType = TYPE_META[activeCard.competitionType] ?? TYPE_META.regular;
+  const activeRegistrationPct = getRegistrationPct(activeCard);
 
   return (
-    <section id="competitions" className="py-20 bg-[#0D1017]">
-      <div className="max-w-7xl mx-auto px-6">
+    <section id="competitions" className="relative overflow-hidden bg-[#090D14] py-24">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute left-1/2 top-12 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[#F0B90B]/[0.05] blur-[140px]" />
+        <div className="absolute -left-24 bottom-0 h-[260px] w-[260px] rounded-full bg-[#25C2A0]/[0.07] blur-[120px]" />
+        <div className="absolute -right-28 top-1/3 h-[280px] w-[280px] rounded-full bg-[#0D5BFF]/[0.08] blur-[120px]" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:44px_44px] opacity-[0.06]" />
+      </div>
+
+      <div className="relative mx-auto max-w-6xl px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-10"
+          className="mx-auto max-w-2xl text-center"
         >
-          <h2 className="text-2xl sm:text-3xl font-display font-bold text-white">
+          {data.season && (
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-1.5 text-[11px] font-medium tracking-[0.24em] text-[#AAB3C2] uppercase">
+              <Sparkles className="h-3.5 w-3.5 text-[#F0B90B]" />
+              {data.season.name}
+            </span>
+          )}
+          <h2 className="mt-5 text-3xl font-display font-black tracking-tight text-white sm:text-4xl lg:text-5xl">
             {t('land.comp.title')}
           </h2>
-          <p className="mt-3 text-[14px] text-[#848E9C]">
-            {data.season ? `${data.season.name} · ` : ''}
+          <p className="mt-4 text-sm leading-7 text-[#8E97A8] sm:text-[15px]">
             {t('land.comp.subtitle', {
               live: data.live.length,
               upcoming: data.upcoming.length,
@@ -234,73 +332,171 @@ export default function CompetitionShowcase() {
           </p>
         </motion.div>
 
-        {/* Card stack with navigation */}
-        <div className="relative max-w-md mx-auto">
-          {/* Card stack visual effect */}
-          <div className="absolute inset-0 translate-y-2 translate-x-1 rounded-2xl bg-white/[0.02] border border-white/[0.04]" />
-          <div className="absolute inset-0 translate-y-4 translate-x-2 rounded-2xl bg-white/[0.01] border border-white/[0.02]" />
+        <motion.div
+          initial={{ opacity: 0, y: 28 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.45 }}
+          className="relative mt-12 overflow-hidden rounded-[36px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(17,24,39,0.92),rgba(10,14,23,0.96))] p-5 shadow-[0_40px_120px_rgba(0,0,0,0.45)] sm:p-6 lg:p-8"
+        >
+          <div
+            className="pointer-events-none absolute inset-x-10 top-0 h-40 rounded-full blur-3xl"
+            style={{ backgroundColor: `${activeStatus.color}26` }}
+          />
 
-          {/* Main card with animation */}
-          <div className="relative h-[340px] overflow-hidden rounded-2xl">
-            <AnimatePresence initial={false} custom={direction} mode="wait">
-              <motion.div
-                key={currentIndex}
-                custom={direction}
-                variants={variants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                className="absolute inset-0"
-              >
-                <CompetitionCardView card={allCards[currentIndex]} index={currentIndex} />
-              </motion.div>
-            </AnimatePresence>
-          </div>
+          <div className="relative grid items-center gap-8 lg:grid-cols-[minmax(0,1.05fr)_390px]">
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-[#B9C2D3]">
+                  <CalendarDays className="h-3.5 w-3.5 text-[#F0B90B]" />
+                  焦点赛事
+                </span>
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold"
+                  style={{ backgroundColor: activeStatus.bg, color: activeStatus.color }}
+                >
+                  {activeCard.status === 'live' && <span className="h-2 w-2 rounded-full bg-current animate-pulse" />}
+                  {activeStatus.label}
+                </span>
+              </div>
 
-          {/* Navigation buttons */}
-          <div className="flex items-center justify-center gap-4 mt-5">
-            <button
-              onClick={goPrev}
-              className="w-10 h-10 rounded-full bg-white/5 border border-white/[0.08] flex items-center justify-center text-[#848E9C] hover:text-white hover:bg-white/10 transition-colors"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.3em] text-[#7E8798]">{activeType.eyebrow}</p>
+                <h3 className="mt-3 max-w-[14ch] text-4xl font-display font-black leading-[0.92] text-white sm:text-5xl">
+                  {activeCard.title}
+                </h3>
+                <p className="mt-4 max-w-xl text-sm leading-7 text-[#9CA5B5] sm:text-[15px]">
+                  当前主推卡片会同步展示比赛状态、奖励、交易对和席位进度。现在聚焦的是
+                  {' '}
+                  <span className="font-semibold text-white">{activeCard.symbol}</span>
+                  ，开赛时间
+                  {' '}
+                  <span className="font-semibold text-white">{formatTime(activeCard.startTime)}</span>
+                  。
+                </p>
+              </div>
 
-            {/* Dots indicator */}
-            <div className="flex items-center gap-1.5">
-              {allCards.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => { setDirection(i > currentIndex ? 1 : -1); setCurrentIndex(i); }}
-                  className={`w-2 h-2 rounded-full transition-all ${
-                    i === currentIndex
-                      ? 'bg-[#F0B90B] w-6'
-                      : 'bg-white/20 hover:bg-white/40'
-                  }`}
-                />
-              ))}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-3xl border border-white/[0.06] bg-white/[0.03] p-4">
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-[#7E8798]">Prize Pool</div>
+                  <div className="mt-3 flex items-end gap-2">
+                    <span className="text-3xl font-display font-black text-white">{activeCard.prizePool}U</span>
+                    <span className="pb-1 text-[11px] text-[#8E97A8]">固定奖金池</span>
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-white/[0.06] bg-white/[0.03] p-4">
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-[#7E8798]">Participants</div>
+                  <div className="mt-3 flex items-end gap-2">
+                    <span className="text-3xl font-display font-black text-white">
+                      {activeCard.registeredCount}
+                    </span>
+                    <span className="pb-1 text-[11px] text-[#8E97A8]">/ {activeCard.maxParticipants}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-white/[0.06] bg-[#0A111E]/90 p-4">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="text-[#D8DEEA]">席位进度</span>
+                  <span className="font-mono font-bold text-white">{activeRegistrationPct}%</span>
+                </div>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.06]">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{ width: `${activeRegistrationPct}%`, backgroundColor: activeType.accent }}
+                  />
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-3 text-[12px] text-[#8E97A8]">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Zap className="h-3.5 w-3.5 text-[#F0B90B]" />
+                    {getBaseAsset(activeCard.symbol)}/USDT
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Star className="h-3.5 w-3.5 text-[#25C2A0]" />
+                    Season Points
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <Link
+                  href="/login?mode=register"
+                  className="inline-flex items-center gap-2 rounded-2xl bg-[#F0B90B] px-6 py-3 text-sm font-bold text-[#0B0E11] transition-colors hover:bg-[#F0B90B]/90"
+                >
+                  {t('land.comp.joinNow')}
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  href={`/competitions/${activeCard.slug}`}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-5 py-3 text-sm font-medium text-white/78 transition-colors hover:bg-white/[0.06] hover:text-white"
+                >
+                  查看详情
+                </Link>
+              </div>
             </div>
 
-            <button
-              onClick={goNext}
-              className="w-10 h-10 rounded-full bg-white/5 border border-white/[0.08] flex items-center justify-center text-[#848E9C] hover:text-white hover:bg-white/10 transition-colors"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
+            <div className="relative">
+              <div className="pointer-events-none absolute inset-4 rounded-[32px] bg-white/[0.03]" />
+              <div
+                className="pointer-events-none absolute inset-6 rounded-[32px] blur-3xl"
+                style={{ backgroundColor: `${activeType.accent}22` }}
+              />
 
-          {/* CTA */}
-          <div className="text-center mt-6">
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#F0B90B] text-[#0B0E11] rounded-lg text-[13px] font-bold hover:bg-[#F0B90B]/90 transition-colors"
-            >
-              {t('land.comp.joinNow')}
-              <ChevronRight className="w-4 h-4" />
-            </Link>
+              <Carousel
+                setApi={setApi}
+                opts={{ align: 'center', loop: allCards.length > 1 }}
+                className="relative"
+              >
+                <CarouselContent className="-ml-0">
+                  {allCards.map((card) => (
+                    <CarouselItem key={card.id} className="pl-0">
+                      <CompetitionCardView card={card} />
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+              </Carousel>
+
+              {allCards.length > 1 && (
+                <div className="mt-5 flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => api?.scrollPrev()}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-[#8E97A8] transition-colors hover:bg-white/[0.08] hover:text-white"
+                    aria-label="上一张赛事卡片"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    {allCards.map((card, index) => (
+                      <button
+                        key={card.id}
+                        type="button"
+                        onClick={() => api?.scrollTo(index)}
+                        aria-label={`切换到第 ${index + 1} 张赛事卡片`}
+                        className={`h-2.5 rounded-full transition-all ${
+                          index === currentIndex
+                            ? 'w-8 bg-[#F0B90B]'
+                            : 'w-2.5 bg-white/20 hover:bg-white/38'
+                        }`}
+                      />
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => api?.scrollNext()}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-[#8E97A8] transition-colors hover:bg-white/[0.08] hover:text-white"
+                    aria-label="下一张赛事卡片"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
