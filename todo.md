@@ -96,3 +96,8 @@
 ## Database Schema Sync
 - [x] Run pnpm db:push to sync coverImageUrl column to remote database
 - [x] Verify SQL error "Unknown column 'coverimageurl'" is resolved (column already existed in DB, restart cleared stale connection cache)
+
+## Database Reset
+- [x] Sync latest GitHub changes (84b0d11 - CompetitionShowcase upgrade)
+- [x] Clear all user data from all 17 tables (TRUNCATE with FK checks disabled)
+- [x] Verify database is clean (all tables 0 rows) and server runs correctly

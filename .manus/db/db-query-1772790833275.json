@@ -1,0 +1,78 @@
+{
+  "query": "SELECT 'users' AS tbl, COUNT(*) AS cnt FROM users\nUNION ALL SELECT 'arena_accounts', COUNT(*) FROM arena_accounts\nUNION ALL SELECT 'arena_sessions', COUNT(*) FROM arena_sessions\nUNION ALL SELECT 'matches', COUNT(*) FROM matches\nUNION ALL SELECT 'positions', COUNT(*) FROM positions\nUNION ALL SELECT 'trades', COUNT(*) FROM trades\nUNION ALL SELECT 'chat_messages', COUNT(*) FROM chat_messages\nUNION ALL SELECT 'behavior_events', COUNT(*) FROM behavior_events\nUNION ALL SELECT 'predictions', COUNT(*) FROM predictions\nUNION ALL SELECT 'seasons', COUNT(*) FROM seasons\nUNION ALL SELECT 'competitions', COUNT(*) FROM competitions\nUNION ALL SELECT 'competition_registrations', COUNT(*) FROM competition_registrations\nUNION ALL SELECT 'match_results', COUNT(*) FROM match_results\nUNION ALL SELECT 'notifications', COUNT(*) FROM notifications\nUNION ALL SELECT 'user_achievements', COUNT(*) FROM user_achievements\nUNION ALL SELECT 'institutions', COUNT(*) FROM institutions\nUNION ALL SELECT 'user_profiles', COUNT(*) FROM user_profiles;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT 'users' AS tbl, COUNT(*) AS cnt FROM users\nUNION ALL SELECT 'arena_accounts', COUNT(*) FROM arena_accounts\nUNION ALL SELECT 'arena_sessions', COUNT(*) FROM arena_sessions\nUNION ALL SELECT 'matches', COUNT(*) FROM matches\nUNION ALL SELECT 'positions', COUNT(*) FROM positions\nUNION ALL SELECT 'trades', COUNT(*) FROM trades\nUNION ALL SELECT 'chat_messages', COUNT(*) FROM chat_messages\nUNION ALL SELECT 'behavior_events', COUNT(*) FROM behavior_events\nUNION ALL SELECT 'predictions', COUNT(*) FROM predictions\nUNION ALL SELECT 'seasons', COUNT(*) FROM seasons\nUNION ALL SELECT 'competitions', COUNT(*) FROM competitions\nUNION ALL SELECT 'competition_registrations', COUNT(*) FROM competition_registrations\nUNION ALL SELECT 'match_results', COUNT(*) FROM match_results\nUNION ALL SELECT 'notifications', COUNT(*) FROM notifications\nUNION ALL SELECT 'user_achievements', COUNT(*) FROM user_achievements\nUNION ALL SELECT 'institutions', COUNT(*) FROM institutions\nUNION ALL SELECT 'user_profiles', COUNT(*) FROM user_profiles;",
+  "rows": [
+    {
+      "tbl": "matches",
+      "cnt": "0"
+    },
+    {
+      "tbl": "users",
+      "cnt": "1"
+    },
+    {
+      "tbl": "arena_accounts",
+      "cnt": "0"
+    },
+    {
+      "tbl": "positions",
+      "cnt": "0"
+    },
+    {
+      "tbl": "arena_sessions",
+      "cnt": "0"
+    },
+    {
+      "tbl": "behavior_events",
+      "cnt": "0"
+    },
+    {
+      "tbl": "trades",
+      "cnt": "0"
+    },
+    {
+      "tbl": "predictions",
+      "cnt": "0"
+    },
+    {
+      "tbl": "chat_messages",
+      "cnt": "0"
+    },
+    {
+      "tbl": "seasons",
+      "cnt": "0"
+    },
+    {
+      "tbl": "competitions",
+      "cnt": "0"
+    },
+    {
+      "tbl": "competition_registrations",
+      "cnt": "0"
+    },
+    {
+      "tbl": "match_results",
+      "cnt": "0"
+    },
+    {
+      "tbl": "notifications",
+      "cnt": "0"
+    },
+    {
+      "tbl": "user_achievements",
+      "cnt": "0"
+    },
+    {
+      "tbl": "user_profiles",
+      "cnt": "0"
+    },
+    {
+      "tbl": "institutions",
+      "cnt": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "tbl\tcnt\nmatches\t0\nusers\t1\narena_accounts\t0\npositions\t0\narena_sessions\t0\nbehavior_events\t0\ntrades\t0\npredictions\t0\nchat_messages\t0\nseasons\t0\ncompetitions\t0\ncompetition_registrations\t0\nmatch_results\t0\nnotifications\t0\nuser_achievements\t0\nuser_profiles\t0\ninstitutions\t0\n",
+  "stderr": "",
+  "execution_time_ms": 1591
+}

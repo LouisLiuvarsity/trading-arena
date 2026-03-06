@@ -1,0 +1,9 @@
+{
+  "query": "SET FOREIGN_KEY_CHECKS = 0;\nTRUNCATE TABLE user_profiles;\nTRUNCATE TABLE user_achievements;\nTRUNCATE TABLE notifications;\nTRUNCATE TABLE match_results;\nTRUNCATE TABLE competition_registrations;\nTRUNCATE TABLE competitions;\nTRUNCATE TABLE seasons;\nTRUNCATE TABLE predictions;\nTRUNCATE TABLE behavior_events;\nTRUNCATE TABLE chat_messages;\nTRUNCATE TABLE trades;\nTRUNCATE TABLE positions;\nTRUNCATE TABLE matches;\nTRUNCATE TABLE arena_sessions;\nTRUNCATE TABLE arena_accounts;\nTRUNCATE TABLE institutions;\nTRUNCATE TABLE users;\nSET FOREIGN_KEY_CHECKS = 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SET FOREIGN_KEY_CHECKS = 0;\nTRUNCATE TABLE user_profiles;\nTRUNCATE TABLE user_achievements;\nTRUNCATE TABLE notifications;\nTRUNCATE TABLE match_results;\nTRUNCATE TABLE competition_registrations;\nTRUNCATE TABLE competitions;\nTRUNCATE TABLE seasons;\nTRUNCATE TABLE predictions;\nTRUNCATE TABLE behavior_events;\nTRUNCATE TABLE chat_messages;\nTRUNCATE TABLE trades;\nTRUNCATE TABLE positions;\nTRUNCATE TABLE matches;\nTRUNCATE TABLE arena_sessions;\nTRUNCATE TABLE arena_accounts;\nTRUNCATE TABLE institutions;\nTRUNCATE TABLE users;\nSET FOREIGN_KEY_CHECKS = 1;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 8386
+}
