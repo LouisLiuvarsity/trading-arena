@@ -30,6 +30,7 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 
 export class CompetitionEngine {
   private settlingLock = new Set<number>();
+  private lastDecayMonth: string | null = null;
 
   constructor(
     private readonly arena: ArenaEngine,
@@ -42,6 +43,7 @@ export class CompetitionEngine {
     const now = Date.now();
     await this.autoTransitions(now);
     await this.tickLiveCompetitions(now);
+    await this.checkMonthlyDecay(now);
   }
 
   /** Time-driven automatic status transitions */
@@ -94,6 +96,35 @@ export class CompetitionEngine {
           console.error(`[competition:settle:${comp.id}]`, error);
         }
       }
+    }
+  }
+
+  // ─── Monthly Season Points Decay ───────────────────────────
+
+  /**
+   * At the start of each new month, apply season points decay (×0.8).
+   * Runs once per month, triggered by the tick loop.
+   */
+  private async checkMonthlyDecay(now: number): Promise<void> {
+    const d = new Date(now);
+    const monthKey = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    if (this.lastDecayMonth === monthKey) return;
+
+    // On first boot, just record the current month without decaying
+    if (this.lastDecayMonth === null) {
+      this.lastDecayMonth = monthKey;
+      return;
+    }
+
+    // New month detected — apply decay
+    const season = await compDb.getActiveSeason();
+    const factor = season?.pointsDecayFactor ?? 0.8;
+    try {
+      await db.applySeasonPointsDecay(factor);
+      console.log(`[decay] Applied season points decay ×${factor} for month ${monthKey}`);
+      this.lastDecayMonth = monthKey;
+    } catch (error) {
+      console.error("[decay] Failed to apply season points decay:", error);
     }
   }
 
@@ -274,7 +305,7 @@ export class CompetitionEngine {
             rankTierAtTime: tier.tier,
             finalEquity: comp.startingCapital + row.pnl,
             closeReasonStats: JSON.stringify(closeReasons),
-          });
+          }, tx);
         }
 
         // 4. Award season points
@@ -542,6 +573,17 @@ export class CompetitionEngine {
     ];
     const nextTierMin = tierIdx < 5 ? tiers[tierIdx + 1].min : Infinity;
 
+    // Compute grand final qualification using season rank score (top 500)
+    const GRAND_FINAL_QUALIFY_COUNT = 500;
+    let grandFinalQualified = false;
+    let grandFinalLine = 0;
+    if (season) {
+      const avgHoldWeight = await db.getAvgHoldWeightForUser(arenaAccountId, season.id);
+      const mySeasonRankScore = Math.round(account.seasonPoints * avgHoldWeight * 100) / 100;
+      grandFinalLine = await db.getGrandFinalLine(GRAND_FINAL_QUALIFY_COUNT, season.id);
+      grandFinalQualified = mySeasonRankScore >= grandFinalLine && mySeasonRankScore > 0;
+    }
+
     return {
       activeCompetition,
       myRegistrations: myRegistrations.filter((r: any) => r.status !== "withdrawn"),
@@ -556,8 +598,8 @@ export class CompetitionEngine {
             mySeasonPoints: account.seasonPoints,
             myRankTier: tier.tier,
             pointsToNextTier: Math.max(0, nextTierMin - account.seasonPoints),
-            grandFinalQualified: account.seasonPoints >= 200,
-            grandFinalLine: 200,
+            grandFinalQualified,
+            grandFinalLine,
             pointsCurve: [],
           }
         : null,

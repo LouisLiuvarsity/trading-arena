@@ -669,8 +669,10 @@ export class ArenaEngine {
 
     const directionConsistency = await dbHelpers.getDirectionConsistency(arenaAccountId, active.id);
     const recentTradeVolume = await dbHelpers.getRecentTradeVolume(active.id, 5 * 60 * 1000);
-    const avgHoldWeight = await dbHelpers.getAvgHoldWeightForUser(arenaAccountId);
-    const seasonRankScore = round2(seasonPoints * (avgHoldWeight || 1));
+    const activeSeason = await compDb.getActiveSeason();
+    const avgHoldWeight = await dbHelpers.getAvgHoldWeightForUser(arenaAccountId, activeSeason?.id);
+    const seasonRankScore = round2(seasonPoints * avgHoldWeight);
+    const grandFinalLine = await dbHelpers.getGrandFinalLine(500, activeSeason?.id);
 
     const userTrades = await dbHelpers.getTradesForUserMatch(arenaAccountId, active.id);
 
@@ -688,8 +690,8 @@ export class ArenaEngine {
         seasonPoints,
         avgHoldWeight: round2(avgHoldWeight),
         seasonRankScore,
-        grandFinalQualified: seasonPoints >= 200,
-        grandFinalLine: 200,
+        grandFinalQualified: seasonRankScore > 0 && seasonRankScore >= grandFinalLine,
+        grandFinalLine,
         prizeEligible,
         rankTier: displayTier.tier,
         tierLeverage: baseTier.leverage,
@@ -1159,6 +1161,8 @@ export class ArenaEngine {
     for (const pos of allPositions) positionMap.set(pos.arenaAccountId, pos);
 
     const lastPrice = this.market.getLastPrice();
+    // Direction consistency bonus: 1.05x weighted PnL for players with >70% consistency
+    const dirConsistencyMap = await dbHelpers.getDirectionConsistencyBatch(matchId);
 
     const rows = allAccounts.map((account) => {
       const base = aggMap.get(account.id) ?? { pnl: 0, weighted: 0, trades: 0 };
@@ -1180,6 +1184,12 @@ export class ArenaEngine {
         pnl += unrealized;
         weighted += unrealized * w;
         tradesUsed = Math.max(base.trades, position.tradeNumber);
+      }
+
+      // Apply direction consistency bonus (1.05x) per design doc §6.4.3
+      const dirConsistency = dirConsistencyMap.get(account.id) ?? 0;
+      if (dirConsistency > 0.7) {
+        weighted *= 1.05;
       }
 
       return {

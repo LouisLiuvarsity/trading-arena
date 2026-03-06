@@ -19,6 +19,7 @@ import {
   chatMessages,
   behaviorEvents,
   predictions,
+  competitions,
   type User,
 } from "../drizzle/schema";
 import { MATCH_DURATION_MS, SESSION_TTL_MS, STARTING_CAPITAL } from "./constants";
@@ -610,6 +611,108 @@ export async function updateSeasonPoints(
     .where(eq(arenaAccounts.id, arenaAccountId));
 }
 
+/**
+ * Build the season leaderboard sorted by seasonRankScore = seasonPoints × avgHoldWeight.
+ * Used for grand final qualification (top N qualify).
+ */
+export async function getSeasonLeaderboard(
+  seasonId?: number,
+  limit: number = 500,
+): Promise<Array<{
+  arenaAccountId: number;
+  username: string;
+  seasonPoints: number;
+  avgHoldWeight: number;
+  seasonRankScore: number;
+  rank: number;
+}>> {
+  // Get all accounts with season points > 0
+  const accounts = await db
+    .select({
+      id: arenaAccounts.id,
+      username: arenaAccounts.username,
+      seasonPoints: arenaAccounts.seasonPoints,
+    })
+    .from(arenaAccounts)
+    .where(sql`${arenaAccounts.seasonPoints} > 0`);
+
+  // Compute average hold weight per account (optionally scoped to season)
+  let avgWeightQuery;
+  if (seasonId) {
+    avgWeightQuery = await db
+      .select({
+        arenaAccountId: trades.arenaAccountId,
+        avg: sql<number>`COALESCE(AVG(${trades.holdWeight}), 0)`,
+      })
+      .from(trades)
+      .innerJoin(competitions, eq(trades.matchId, competitions.matchId))
+      .where(eq(competitions.seasonId, seasonId))
+      .groupBy(trades.arenaAccountId);
+  } else {
+    avgWeightQuery = await db
+      .select({
+        arenaAccountId: trades.arenaAccountId,
+        avg: sql<number>`COALESCE(AVG(${trades.holdWeight}), 0)`,
+      })
+      .from(trades)
+      .groupBy(trades.arenaAccountId);
+  }
+
+  const weightMap = new Map<number, number>();
+  for (const row of avgWeightQuery) {
+    weightMap.set(row.arenaAccountId, row.avg);
+  }
+
+  // Compute rank scores and sort
+  const rows = accounts.map((a) => {
+    const avgHoldWeight = weightMap.get(a.id) ?? 0;
+    return {
+      arenaAccountId: a.id,
+      username: a.username,
+      seasonPoints: a.seasonPoints,
+      avgHoldWeight: Math.round(avgHoldWeight * 100) / 100,
+      seasonRankScore: Math.round(a.seasonPoints * avgHoldWeight * 100) / 100,
+      rank: 0,
+    };
+  });
+
+  rows.sort((a, b) => {
+    if (b.seasonRankScore !== a.seasonRankScore) return b.seasonRankScore - a.seasonRankScore;
+    if (b.seasonPoints !== a.seasonPoints) return b.seasonPoints - a.seasonPoints;
+    return a.arenaAccountId - b.arenaAccountId;
+  });
+
+  rows.forEach((row, idx) => {
+    row.rank = idx + 1;
+  });
+
+  return rows.slice(0, limit);
+}
+
+/** Get the grand final qualification line (the seasonRankScore of the Nth-ranked player) */
+export async function getGrandFinalLine(
+  qualifyCount: number = 500,
+  seasonId?: number,
+): Promise<number> {
+  const leaderboard = await getSeasonLeaderboard(seasonId, qualifyCount);
+  if (leaderboard.length < qualifyCount) return 0;
+  return leaderboard[qualifyCount - 1].seasonRankScore;
+}
+
+/** Apply monthly season points decay: multiply all season points by the given factor (e.g. 0.8) */
+export async function applySeasonPointsDecay(
+  factor: number,
+  dbOrTx: DbOrTx = db,
+): Promise<void> {
+  await dbOrTx
+    .update(arenaAccounts)
+    .set({
+      seasonPoints: sql`ROUND(${arenaAccounts.seasonPoints} * ${factor}, 2)`,
+      updatedAt: Date.now(),
+    })
+    .where(sql`${arenaAccounts.seasonPoints} > 0`);
+}
+
 export async function insertChatMessage(input: {
   id: string;
   arenaAccountId: number;
@@ -702,6 +805,34 @@ export async function getRecentTradeVolume(matchId: number, lookbackMs: number):
   return rows[0]?.count ?? 0;
 }
 
+/** Batch direction consistency for all accounts in a match. Returns Map<accountId, consistency 0..1> */
+export async function getDirectionConsistencyBatch(matchId: number): Promise<Map<number, number>> {
+  const rows = await db
+    .select({
+      arenaAccountId: trades.arenaAccountId,
+      direction: trades.direction,
+      cnt: sql<number>`COUNT(*)`,
+    })
+    .from(trades)
+    .where(eq(trades.matchId, matchId))
+    .groupBy(trades.arenaAccountId, trades.direction);
+
+  // Aggregate: for each account, find total trades and max(longCount, shortCount)
+  const totals = new Map<number, { total: number; max: number }>();
+  for (const row of rows) {
+    const existing = totals.get(row.arenaAccountId) ?? { total: 0, max: 0 };
+    existing.total += row.cnt;
+    existing.max = Math.max(existing.max, row.cnt);
+    totals.set(row.arenaAccountId, existing);
+  }
+
+  const result = new Map<number, number>();
+  totals.forEach(({ total, max }, accountId) => {
+    result.set(accountId, Math.round((max / total) * 100) / 100);
+  });
+  return result;
+}
+
 export async function getDirectionConsistency(arenaAccountId: number, matchId: number): Promise<number> {
   const rows = await db
     .select({ direction: trades.direction })
@@ -715,7 +846,18 @@ export async function getDirectionConsistency(arenaAccountId: number, matchId: n
   return Math.round((Math.max(longCount, shortCount) / rows.length) * 100) / 100;
 }
 
-export async function getAvgHoldWeightForUser(arenaAccountId: number): Promise<number> {
+export async function getAvgHoldWeightForUser(arenaAccountId: number, seasonId?: number): Promise<number> {
+  if (seasonId) {
+    // Filter trades to only those from competitions in the given season
+    const rows = await db
+      .select({
+        avg: sql<number>`COALESCE(AVG(${trades.holdWeight}), 0)`,
+      })
+      .from(trades)
+      .innerJoin(competitions, eq(trades.matchId, competitions.matchId))
+      .where(and(eq(trades.arenaAccountId, arenaAccountId), eq(competitions.seasonId, seasonId)));
+    return rows[0]?.avg ?? 0;
+  }
   const rows = await db
     .select({
       avg: sql<number>`COALESCE(AVG(${trades.holdWeight}), 0)`,

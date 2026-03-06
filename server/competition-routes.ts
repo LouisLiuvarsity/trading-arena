@@ -7,6 +7,7 @@ import { z } from "zod";
 import type { CompetitionEngine } from "./competition-engine";
 import type { ArenaEngine } from "./engine";
 import * as compDb from "./competition-db";
+import * as dbHelpers from "./db";
 
 function parseIntParam(val: string): number {
   const n = Number(val);
@@ -350,6 +351,51 @@ export function registerCompetitionRoutes(
   app.get("/api/seasons", async (_req: Request, res: Response) => {
     try {
       res.json(await compDb.listSeasons());
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  /** Season leaderboard — ranked by seasonRankScore = seasonPoints × avgHoldWeight */
+  app.get("/api/seasons/:seasonSlug/leaderboard", async (req: Request, res: Response) => {
+    try {
+      const season = await compDb.getSeasonBySlug(req.params.seasonSlug);
+      if (!season) {
+        res.status(404).json({ error: "Season not found" });
+        return;
+      }
+
+      const limit = Math.min(Math.max(1, Number(req.query.limit) || 500), 1000);
+      const leaderboard = await dbHelpers.getSeasonLeaderboard(season.id, limit);
+
+      // Find current user's position if authenticated
+      const token = getAuthToken(req);
+      const account = token ? await arenaEngine.getAccountByToken(token) : null;
+      const me = account ? leaderboard.find(r => r.arenaAccountId === account.id) : null;
+
+      res.json({
+        seasonId: season.id,
+        seasonName: season.name,
+        leaderboard,
+        me: me ?? null,
+        grandFinalLine: await dbHelpers.getGrandFinalLine(500, season.id),
+      });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  /** Admin: Season leaderboard */
+  app.get("/api/admin/seasons/:id/leaderboard", async (req: Request, res: Response) => {
+    const adminId = await requireAdmin(req, res);
+    if (!adminId) return;
+
+    try {
+      const seasonId = parseIntParam(req.params.id);
+      const limit = Math.min(Math.max(1, Number(req.query.limit) || 500), 1000);
+      const leaderboard = await dbHelpers.getSeasonLeaderboard(seasonId, limit);
+      const grandFinalLine = await dbHelpers.getGrandFinalLine(500, seasonId);
+      res.json({ leaderboard, grandFinalLine });
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
     }
