@@ -1,0 +1,53 @@
+{
+  "query": "SHOW CREATE TABLE competitions;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SHOW CREATE TABLE competitions;",
+  "rows": [
+    {
+      "Table": "competitions",
+      "Create Table": "CREATE TABLE `competitions` ("
+    }
+  ],
+  "messages": [
+    "  `id` int NOT NULL AUTO_INCREMENT,",
+    "  `seasonId` int NOT NULL,",
+    "  `title` varchar(256) COLLATE utf8mb4_unicode_ci NOT NULL,",
+    "  `slug` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,",
+    "  `description` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,",
+    "  `competitionNumber` int NOT NULL,",
+    "  `competitionType` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'regular',",
+    "  `status` varchar(24) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'draft',",
+    "  `matchId` int DEFAULT NULL,",
+    "  `maxParticipants` int NOT NULL DEFAULT '50',",
+    "  `minParticipants` int NOT NULL DEFAULT '5',",
+    "  `registrationOpenAt` bigint DEFAULT NULL,",
+    "  `registrationCloseAt` bigint DEFAULT NULL,",
+    "  `startTime` bigint NOT NULL,",
+    "  `endTime` bigint NOT NULL,",
+    "  `symbol` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'SOLUSDT',",
+    "  `startingCapital` double NOT NULL DEFAULT '5000',",
+    "  `maxTradesPerMatch` int NOT NULL DEFAULT '40',",
+    "  `closeOnlySeconds` int NOT NULL DEFAULT '1800',",
+    "  `feeRate` double NOT NULL DEFAULT '0.0005',",
+    "  `prizePool` double NOT NULL DEFAULT '500',",
+    "  `prizeTableJson` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,",
+    "  `pointsTableJson` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,",
+    "  `requireMinSeasonPoints` int NOT NULL DEFAULT '0',",
+    "  `requireMinTier` varchar(16) COLLATE utf8mb4_unicode_ci DEFAULT NULL,",
+    "  `inviteOnly` int NOT NULL DEFAULT '0',",
+    "  `createdBy` int DEFAULT NULL,",
+    "  `createdAt` bigint NOT NULL,",
+    "  `updatedAt` bigint NOT NULL,",
+    "  `archived` int NOT NULL DEFAULT '0',",
+    "  `coverImageUrl` varchar(512) COLLATE utf8mb4_unicode_ci DEFAULT NULL,",
+    "  PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */,",
+    "  UNIQUE KEY `competitions_slug_unique` (`slug`),",
+    "  KEY `idx_comp_season` (`seasonId`),",
+    "  KEY `idx_comp_status` (`status`),",
+    "  KEY `idx_comp_start` (`startTime`),",
+    "  KEY `idx_comp_archived` (`archived`)",
+    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci AUTO_INCREMENT=30001"
+  ],
+  "stdout": "Table\tCreate Table\ncompetitions\tCREATE TABLE `competitions` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `seasonId` int NOT NULL,\n  `title` varchar(256) COLLATE utf8mb4_unicode_ci NOT NULL,\n  `slug` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,\n  `description` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,\n  `competitionNumber` int NOT NULL,\n  `competitionType` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'regular',\n  `status` varchar(24) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'draft',\n  `matchId` int DEFAULT NULL,\n  `maxParticipants` int NOT NULL DEFAULT '50',\n  `minParticipants` int NOT NULL DEFAULT '5',\n  `registrationOpenAt` bigint DEFAULT NULL,\n  `registrationCloseAt` bigint DEFAULT NULL,\n  `startTime` bigint NOT NULL,\n  `endTime` bigint NOT NULL,\n  `symbol` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'SOLUSDT',\n  `startingCapital` double NOT NULL DEFAULT '5000',\n  `maxTradesPerMatch` int NOT NULL DEFAULT '40',\n  `closeOnlySeconds` int NOT NULL DEFAULT '1800',\n  `feeRate` double NOT NULL DEFAULT '0.0005',\n  `prizePool` double NOT NULL DEFAULT '500',\n  `prizeTableJson` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,\n  `pointsTableJson` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,\n  `requireMinSeasonPoints` int NOT NULL DEFAULT '0',\n  `requireMinTier` varchar(16) COLLATE utf8mb4_unicode_ci DEFAULT NULL,\n  `inviteOnly` int NOT NULL DEFAULT '0',\n  `createdBy` int DEFAULT NULL,\n  `createdAt` bigint NOT NULL,\n  `updatedAt` bigint NOT NULL,\n  `archived` int NOT NULL DEFAULT '0',\n  `coverImageUrl` varchar(512) COLLATE utf8mb4_unicode_ci DEFAULT NULL,\n  PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */,\n  UNIQUE KEY `competitions_slug_unique` (`slug`),\n  KEY `idx_comp_season` (`seasonId`),\n  KEY `idx_comp_status` (`status`),\n  KEY `idx_comp_start` (`startTime`),\n  KEY `idx_comp_archived` (`archived`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci AUTO_INCREMENT=30001\n",
+  "stderr": "",
+  "execution_time_ms": 1519
+}

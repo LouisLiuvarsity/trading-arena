@@ -1,0 +1,13 @@
+{
+  "query": "SELECT `coverImageUrl` FROM competitions LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT `coverImageUrl` FROM competitions LIMIT 1;",
+  "rows": [
+    {
+      "coverImageUrl": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "coverImageUrl\nNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1494
+}

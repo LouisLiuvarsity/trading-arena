@@ -92,3 +92,7 @@
 - [x] Restart dev server: running normally
 - [x] Tests: 21 passed, tsc 0 errors
 - [ ] Redeploy via Publish button
+
+## Database Schema Sync
+- [x] Run pnpm db:push to sync coverImageUrl column to remote database
+- [x] Verify SQL error "Unknown column 'coverimageurl'" is resolved (column already existed in DB, restart cleared stale connection cache)

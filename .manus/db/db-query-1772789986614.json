@@ -1,0 +1,103 @@
+{
+  "query": "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'competitions' ORDER BY ORDINAL_POSITION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'competitions' ORDER BY ORDINAL_POSITION;",
+  "rows": [
+    {
+      "COLUMN_NAME": "id"
+    },
+    {
+      "COLUMN_NAME": "seasonId"
+    },
+    {
+      "COLUMN_NAME": "title"
+    },
+    {
+      "COLUMN_NAME": "slug"
+    },
+    {
+      "COLUMN_NAME": "description"
+    },
+    {
+      "COLUMN_NAME": "competitionNumber"
+    },
+    {
+      "COLUMN_NAME": "competitionType"
+    },
+    {
+      "COLUMN_NAME": "status"
+    },
+    {
+      "COLUMN_NAME": "matchId"
+    },
+    {
+      "COLUMN_NAME": "maxParticipants"
+    },
+    {
+      "COLUMN_NAME": "minParticipants"
+    },
+    {
+      "COLUMN_NAME": "registrationOpenAt"
+    },
+    {
+      "COLUMN_NAME": "registrationCloseAt"
+    },
+    {
+      "COLUMN_NAME": "startTime"
+    },
+    {
+      "COLUMN_NAME": "endTime"
+    },
+    {
+      "COLUMN_NAME": "symbol"
+    },
+    {
+      "COLUMN_NAME": "startingCapital"
+    },
+    {
+      "COLUMN_NAME": "maxTradesPerMatch"
+    },
+    {
+      "COLUMN_NAME": "closeOnlySeconds"
+    },
+    {
+      "COLUMN_NAME": "feeRate"
+    },
+    {
+      "COLUMN_NAME": "prizePool"
+    },
+    {
+      "COLUMN_NAME": "prizeTableJson"
+    },
+    {
+      "COLUMN_NAME": "pointsTableJson"
+    },
+    {
+      "COLUMN_NAME": "requireMinSeasonPoints"
+    },
+    {
+      "COLUMN_NAME": "requireMinTier"
+    },
+    {
+      "COLUMN_NAME": "inviteOnly"
+    },
+    {
+      "COLUMN_NAME": "createdBy"
+    },
+    {
+      "COLUMN_NAME": "createdAt"
+    },
+    {
+      "COLUMN_NAME": "updatedAt"
+    },
+    {
+      "COLUMN_NAME": "archived"
+    },
+    {
+      "COLUMN_NAME": "coverImageUrl"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\nid\nseasonId\ntitle\nslug\ndescription\ncompetitionNumber\ncompetitionType\nstatus\nmatchId\nmaxParticipants\nminParticipants\nregistrationOpenAt\nregistrationCloseAt\nstartTime\nendTime\nsymbol\nstartingCapital\nmaxTradesPerMatch\ncloseOnlySeconds\nfeeRate\nprizePool\nprizeTableJson\npointsTableJson\nrequireMinSeasonPoints\nrequireMinTier\ninviteOnly\ncreatedBy\ncreatedAt\nupdatedAt\narchived\ncoverImageUrl\n",
+  "stderr": "",
+  "execution_time_ms": 1606
+}

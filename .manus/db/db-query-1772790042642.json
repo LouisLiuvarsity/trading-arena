@@ -1,0 +1,15 @@
+{
+  "query": "SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'competitions' AND COLUMN_NAME LIKE '%cover%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'competitions' AND COLUMN_NAME LIKE '%cover%';",
+  "rows": [
+    {
+      "COLUMN_NAME": "coverImageUrl",
+      "DATA_TYPE": "varchar",
+      "CHARACTER_MAXIMUM_LENGTH": "512"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\tDATA_TYPE\tCHARACTER_MAXIMUM_LENGTH\ncoverImageUrl\tvarchar\t512\n",
+  "stderr": "",
+  "execution_time_ms": 1535
+}
