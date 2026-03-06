@@ -157,6 +157,7 @@ export function registerCompetitionRoutes(
           endTime: c.endTime,
           registeredCount: registered,
           maxParticipants: c.maxParticipants,
+          coverImageUrl: c.coverImageUrl ?? null,
         };
       };
 
@@ -213,6 +214,7 @@ export function registerCompetitionRoutes(
           endTime: comp.endTime,
           registrationOpenAt: comp.registrationOpenAt,
           registrationCloseAt: comp.registrationCloseAt,
+          coverImageUrl: comp.coverImageUrl ?? null,
           myRegistrationStatus: myStatus,
         });
       }

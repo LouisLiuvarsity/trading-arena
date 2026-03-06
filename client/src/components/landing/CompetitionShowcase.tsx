@@ -16,6 +16,7 @@ interface CompetitionCard {
   endTime: number;
   registeredCount: number;
   maxParticipants: number;
+  coverImageUrl?: string | null;
 }
 
 interface ShowcaseData {
@@ -55,84 +56,70 @@ function CompetitionCardView({ card, index }: { card: CompetitionCard; index: nu
   const isLive = card.status === 'live';
   const baseAsset = card.symbol.replace(/USDT|USDC/, '');
 
-  // Gradient backgrounds based on competition type
   const gradients: Record<string, string> = {
-    grand_final: 'from-[#F0B90B]/20 via-[#FF6B35]/10 to-transparent',
-    special: 'from-[#8B5CF6]/20 via-[#6366F1]/10 to-transparent',
-    regular: 'from-[#0ECB81]/10 via-[#0ECB81]/5 to-transparent',
-    practice: 'from-[#848E9C]/10 via-[#848E9C]/5 to-transparent',
+    grand_final: 'from-[#F0B90B]/30 via-[#FF6B35]/15 to-[#1C2030]',
+    special: 'from-[#8B5CF6]/30 via-[#6366F1]/15 to-[#1C2030]',
+    regular: 'from-[#0ECB81]/20 via-[#0ECB81]/8 to-[#1C2030]',
+    practice: 'from-[#848E9C]/20 via-[#848E9C]/8 to-[#1C2030]',
   };
 
   return (
-    <div className={`relative w-full bg-[#1C2030] border border-white/[0.08] rounded-2xl overflow-hidden ${
+    <div className={`relative w-full h-full bg-[#1C2030] border border-white/[0.08] rounded-2xl overflow-hidden ${
       isLive ? 'ring-1 ring-[#0ECB81]/30' : ''
     }`}>
-      {/* Top gradient decoration */}
-      <div className={`absolute inset-0 bg-gradient-to-b ${gradients[card.competitionType] ?? gradients.regular} pointer-events-none`} />
-
-      {/* Card content */}
-      <div className="relative p-5 space-y-4">
-        {/* Status + Type badges */}
-        <div className="flex items-center justify-between">
+      {/* Cover image — top half */}
+      <div className="relative h-[160px] overflow-hidden">
+        {card.coverImageUrl ? (
+          <img src={card.coverImageUrl} alt={card.title} className="w-full h-full object-cover" />
+        ) : (
+          <div className={`w-full h-full bg-gradient-to-b ${gradients[card.competitionType] ?? gradients.regular}`}>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Trophy className="w-12 h-12 text-white/10" />
+            </div>
+          </div>
+        )}
+        {/* Status badge on image */}
+        <div className="absolute top-3 left-3">
           <span
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-full"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-full backdrop-blur-sm"
             style={{ backgroundColor: statusConf.bg, color: statusConf.color }}
           >
             {isLive && <span className="w-2 h-2 rounded-full bg-current animate-pulse" />}
             {statusConf.label}
           </span>
-          <span className="text-[10px] text-[#848E9C] font-mono">
-            {TYPE_ICONS[card.competitionType]} {card.competitionType === 'grand_final' ? 'Grand Final' : card.competitionType}
-          </span>
         </div>
+        {card.prizePool > 0 && (
+          <div className="absolute top-3 right-3">
+            <span className="inline-flex items-center gap-1 px-2 py-1 bg-black/50 backdrop-blur-sm text-[#F0B90B] text-[11px] font-bold rounded-full">
+              <Coins className="w-3 h-3" /> {card.prizePool}U
+            </span>
+          </div>
+        )}
+      </div>
 
-        {/* Title */}
-        <h3 className="text-lg font-display font-bold text-white leading-snug">
+      {/* Text content — bottom half */}
+      <div className="p-4 space-y-3">
+        <h3 className="text-base font-display font-bold text-white leading-snug truncate">
           {card.title}
         </h3>
 
-        {/* Key info grid */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex items-center gap-2">
-            <Clock className="w-3.5 h-3.5 text-[#848E9C]" />
-            <div>
-              <div className="text-[10px] text-[#848E9C]">Time</div>
-              <div className="text-[11px] text-[#D1D4DC] font-mono">{formatTime(card.startTime)}</div>
-            </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="flex items-center gap-1.5">
+            <Clock className="w-3 h-3 text-[#848E9C]" />
+            <span className="text-[11px] text-[#D1D4DC] font-mono">{formatTime(card.startTime)}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Zap className="w-3.5 h-3.5 text-[#F0B90B]" />
-            <div>
-              <div className="text-[10px] text-[#848E9C]">Pair</div>
-              <div className="text-[11px] text-[#D1D4DC] font-mono font-bold">{baseAsset}/USDT</div>
-            </div>
+          <div className="flex items-center gap-1.5">
+            <Zap className="w-3 h-3 text-[#F0B90B]" />
+            <span className="text-[11px] text-[#D1D4DC] font-mono font-bold">{baseAsset}/USDT</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Users className="w-3.5 h-3.5 text-[#0ECB81]" />
-            <div>
-              <div className="text-[10px] text-[#848E9C]">Players</div>
-              <div className="text-[11px] text-[#D1D4DC] font-mono">{card.registeredCount}/{card.maxParticipants}</div>
-            </div>
+          <div className="flex items-center gap-1.5">
+            <Users className="w-3 h-3 text-[#0ECB81]" />
+            <span className="text-[11px] text-[#D1D4DC] font-mono">{card.registeredCount}/{card.maxParticipants}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Coins className="w-3.5 h-3.5 text-[#F0B90B]" />
-            <div>
-              <div className="text-[10px] text-[#848E9C]">Prize Pool</div>
-              <div className="text-[11px] text-[#F0B90B] font-mono font-bold">{card.prizePool}U</div>
-            </div>
+          <div className="flex items-center gap-1.5">
+            <Star className="w-3 h-3 text-[#0ECB81]" />
+            <span className="text-[10px] text-[#0ECB81]">Season Points</span>
           </div>
-        </div>
-
-        {/* Tags */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {card.prizePool > 0 && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#F0B90B]/10 text-[#F0B90B] text-[10px] font-medium rounded-full">
-              <Trophy className="w-3 h-3" /> Prize
-            </span>
-          )}
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#0ECB81]/10 text-[#0ECB81] text-[10px] font-medium rounded-full">
-            <Star className="w-3 h-3" /> Season Points
-          </span>
         </div>
       </div>
     </div>
@@ -254,7 +241,7 @@ export default function CompetitionShowcase() {
           <div className="absolute inset-0 translate-y-4 translate-x-2 rounded-2xl bg-white/[0.01] border border-white/[0.02]" />
 
           {/* Main card with animation */}
-          <div className="relative h-[360px] overflow-hidden rounded-2xl">
+          <div className="relative h-[340px] overflow-hidden rounded-2xl">
             <AnimatePresence initial={false} custom={direction} mode="wait">
               <motion.div
                 key={currentIndex}

@@ -53,6 +53,7 @@ export interface CompetitionSummary {
   endTime: number;
   registrationOpenAt: number | null;
   registrationCloseAt: number | null;
+  coverImageUrl: string | null;
   myRegistrationStatus: RegistrationStatus | null;
 }
 

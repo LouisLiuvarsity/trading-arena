@@ -530,6 +530,7 @@ export class CompetitionEngine {
         endTime: comp.endTime,
         registrationOpenAt: comp.registrationOpenAt,
         registrationCloseAt: comp.registrationCloseAt,
+        coverImageUrl: comp.coverImageUrl ?? null,
         myRegistrationStatus: myReg?.status ?? null,
       });
     }

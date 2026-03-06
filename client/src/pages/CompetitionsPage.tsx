@@ -221,7 +221,14 @@ function CompetitionCard({
   const isWithdrawing = withdrawingSlug === comp.slug;
 
   return (
-    <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-5 hover:border-[rgba(255,255,255,0.15)] transition-colors">
+    <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl overflow-hidden hover:border-[rgba(255,255,255,0.15)] transition-colors">
+      {/* Cover image (if available) */}
+      {(comp as any).coverImageUrl && (
+        <div className="h-32 overflow-hidden">
+          <img src={(comp as any).coverImageUrl} alt={comp.title} className="w-full h-full object-cover" />
+        </div>
+      )}
+      <div className="p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           {/* Title + Status */}
@@ -323,6 +330,7 @@ function CompetitionCard({
             </Link>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
