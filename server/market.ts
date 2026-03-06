@@ -30,18 +30,27 @@ type OrderBookSnapshot = {
   asks: DepthEntry[];
 };
 
-async function fetchJson<T>(url: string): Promise<T> {
-  const ac = new AbortController();
-  const timeout = setTimeout(() => ac.abort(), 4000);
-  try {
-    const res = await fetch(url, { signal: ac.signal });
-    if (!res.ok) {
-      throw new Error(`Market request failed: ${res.status}`);
+async function fetchJson<T>(url: string, retries = 2): Promise<T> {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const ac = new AbortController();
+    const timeout = setTimeout(() => ac.abort(), 4000);
+    try {
+      const res = await fetch(url, { signal: ac.signal });
+      if (!res.ok) {
+        throw new Error(`Market request failed: ${res.status}`);
+      }
+      return (await res.json()) as T;
+    } catch (err) {
+      lastError = err as Error;
+      if (attempt < retries) {
+        await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+      }
+    } finally {
+      clearTimeout(timeout);
     }
-    return (await res.json()) as T;
-  } finally {
-    clearTimeout(timeout);
   }
+  throw lastError!;
 }
 
 export class MarketService {

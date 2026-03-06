@@ -13,6 +13,7 @@ import type { ArenaEngine } from "./engine";
 import type { MarketService } from "./market";
 import * as compDb from "./competition-db";
 import * as db from "./db";
+import { db as dbInstance } from "./db";
 import { getPointsForRank, getPrizeForRank, getRankTier, MATCH_DURATION_MS, MIN_TRADES_FOR_PRIZE } from "./constants";
 import { TRADING_PAIR } from "../shared/tradingPair";
 
@@ -201,55 +202,64 @@ export class CompetitionEngine {
       const leaderboard = await this.arena.buildLeaderboard(comp.matchId!, acceptedIds);
       const participantLeaderboard = leaderboard;
 
-      // 3. Write match_results for every participant
+      // 3-5. Write match_results, award season points, complete match — all in one transaction
+      // Prepare trade data outside transaction to minimize lock time
+      const tradeDataByAccount = new Map<number, Awaited<ReturnType<typeof db.getTradesForUserMatch>>>();
       for (const row of participantLeaderboard) {
-        const trades = await db.getTradesForUserMatch(row.arenaAccountId, comp.matchId!);
-        const wins = trades.filter((t: any) => t.pnl > 0);
-        const losses = trades.filter((t: any) => t.pnl < 0);
-        const closeReasons: Record<string, number> = {};
-        for (const t of trades) {
-          closeReasons[t.closeReason] = (closeReasons[t.closeReason] || 0) + 1;
-        }
-
-        const account = await db.getArenaAccountById(row.arenaAccountId);
-        const tier = getRankTier(account?.seasonPoints ?? 0);
-
-        await compDb.insertMatchResult({
-          competitionId: comp.id,
-          arenaAccountId: row.arenaAccountId,
-          finalRank: row.rank,
-          totalPnl: row.pnl,
-          totalPnlPct: row.pnlPct,
-          totalWeightedPnl: row.weightedPnl,
-          tradesCount: trades.length,
-          winCount: wins.length,
-          lossCount: losses.length,
-          bestTradePnl: trades.length ? Math.max(...trades.map((t: any) => t.pnl)) : undefined,
-          worstTradePnl: trades.length ? Math.min(...trades.map((t: any) => t.pnl)) : undefined,
-          avgHoldDuration: trades.length
-            ? trades.reduce((s: number, t: any) => s + t.holdDuration, 0) / trades.length
-            : undefined,
-          avgHoldWeight: trades.length
-            ? trades.reduce((s: number, t: any) => s + t.holdWeight, 0) / trades.length
-            : undefined,
-          pointsEarned: row.matchPoints,
-          prizeWon: row.prizeAmount,
-          prizeEligible: row.prizeEligible ? 1 : 0,
-          rankTierAtTime: tier.tier,
-          finalEquity: comp.startingCapital + row.pnl,
-          closeReasonStats: JSON.stringify(closeReasons),
-        });
+        tradeDataByAccount.set(row.arenaAccountId, await db.getTradesForUserMatch(row.arenaAccountId, comp.matchId!));
       }
 
-      // 4. Award season points
-      for (const row of leaderboard) {
-        if (row.matchPoints > 0) {
-          await db.updateSeasonPoints(row.arenaAccountId, row.matchPoints);
-        }
-      }
+      await dbInstance.transaction(async (tx) => {
+        // 3. Write match_results for every participant
+        for (const row of participantLeaderboard) {
+          const trades = tradeDataByAccount.get(row.arenaAccountId) ?? [];
+          const wins = trades.filter((t: any) => t.pnl > 0);
+          const losses = trades.filter((t: any) => t.pnl < 0);
+          const closeReasons: Record<string, number> = {};
+          for (const t of trades) {
+            closeReasons[t.closeReason] = (closeReasons[t.closeReason] || 0) + 1;
+          }
 
-      // 5. Complete the match in the legacy system
-      await db.completeMatch(comp.matchId!);
+          const account = await db.getArenaAccountById(row.arenaAccountId, tx);
+          const tier = getRankTier(account?.seasonPoints ?? 0);
+
+          await compDb.insertMatchResult({
+            competitionId: comp.id,
+            arenaAccountId: row.arenaAccountId,
+            finalRank: row.rank,
+            totalPnl: row.pnl,
+            totalPnlPct: row.pnlPct,
+            totalWeightedPnl: row.weightedPnl,
+            tradesCount: trades.length,
+            winCount: wins.length,
+            lossCount: losses.length,
+            bestTradePnl: trades.length ? Math.max(...trades.map((t: any) => t.pnl)) : undefined,
+            worstTradePnl: trades.length ? Math.min(...trades.map((t: any) => t.pnl)) : undefined,
+            avgHoldDuration: trades.length
+              ? trades.reduce((s: number, t: any) => s + t.holdDuration, 0) / trades.length
+              : undefined,
+            avgHoldWeight: trades.length
+              ? trades.reduce((s: number, t: any) => s + t.holdWeight, 0) / trades.length
+              : undefined,
+            pointsEarned: row.matchPoints,
+            prizeWon: row.prizeAmount,
+            prizeEligible: row.prizeEligible ? 1 : 0,
+            rankTierAtTime: tier.tier,
+            finalEquity: comp.startingCapital + row.pnl,
+            closeReasonStats: JSON.stringify(closeReasons),
+          });
+        }
+
+        // 4. Award season points
+        for (const row of leaderboard) {
+          if (row.matchPoints > 0) {
+            await db.updateSeasonPoints(row.arenaAccountId, row.matchPoints, tx);
+          }
+        }
+
+        // 5. Complete the match in the legacy system
+        await db.completeMatch(comp.matchId!, tx);
+      });
 
       // 6. Notify participants
       for (const row of leaderboard) {

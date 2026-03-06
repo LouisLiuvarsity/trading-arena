@@ -61,6 +61,15 @@ function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+function sanitizeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 function monthLabel(ts: number): string {
   const d = new Date(ts);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -83,6 +92,8 @@ export class ArenaEngine {
   // Leaderboard cache (TTL-based to avoid recomputing per request)
   private leaderboardCache: { matchId: number; rows: LeaderboardRow[]; at: number } | null = null;
   private static LEADERBOARD_CACHE_TTL_MS = 3000; // 3 seconds
+  // Promise-based deduplication to prevent concurrent rebuilds
+  private leaderboardBuilding: Promise<LeaderboardRow[]> | null = null;
 
   private readonly legacyAutoRotate: boolean;
 
@@ -176,7 +187,7 @@ export class ArenaEngine {
       id: `chat-${nanoid(12)}`,
       arenaAccountId,
       username: account.username,
-      message: message.slice(0, 280),
+      message: sanitizeHtml(message).slice(0, 280),
       type: "user",
       timestamp: Date.now(),
     });
@@ -887,6 +898,26 @@ export class ArenaEngine {
       return this.leaderboardCache.rows;
     }
 
+    // Deduplicate concurrent unfiltered builds: if one is already in progress, await it
+    if (!participantIds && this.leaderboardBuilding) {
+      return this.leaderboardBuilding;
+    }
+
+    const buildPromise = this._buildLeaderboardInternal(matchId, participantIds);
+
+    if (!participantIds) {
+      this.leaderboardBuilding = buildPromise;
+      try {
+        return await buildPromise;
+      } finally {
+        this.leaderboardBuilding = null;
+      }
+    }
+
+    return buildPromise;
+  }
+
+  private async _buildLeaderboardInternal(matchId: number, participantIds?: Set<number>): Promise<LeaderboardRow[]> {
     let allAccounts = await dbHelpers.getAllArenaAccountsWithCapital();
     if (participantIds) {
       allAccounts = allAccounts.filter(a => participantIds.has(a.id));
