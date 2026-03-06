@@ -640,7 +640,10 @@ export class ArenaEngine {
       : await dbHelpers.getTradeCountForUserMatch(arenaAccountId, active.id);
     const matchPoints = this.getPointsForRankFromRules(myRank, rules);
     const seasonPoints = round2(accountRow.seasonPoints + matchPoints);
-    const tier = getRankTier(seasonPoints);
+    // Leverage is based on pre-match season points only (already realized),
+    // NOT including current match points — prevents dynamic fluctuation during match
+    const baseTier = getRankTier(accountRow.seasonPoints);
+    const displayTier = getRankTier(seasonPoints);
     const prizeEligible = tradesUsed >= MIN_TRADES_FOR_PRIZE;
     const prizeAmount = prizeEligible ? this.getPrizeForRankFromRules(myRank, rules) : 0;
 
@@ -688,8 +691,8 @@ export class ArenaEngine {
         grandFinalQualified: seasonPoints >= 200,
         grandFinalLine: 200,
         prizeEligible,
-        rankTier: tier.tier,
-        tierLeverage: tier.leverage,
+        rankTier: displayTier.tier,
+        tierLeverage: baseTier.leverage,
         prizeAmount,
         directionConsistency,
         directionBonus: directionConsistency > 0.7,

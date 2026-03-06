@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { Trophy, Zap, TrendingUp, Shield, ChevronRight, UserPlus, LogIn } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Link } from 'wouter';
+import { Trophy, ChevronRight, ChevronLeft, UserPlus, LogIn, Sparkles, BarChart3, Target, Users } from 'lucide-react';
 import { useT } from '@/lib/i18n';
 import LanguageToggle from '@/components/LanguageToggle';
-import { useTradingPair } from '@/contexts/TradingPairContext';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface LoginPageProps {
@@ -10,12 +10,71 @@ interface LoginPageProps {
   onQuickLogin?: (username: string, password: string) => Promise<void>;
 }
 
+// Floating particles animation
+function FloatingParticles() {
+  const [particles] = useState(() =>
+    Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: 2 + Math.random() * 4,
+      duration: 15 + Math.random() * 20,
+      delay: Math.random() * 10,
+      opacity: 0.1 + Math.random() * 0.2,
+    }))
+  );
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {particles.map((p) => (
+        <div
+          key={p.id}
+          className="absolute rounded-full bg-[#F0B90B]"
+          style={{
+            left: `${p.x}%`,
+            top: `${p.y}%`,
+            width: p.size,
+            height: p.size,
+            opacity: p.opacity,
+            animation: `float-particle ${p.duration}s ease-in-out ${p.delay}s infinite alternate`,
+          }}
+        />
+      ))}
+      <style>{`
+        @keyframes float-particle {
+          0% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(30px, -40px) scale(1.2); }
+          66% { transform: translate(-20px, -80px) scale(0.8); }
+          100% { transform: translate(10px, -120px) scale(1.1); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// Animated counter
+function AnimatedNumber({ value, suffix = '' }: { value: number; suffix?: string }) {
+  const [display, setDisplay] = useState(0);
+  useEffect(() => {
+    const duration = 1500;
+    const start = performance.now();
+    const animate = (now: number) => {
+      const elapsed = now - start;
+      const progress = Math.min(1, elapsed / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.round(value * eased));
+      if (progress < 1) requestAnimationFrame(animate);
+    };
+    requestAnimationFrame(animate);
+  }, [value]);
+  return <>{display.toLocaleString()}{suffix}</>;
+}
+
 export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickLoginProp }: LoginPageProps) {
   const auth = useAuth();
   const onLogin = onLoginProp ?? auth.login;
   const onQuickLogin = onQuickLoginProp ?? auth.quickLogin;
   const { t } = useT();
-  const tradingPair = useTradingPair();
   const [mode, setMode] = useState<'register' | 'quick'>(() => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -30,6 +89,11 @@ export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickL
   const [quickPassword, setQuickPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +132,9 @@ export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickL
 
   return (
     <div className="h-screen w-screen bg-[#0B0E11] flex items-center justify-center overflow-hidden relative">
-      <div className="absolute inset-0 opacity-[0.03]"
+      {/* Animated background */}
+      <FloatingParticles />
+      <div className="absolute inset-0 opacity-[0.02]"
         style={{
           backgroundImage: `
             linear-gradient(rgba(240,185,11,0.3) 1px, transparent 1px),
@@ -77,18 +143,29 @@ export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickL
           backgroundSize: '60px 60px',
         }}
       />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full opacity-[0.06]"
-        style={{ background: 'radial-gradient(circle, #F0B90B 0%, transparent 70%)' }}
+      {/* Animated glow orbs */}
+      <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] rounded-full opacity-[0.04] animate-pulse"
+        style={{ background: 'radial-gradient(circle, #F0B90B 0%, transparent 70%)', animationDuration: '4s' }}
+      />
+      <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full opacity-[0.03] animate-pulse"
+        style={{ background: 'radial-gradient(circle, #0ECB81 0%, transparent 70%)', animationDuration: '6s' }}
       />
 
-      <div className="relative z-10 w-full max-w-[440px] mx-4">
+      {/* Back button */}
+      <Link href="/" className="absolute top-5 left-5 z-20 flex items-center gap-1.5 text-[#848E9C] hover:text-[#D1D4DC] transition-colors group">
+        <ChevronLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+        <span className="text-[12px] font-medium">{t('login.back')}</span>
+      </Link>
+
+      <div className={`relative z-10 w-full max-w-[440px] mx-4 transition-all duration-700 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
         {/* Language toggle */}
         <div className="absolute -top-12 right-0">
           <LanguageToggle />
         </div>
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#F0B90B]/20 to-[#F0B90B]/5 border border-[#F0B90B]/20 mb-4">
+
+        {/* Logo with animation */}
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#F0B90B]/20 to-[#F0B90B]/5 border border-[#F0B90B]/20 mb-4 animate-[bounce_3s_ease-in-out_infinite]">
             <Trophy className="w-8 h-8 text-[#F0B90B]" />
           </div>
           <h1 className="text-3xl font-bold text-white tracking-tight" style={{ fontFamily: "'DM Mono', monospace" }}>
@@ -97,26 +174,15 @@ export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickL
           <p className="text-[#848E9C] text-sm mt-2">{t('login.subtitle')}</p>
         </div>
 
-        {/* Stats */}
-        <div className="flex items-center justify-center gap-6 mb-8">
-          <div className="text-center">
-            <div className="text-[#F0B90B] text-lg font-bold" style={{ fontFamily: "'DM Mono', monospace" }}>5,000</div>
-            <div className="text-[#5E6673] text-[10px] uppercase tracking-wider">{t('login.capital')}</div>
+        {/* Animated highlights */}
+        <div className="flex items-center justify-center gap-4 mb-6">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#F0B90B]/5 border border-[#F0B90B]/10 rounded-full">
+            <Sparkles className="w-3 h-3 text-[#F0B90B]" />
+            <span className="text-[11px] text-[#F0B90B] font-medium">{t('login.highlight1')}</span>
           </div>
-          <div className="w-px h-8 bg-[rgba(255,255,255,0.06)]" />
-          <div className="text-center">
-            <div className="text-white text-lg font-bold" style={{ fontFamily: "'DM Mono', monospace" }}>{tradingPair.baseAsset}</div>
-            <div className="text-[#5E6673] text-[10px] uppercase tracking-wider">{t('login.pair')}</div>
-          </div>
-          <div className="w-px h-8 bg-[rgba(255,255,255,0.06)]" />
-          <div className="text-center">
-            <div className="text-white text-lg font-bold" style={{ fontFamily: "'DM Mono', monospace" }}>24H</div>
-            <div className="text-[#5E6673] text-[10px] uppercase tracking-wider">{t('login.duration')}</div>
-          </div>
-          <div className="w-px h-8 bg-[rgba(255,255,255,0.06)]" />
-          <div className="text-center">
-            <div className="text-[#0ECB81] text-lg font-bold" style={{ fontFamily: "'DM Mono', monospace" }}>500U</div>
-            <div className="text-[#5E6673] text-[10px] uppercase tracking-wider">{t('login.pool')}</div>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0ECB81]/5 border border-[#0ECB81]/10 rounded-full">
+            <Target className="w-3 h-3 text-[#0ECB81]" />
+            <span className="text-[11px] text-[#0ECB81] font-medium">{t('login.highlight2')}</span>
           </div>
         </div>
 
@@ -252,35 +318,22 @@ export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickL
           </div>
         </div>
 
-        {/* Features */}
-        <div className="grid grid-cols-2 gap-3 mt-6">
-          <div className="bg-[#1C2030]/40 border border-[rgba(255,255,255,0.04)] rounded-lg p-3 flex items-start gap-2.5">
-            <Zap className="w-4 h-4 text-[#F0B90B] shrink-0 mt-0.5" />
-            <div>
-              <div className="text-white text-xs font-medium">{t('login.feat1.title')}</div>
-              <div className="text-[#5E6673] text-[10px] mt-0.5">{t('login.feat1.desc')}</div>
-            </div>
+        {/* Platform highlights instead of competition stats */}
+        <div className="grid grid-cols-3 gap-3 mt-6">
+          <div className="bg-[#1C2030]/40 border border-[rgba(255,255,255,0.04)] rounded-lg p-3 text-center group hover:border-[#F0B90B]/20 transition-colors">
+            <BarChart3 className="w-5 h-5 text-[#F0B90B] mx-auto mb-1.5 group-hover:scale-110 transition-transform" />
+            <div className="text-white text-xs font-medium">{t('login.feat1.title')}</div>
+            <div className="text-[#5E6673] text-[10px] mt-0.5">{t('login.feat1.desc')}</div>
           </div>
-          <div className="bg-[#1C2030]/40 border border-[rgba(255,255,255,0.04)] rounded-lg p-3 flex items-start gap-2.5">
-            <TrendingUp className="w-4 h-4 text-[#0ECB81] shrink-0 mt-0.5" />
-            <div>
-              <div className="text-white text-xs font-medium">{t('login.feat2.title')}</div>
-              <div className="text-[#5E6673] text-[10px] mt-0.5">{t('login.feat2.desc')}</div>
-            </div>
+          <div className="bg-[#1C2030]/40 border border-[rgba(255,255,255,0.04)] rounded-lg p-3 text-center group hover:border-[#0ECB81]/20 transition-colors">
+            <Users className="w-5 h-5 text-[#0ECB81] mx-auto mb-1.5 group-hover:scale-110 transition-transform" />
+            <div className="text-white text-xs font-medium">{t('login.feat2.title')}</div>
+            <div className="text-[#5E6673] text-[10px] mt-0.5">{t('login.feat2.desc')}</div>
           </div>
-          <div className="bg-[#1C2030]/40 border border-[rgba(255,255,255,0.04)] rounded-lg p-3 flex items-start gap-2.5">
-            <Trophy className="w-4 h-4 text-[#F0B90B] shrink-0 mt-0.5" />
-            <div>
-              <div className="text-white text-xs font-medium">{t('login.feat3.title')}</div>
-              <div className="text-[#5E6673] text-[10px] mt-0.5">{t('login.feat3.desc')}</div>
-            </div>
-          </div>
-          <div className="bg-[#1C2030]/40 border border-[rgba(255,255,255,0.04)] rounded-lg p-3 flex items-start gap-2.5">
-            <Shield className="w-4 h-4 text-[#848E9C] shrink-0 mt-0.5" />
-            <div>
-              <div className="text-white text-xs font-medium">{t('login.feat4.title')}</div>
-              <div className="text-[#5E6673] text-[10px] mt-0.5">{t('login.feat4.desc')}</div>
-            </div>
+          <div className="bg-[#1C2030]/40 border border-[rgba(255,255,255,0.04)] rounded-lg p-3 text-center group hover:border-[#848E9C]/20 transition-colors">
+            <Trophy className="w-5 h-5 text-[#F0B90B] mx-auto mb-1.5 group-hover:scale-110 transition-transform" />
+            <div className="text-white text-xs font-medium">{t('login.feat3.title')}</div>
+            <div className="text-[#5E6673] text-[10px] mt-0.5">{t('login.feat3.desc')}</div>
           </div>
         </div>
       </div>

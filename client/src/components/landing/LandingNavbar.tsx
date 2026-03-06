@@ -13,6 +13,7 @@ import {
 import LanguageToggle from '@/components/LanguageToggle';
 
 const NAV_LINKS = [
+  { key: 'land.nav.competitions', href: '#competitions' },
   { key: 'land.nav.about', href: '#how-it-works' },
   { key: 'land.nav.competitionRules', href: '#rules' },
   { key: 'land.nav.prizes', href: '#prizes' },

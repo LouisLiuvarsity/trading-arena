@@ -1,6 +1,23 @@
 import { useT } from '@/lib/i18n';
 import { motion } from 'framer-motion';
-import { REGULAR_PRIZE_TABLE, GRAND_FINAL_PRIZE_TABLE } from '@/lib/types';
+import { REGULAR_PRIZE_TABLE, GRAND_FINAL_PRIZE_TABLE, MATCH_POINTS_TABLE } from '@/lib/types';
+
+// Helper: find the season points for a given rank range
+function getPointsForRank(rankMin: number, rankMax: number): string {
+  for (const row of MATCH_POINTS_TABLE) {
+    if (rankMin >= row.rankMin && rankMax <= row.rankMax) {
+      return `${row.points}`;
+    }
+  }
+  // If range spans multiple point tiers, show a range
+  let minPts = 0, maxPts = 0;
+  for (const row of MATCH_POINTS_TABLE) {
+    if (rankMin >= row.rankMin && rankMin <= row.rankMax) maxPts = row.points;
+    if (rankMax >= row.rankMin && rankMax <= row.rankMax) minPts = row.points;
+  }
+  if (minPts === maxPts) return `${minPts}`;
+  return `${minPts}~${maxPts}`;
+}
 
 function PrizeTable({
   title,
@@ -26,13 +43,13 @@ function PrizeTable({
               <th className="text-left px-5 py-2.5">{t('land.prize.rank')}</th>
               <th className="text-center px-3 py-2.5">{t('land.prize.count')}</th>
               <th className="text-right px-3 py-2.5">{t('land.prize.perPerson')}</th>
-              <th className="text-right px-5 py-2.5">{t('land.prize.subtotal')}</th>
+              <th className="text-right px-5 py-2.5">{t('land.prize.seasonPts')}</th>
             </tr>
           </thead>
           <tbody>
             {data.map((row) => {
               const count = row.rankMax - row.rankMin + 1;
-              const subtotal = count * row.prize;
+              const pts = getPointsForRank(row.rankMin, row.rankMax);
               const rankLabel = row.rankMin === row.rankMax
                 ? `#${row.rankMin}`
                 : `#${row.rankMin}-${row.rankMax}`;
@@ -48,8 +65,8 @@ function PrizeTable({
                   <td className="text-right px-3 py-2.5 text-[#F0B90B] font-mono">
                     {row.prize}U
                   </td>
-                  <td className="text-right px-5 py-2.5 text-[#D1D4DC] font-mono">
-                    {subtotal}U
+                  <td className="text-right px-5 py-2.5 text-[#0ECB81] font-mono">
+                    +{pts} pts
                   </td>
                 </tr>
               );
@@ -58,11 +75,14 @@ function PrizeTable({
         </table>
       </div>
 
-      <div className="px-5 py-3 border-t border-white/[0.06] flex items-center justify-between">
-        <span className="text-[11px] text-[#848E9C]">{t('land.prize.top100')}</span>
-        <span className="text-[12px] font-bold text-[#F0B90B]">
-          {t('land.prize.total', { n: total })}
-        </span>
+      <div className="px-5 py-3 border-t border-white/[0.06] space-y-1">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] text-[#848E9C]">{t('land.prize.top100')}</span>
+          <span className="text-[12px] font-bold text-[#F0B90B]">
+            {t('land.prize.total', { n: total })}
+          </span>
+        </div>
+        <p className="text-[10px] text-[#848E9C]/70">{t('land.prize.pointsNote')}</p>
       </div>
     </div>
   );

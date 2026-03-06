@@ -39,7 +39,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'status.qualified': '✓ 已晋级',
     'status.notQualified': '未晋级',
     'status.prizePool': '奖金池',
-    'status.home': '主页',
+    'status.home': '返回',
 
     // ── MobileStatusBar ──
     'mstatus.eq': '权益',
@@ -304,8 +304,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'land.rules.card1.desc': '所有段位本金相同，无爆仓风险。晋级解锁更高杠杆 (1x→3x)，更快拉开收益差距。',
     'land.rules.card2.title': '最多 40 笔交易',
     'land.rules.card2.desc': '每场比赛限制 40 笔交易，鼓励深思熟虑的决策。最后 30 分钟禁止开新仓，只能平仓。',
-    'land.rules.card3.title': '持仓时间权重',
-    'land.rules.card3.desc': '持仓越久权重越高（0.2x→1.3x）。快进快出只算 20%，鼓励有理由的持仓。',
+    'land.rules.card3.title': '交易质量评分',
+    'land.rules.card3.desc': '系统会综合评估你的交易质量，包括持仓时长等因素。深思熟虑的交易会获得更高评分。',
     'land.rules.card4.title': '固定奖金池',
     'land.rules.card4.desc': '每场常规赛 500 USDT，总决赛 2,500 USDT。冠军独享 55U（常规）/ 300U（总决赛）。',
     'land.rules.card5.title': '积分制总决赛',
@@ -327,6 +327,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'land.prize.count': '人数',
     'land.prize.perPerson': '单人奖金',
     'land.prize.subtotal': '小计',
+    'land.prize.seasonPts': '排位积分',
+    'land.prize.pointsNote': '* 实际积分会参考交易质量（持仓时长）进行调整',
     'land.prize.people': '{n} 人',
     'land.prize.top100': '前 100 名均有奖金',
     'land.prize.total': '共 {n} USDT',
@@ -382,11 +384,18 @@ const translations: Record<Lang, Record<string, string>> = {
     'land.footer.sim': '模拟交易 · 无真实资金风险',
 
     // ── Landing v5 (Binance-style) ──
+    'land.nav.competitions': '赛事',
     'land.nav.about': '关于',
     'land.nav.competitionRules': '比赛规则',
     'land.nav.faq': '常见问题',
     'land.nav.login': '登录',
     'land.nav.register': '注册',
+
+    // ── Competition Showcase ──
+    'land.comp.title': '赛事中心',
+    'land.comp.subtitle': '{live} 场进行中 · {upcoming} 场即将开始 · {completed} 场已结束',
+    'land.comp.empty': '暂无赛事，敬请期待',
+    'land.comp.joinNow': '立即参赛',
 
     'land.about.title': '了解Otter Trader',
     'land.about.step1.title': '注册参赛',
@@ -397,7 +406,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'land.about.step3.desc': '排名前100即可获得真实奖金，比赛结束后还可获取专属交易分析报告。',
 
     'land.rules.dropdown.minTrades': '至少 5 笔交易才有奖金资格',
-    'land.rules.dropdown.holdWeight': '持仓越久权重越高（0.2x→1.3x）',
+    'land.rules.dropdown.holdWeight': '交易质量影响最终积分',
     'land.rules.dropdown.leverage': '高段位解锁更高杠杆（1x→3x）',
     'land.rules.dropdown.ranking': '按加权收益率排名，积分决定段位',
     'land.rules.dropdown.maxTrades': '每场最多 40 笔交易',
@@ -459,10 +468,9 @@ const translations: Record<Lang, Record<string, string>> = {
     // ── LoginPage ──
     'login.title': '交易竞技场',
     'login.subtitle': '24小时加密货币交易竞赛',
-    'login.capital': 'USDT 本金',
-    'login.pair': '交易对',
-    'login.duration': '比赛时长',
-    'login.pool': '奖金池',
+    'login.back': '返回首页',
+    'login.highlight1': '模拟交易',
+    'login.highlight2': '赢取奖金',
     'login.tabNew': '新玩家注册',
     'login.tabReturn': '老玩家登录',
     'login.inviteCode': '邀请码',
@@ -875,7 +883,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'status.qualified': '✓ Qualified',
     'status.notQualified': 'Not Qualified',
     'status.prizePool': 'Prize Pool',
-    'status.home': 'Home',
+    'status.home': 'Back',
 
     // ── MobileStatusBar ──
     'mstatus.eq': 'Eq',
@@ -1140,8 +1148,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'land.rules.card1.desc': 'Same capital for all tiers, no liquidation risk. Higher tiers unlock more leverage (1x→3x) for bigger edge.',
     'land.rules.card2.title': 'Max 40 Trades',
     'land.rules.card2.desc': '40 trades per match encourages thoughtful decisions. Last 30 min: close-only, no new positions.',
-    'land.rules.card3.title': 'Hold Time Weight',
-    'land.rules.card3.desc': 'Longer holds earn higher weight (0.2x→1.3x). Scalping counts only 20%, rewarding conviction.',
+    'land.rules.card3.title': 'Trade Quality Score',
+    'land.rules.card3.desc': 'Your trades are scored based on quality factors including hold duration. Thoughtful trades earn higher scores.',
     'land.rules.card4.title': 'Fixed Prize Pool',
     'land.rules.card4.desc': '500 USDT per regular match, 2,500 USDT Grand Final. Champion takes 55U (regular) / 300U (finals).',
     'land.rules.card5.title': 'Points-Based Finals',
@@ -1163,6 +1171,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'land.prize.count': 'Count',
     'land.prize.perPerson': 'Per Person',
     'land.prize.subtotal': 'Subtotal',
+    'land.prize.seasonPts': 'Season Points',
+    'land.prize.pointsNote': '* Actual points adjusted by trade quality (hold time)',
     'land.prize.people': '{n} players',
     'land.prize.top100': 'Top 100 all win prizes',
     'land.prize.total': 'Total {n} USDT',
@@ -1218,11 +1228,18 @@ const translations: Record<Lang, Record<string, string>> = {
     'land.footer.sim': 'Simulated trading · No real capital at risk',
 
     // ── Landing v5 (Binance-style) ──
+    'land.nav.competitions': 'Competitions',
     'land.nav.about': 'About',
     'land.nav.competitionRules': 'Rules',
     'land.nav.faq': 'FAQ',
     'land.nav.login': 'Log In',
     'land.nav.register': 'Register',
+
+    // ── Competition Showcase ──
+    'land.comp.title': 'Competitions',
+    'land.comp.subtitle': '{live} Live · {upcoming} Upcoming · {completed} Completed',
+    'land.comp.empty': 'No competitions yet. Stay tuned!',
+    'land.comp.joinNow': 'Join Now',
 
     'land.about.title': 'About Otter Trader',
     'land.about.step1.title': 'Register',
@@ -1233,7 +1250,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'land.about.step3.desc': 'Top 100 earn real USDT prizes. Get your exclusive trading analysis report after each match.',
 
     'land.rules.dropdown.minTrades': 'Min 5 trades for prize eligibility',
-    'land.rules.dropdown.holdWeight': 'Longer holds earn higher weight (0.2x→1.3x)',
+    'land.rules.dropdown.holdWeight': 'Trade quality affects final points',
     'land.rules.dropdown.leverage': 'Higher tiers unlock more leverage (1x→3x)',
     'land.rules.dropdown.ranking': 'Ranked by weighted return, points determine tier',
     'land.rules.dropdown.maxTrades': 'Max 40 trades per match',
@@ -1295,10 +1312,9 @@ const translations: Record<Lang, Record<string, string>> = {
     // ── LoginPage ──
     'login.title': 'Trading Arena',
     'login.subtitle': '24H Crypto Trading Competition',
-    'login.capital': 'USDT Capital',
-    'login.pair': 'Trading Pair',
-    'login.duration': 'Duration',
-    'login.pool': 'Prize Pool',
+    'login.back': 'Back to Home',
+    'login.highlight1': 'Simulated Trading',
+    'login.highlight2': 'Win Prizes',
     'login.tabNew': 'New Player',
     'login.tabReturn': 'Returning Player',
     'login.inviteCode': 'Invite Code',

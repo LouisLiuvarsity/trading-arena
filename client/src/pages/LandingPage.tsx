@@ -1,5 +1,6 @@
 import LandingNavbar from '@/components/landing/LandingNavbar';
 import HeroSection from '@/components/landing/HeroSection';
+import CompetitionShowcase from '@/components/landing/CompetitionShowcase';
 import HowItWorks from '@/components/landing/HowItWorks';
 import RulesSection from '@/components/landing/RulesSection';
 import PrizeSection from '@/components/landing/PrizeSection';
@@ -17,6 +18,7 @@ export default function LandingPage(_props: LandingPageProps) {
     <div className="min-h-screen bg-[#0B0E11] text-white overflow-x-hidden">
       <LandingNavbar />
       <HeroSection />
+      <CompetitionShowcase />
       <HowItWorks />
       <RulesSection />
       <PrizeSection />

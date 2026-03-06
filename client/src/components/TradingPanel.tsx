@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, memo, useMemo } from 'react';
 import { Slider } from '@/components/ui/slider';
 import type { Position, AccountState } from '@/lib/types';
-import { HOLD_WEIGHT_MIN, HOLD_WEIGHT_MAX } from '@/lib/types';
 import { useT } from '@/lib/i18n';
 import { useTradingPair } from '@/contexts/TradingPairContext';
 
@@ -273,7 +272,6 @@ function TradingPanel({
   // ─── POSITION VIEW ───────────────────────────────────────
   if (position) {
     const isProfitable = position.unrealizedPnl >= 0;
-    const weightProgress = Math.min(100, ((position.holdDurationWeight - HOLD_WEIGHT_MIN) / (HOLD_WEIGHT_MAX - HOLD_WEIGHT_MIN)) * 100);
 
     // Compute TP/SL estimated PnL
     const tpPnl = position.takeProfit
@@ -323,20 +321,12 @@ function TradingPanel({
           </div>
         </div>
 
-        {/* Hold Duration & Weight */}
+        {/* Trade info */}
         <div className="flex items-center gap-4 px-5 border-r border-[rgba(255,255,255,0.06)]">
           <div className="space-y-1.5">
             <div className="flex items-center gap-3">
               <span className="text-[10px] text-[#848E9C]">{t('tp.hold')}</span>
               <span className="font-mono text-[#D1D4DC] tabular-nums text-sm">{formatDuration(holdSeconds)}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-[10px] text-[#848E9C]">{t('tp.weight')}</span>
-              <span className="font-mono text-[#F0B90B] font-bold text-sm">{position.holdDurationWeight}x</span>
-            </div>
-            <div className="w-24 h-1.5 bg-white/5 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-[#F6465D] via-[#F0B90B] to-[#0ECB81] rounded-full transition-all duration-500"
-                style={{ width: `${weightProgress}%` }} />
             </div>
           </div>
         </div>

@@ -9,7 +9,6 @@ import { useState, useEffect, useCallback, memo } from 'react';
 import { Slider } from '@/components/ui/slider';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { Position, AccountState } from '@/lib/types';
-import { HOLD_WEIGHT_MIN, HOLD_WEIGHT_MAX } from '@/lib/types';
 import { useTradingPair } from '@/contexts/TradingPairContext';
 import { useT } from '@/lib/i18n';
 
@@ -259,7 +258,6 @@ function MobileTradingPanel({
   // ─── POSITION VIEW ───────────────────────────────────────
   if (position) {
     const isProfitable = position.unrealizedPnl >= 0;
-    const weightProgress = Math.min(100, ((position.holdDurationWeight - HOLD_WEIGHT_MIN) / (HOLD_WEIGHT_MAX - HOLD_WEIGHT_MIN)) * 100);
 
     const tpPnl = position.takeProfit
       ? (position.direction === 'long'
@@ -301,7 +299,7 @@ function MobileTradingPanel({
         {expanded && (
           <div className="px-3 pb-2 space-y-2 animate-fade-in-up">
             {/* Price + Hold info */}
-            <div className="grid grid-cols-4 gap-2 text-[10px]">
+            <div className="grid grid-cols-3 gap-2 text-[10px]">
               <div>
                 <div className="text-[#848E9C]">{t('tp.entry')}</div>
                 <div className="font-mono text-[#D1D4DC]">{formatPrice(position.entryPrice)}</div>
@@ -313,18 +311,6 @@ function MobileTradingPanel({
               <div>
                 <div className="text-[#848E9C]">{t('tp.hold')}</div>
                 <div className="font-mono text-[#D1D4DC]">{formatDuration(holdSeconds)}</div>
-              </div>
-              <div>
-                <div className="text-[#848E9C]">{t('tp.weight')}</div>
-                <div className="font-mono text-[#F0B90B] font-bold">{position.holdDurationWeight}x</div>
-              </div>
-            </div>
-
-            {/* Weight progress bar */}
-            <div className="flex items-center gap-2">
-              <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-[#F6465D] via-[#F0B90B] to-[#0ECB81] rounded-full transition-all duration-500"
-                  style={{ width: `${weightProgress}%` }} />
               </div>
             </div>
 

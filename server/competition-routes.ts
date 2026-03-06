@@ -120,6 +120,58 @@ export function registerCompetitionRoutes(
   }));
   // ─── Public Endpoints ───────────────────────────────────────
 
+  /** Public: Competition showcase for landing page (no auth required) */
+  app.get("/api/public/competitions", async (_req: Request, res: Response) => {
+    try {
+      // Fetch all non-draft, non-cancelled competitions
+      const allComps = await compDb.listCompetitions({});
+      const visibleComps = allComps.filter(
+        (c) => c.status !== "draft" && c.status !== "cancelled",
+      );
+
+      // Get current season
+      const seasons = await compDb.listSeasons();
+      const activeSeason = seasons.find((s) => s.status === "active") ?? seasons[0] ?? null;
+
+      // Separate into categories
+      const live = visibleComps.filter((c) => c.status === "live");
+      const upcoming = visibleComps.filter(
+        (c) => c.status === "announced" || c.status === "registration_open" || c.status === "registration_closed",
+      );
+      const completed = visibleComps
+        .filter((c) => c.status === "completed" || c.status === "settling")
+        .slice(0, 5); // Last 5 completed
+
+      const mapComp = async (c: (typeof visibleComps)[0]) => {
+        const registered = await compDb.countRegistrations(c.id);
+        return {
+          id: c.id,
+          slug: c.slug,
+          title: c.title,
+          competitionType: c.competitionType,
+          status: c.status,
+          prizePool: c.prizePool,
+          symbol: c.symbol,
+          startTime: c.startTime,
+          endTime: c.endTime,
+          registeredCount: registered,
+          maxParticipants: c.maxParticipants,
+        };
+      };
+
+      res.json({
+        season: activeSeason
+          ? { id: activeSeason.id, name: activeSeason.name, slug: activeSeason.slug }
+          : null,
+        live: await Promise.all(live.map(mapComp)),
+        upcoming: await Promise.all(upcoming.map(mapComp)),
+        completed: await Promise.all(completed.map(mapComp)),
+      });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
   /** List competitions */
   app.get("/api/competitions", async (req: Request, res: Response) => {
     try {
