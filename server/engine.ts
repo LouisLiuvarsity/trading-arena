@@ -144,20 +144,20 @@ export class ArenaEngine {
     this.initialized = true;
   }
 
-  async login(inviteCode: string, usernameInput: string, password: string): Promise<{ token: string; account: ArenaAccount }> {
+  async register(email: string, usernameInput: string, password: string): Promise<{ token: string; account: ArenaAccount }> {
     const username = usernameInput.trim();
     if (!username || username.length < 2 || username.length > 20) {
       throw new Error("Username length must be between 2 and 20");
     }
-    const code = inviteCode.trim();
-    if (!code || code.length < 4) {
-      throw new Error("Invalid invite code");
+    const emailTrimmed = email.trim().toLowerCase();
+    if (!emailTrimmed) {
+      throw new Error("Email is required");
     }
     if (!password || password.length < 4) {
       throw new Error("Password must be at least 4 characters");
     }
 
-    const account = await dbHelpers.registerArenaAccount(code, username, password);
+    const account = await dbHelpers.registerArenaAccount(emailTrimmed, username, password);
     const token = crypto.randomBytes(24).toString("hex");
     await dbHelpers.createArenaSession(account.id, token);
 
@@ -174,11 +174,11 @@ export class ArenaEngine {
     }
     const account = await dbHelpers.getArenaAccountByUsernameForLogin(username);
     if (!account) {
-      throw new Error("Account not found. Please register with an invite code first.");
+      throw new Error("Account not found. Please register first.");
     }
     // Verify password
     if (!account.passwordHash) {
-      throw new Error("Account has no password set. Please re-register with your invite code to set a password.");
+      throw new Error("Account has no password set. Please re-register to set a password.");
     }
     if (!(await dbHelpers.verifyPassword(password, account.passwordHash))) {
       throw new Error("Incorrect password");

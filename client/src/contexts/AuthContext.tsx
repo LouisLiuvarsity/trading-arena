@@ -9,7 +9,7 @@ interface AuthState {
 }
 
 interface AuthContextType extends AuthState {
-  login: (inviteCode: string, name: string, password: string) => Promise<void>;
+  login: (email: string, name: string, password: string) => Promise<void>;
   quickLogin: (name: string, password: string) => Promise<void>;
   logout: () => void;
 }
@@ -33,13 +33,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const login = useCallback(
-    async (inviteCode: string, name: string, password: string) => {
-      const result = await apiLogin(inviteCode, name, password);
+    async (email: string, name: string, password: string) => {
+      const result = await apiLogin(email, name, password);
       setUsername(result.user.username);
       setToken(result.token);
       localStorage.setItem("arena_username", result.user.username);
       localStorage.setItem("arena_token", result.token);
-      localStorage.setItem("arena_invite_code", inviteCode);
       navigate("/hub");
     },
     [navigate],

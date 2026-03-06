@@ -44,10 +44,10 @@ export async function apiRequest<T>(
   return data as T;
 }
 
-export async function login(inviteCode: string, username: string, password: string) {
+export async function login(email: string, username: string, password: string) {
   return apiRequest<{ token: string; user: { id: number; username: string } }>("/api/auth/login", {
     method: "POST",
-    body: { inviteCode, username, password },
+    body: { email, username, password },
   });
 }
 
@@ -55,5 +55,12 @@ export async function quickLogin(username: string, password: string) {
   return apiRequest<{ token: string; user: { id: number; username: string } }>("/api/auth/quick-login", {
     method: "POST",
     body: { username, password },
+  });
+}
+
+export async function checkUsername(username: string) {
+  return apiRequest<{ available: boolean }>("/api/auth/check-username", {
+    method: "POST",
+    body: { username },
   });
 }

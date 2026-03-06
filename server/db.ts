@@ -142,37 +142,12 @@ export async function getOrCreateArenaAccount(
   return { id: insertId, username, capital: STARTING_CAPITAL, seasonPoints: 0 };
 }
 
-/** Register a new arena account with invite code + password (first-time registration) */
+/** Register a new arena account with email + username + password */
 export async function registerArenaAccount(
-  inviteCode: string,
+  email: string,
   username: string,
   password: string,
 ): Promise<{ id: number; username: string; capital: number; seasonPoints: number }> {
-  // Check if invite code already consumed
-  const existing = await db
-    .select()
-    .from(arenaAccounts)
-    .where(eq(arenaAccounts.inviteCode, inviteCode))
-    .limit(1);
-
-  if (existing[0]) {
-    if (existing[0].inviteConsumed) {
-      throw new Error("Invite code already used");
-    }
-    // Legacy account without password — set password now
-    const hashed = await hashPassword(password);
-    await db
-      .update(arenaAccounts)
-      .set({ passwordHash: hashed, inviteConsumed: 1, updatedAt: Date.now() })
-      .where(eq(arenaAccounts.id, existing[0].id));
-    return {
-      id: existing[0].id,
-      username: existing[0].username,
-      capital: existing[0].capital,
-      seasonPoints: existing[0].seasonPoints,
-    };
-  }
-
   // Check username uniqueness
   const usernameCheck = await db
     .select()
@@ -183,12 +158,26 @@ export async function registerArenaAccount(
     throw new Error("Username already taken");
   }
 
+  // Check email uniqueness
+  const emailCheck = await db
+    .select()
+    .from(arenaAccounts)
+    .where(eq(arenaAccounts.email, email))
+    .limit(1);
+  if (emailCheck[0]) {
+    throw new Error("Email already registered");
+  }
+
+  // Auto-generate a unique inviteCode for DB compatibility
+  const autoCode = `email_${crypto.randomBytes(12).toString("hex")}`;
+
   const now = Date.now();
   const hashed = await hashPassword(password);
   const result = await db.insert(arenaAccounts).values({
     userId: 0,
     username,
-    inviteCode,
+    email,
+    inviteCode: autoCode,
     passwordHash: hashed,
     inviteConsumed: 1,
     capital: STARTING_CAPITAL,
@@ -198,6 +187,16 @@ export async function registerArenaAccount(
   });
   const insertId = Number(result[0].insertId);
   return { id: insertId, username, capital: STARTING_CAPITAL, seasonPoints: 0 };
+}
+
+/** Check if a username is available */
+export async function checkUsernameAvailable(username: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: arenaAccounts.id })
+    .from(arenaAccounts)
+    .where(eq(arenaAccounts.username, username))
+    .limit(1);
+  return rows.length === 0;
 }
 
 /** Login existing account by username (returning users) — returns passwordHash for verification */

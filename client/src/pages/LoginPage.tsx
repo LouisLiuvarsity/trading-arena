@@ -1,12 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'wouter';
-import { Trophy, ChevronRight, ChevronLeft, UserPlus, LogIn, Sparkles, BarChart3, Target, Users } from 'lucide-react';
+import { Trophy, ChevronRight, ChevronLeft, UserPlus, LogIn, Sparkles, BarChart3, Target, Users, Check, X, Loader2 } from 'lucide-react';
 import { useT } from '@/lib/i18n';
 import LanguageToggle from '@/components/LanguageToggle';
 import { useAuth } from '@/contexts/AuthContext';
+import { checkUsername as apiCheckUsername } from '@/lib/api';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 
 interface LoginPageProps {
-  onLogin?: (inviteCode: string, username: string, password: string) => Promise<void>;
+  onLogin?: (email: string, username: string, password: string) => Promise<void>;
   onQuickLogin?: (username: string, password: string) => Promise<void>;
 }
 
@@ -82,7 +93,7 @@ export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickL
     } catch {}
     return localStorage.getItem("arena_username") ? 'quick' : 'register';
   });
-  const [inviteCode, setInviteCode] = useState('');
+  const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [quickUsername, setQuickUsername] = useState(() => localStorage.getItem("arena_username") ?? '');
@@ -91,17 +102,55 @@ export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickL
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
+  // Confirmation dialog state
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  // Username availability check state
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+  const checkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const handleRegister = async (e: React.FormEvent) => {
+  // Debounced username availability check
+  const checkUsernameAvailability = useCallback((name: string) => {
+    if (checkTimerRef.current) clearTimeout(checkTimerRef.current);
+    const trimmed = name.trim();
+    if (!trimmed || trimmed.length < 2) {
+      setUsernameStatus('idle');
+      return;
+    }
+    setUsernameStatus('checking');
+    checkTimerRef.current = setTimeout(async () => {
+      try {
+        const result = await apiCheckUsername(trimmed);
+        setUsernameStatus(result.available ? 'available' : 'taken');
+      } catch {
+        setUsernameStatus('idle');
+      }
+    }, 500);
+  }, []);
+
+  const handleUsernameChange = (value: string) => {
+    setUsername(value);
+    checkUsernameAvailability(value);
+  };
+
+  // Show confirmation dialog instead of directly registering
+  const handleRegisterClick = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteCode.trim() || !username.trim() || !password) return;
+    if (!email.trim() || !username.trim() || !password || usernameStatus === 'taken') return;
+    setShowConfirm(true);
+  };
+
+  // Actually perform registration after confirmation
+  const handleConfirmRegister = async () => {
+    setShowConfirm(false);
     setIsLoading(true);
     setError(null);
     try {
-      await onLogin(inviteCode.trim(), username.trim(), password);
+      await onLogin(email.trim(), username.trim(), password);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -129,6 +178,12 @@ export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickL
         ? 'text-[#F0B90B] border-[#F0B90B]'
         : 'text-[#5E6673] border-transparent hover:text-[#848E9C]'
     }`;
+
+  // Mask password for display: show first and last char, mask the rest
+  const maskPassword = (pw: string) => {
+    if (pw.length <= 2) return '*'.repeat(pw.length);
+    return pw[0] + '*'.repeat(pw.length - 2) + pw[pw.length - 1];
+  };
 
   return (
     <div className="h-screen w-screen bg-[#0B0E11] flex items-center justify-center overflow-hidden relative">
@@ -202,33 +257,63 @@ export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickL
 
           <div className="p-6">
             {mode === 'register' ? (
-              <form onSubmit={handleRegister}>
+              <form onSubmit={handleRegisterClick}>
                 <label className="block text-[#848E9C] text-xs uppercase tracking-wider mb-2">
-                  {t('login.inviteCode')}
+                  {t('login.email')}
                 </label>
                 <input
-                  type="text"
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value)}
-                  placeholder={t('login.invitePlaceholder')}
-                  maxLength={32}
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t('login.emailPlaceholder')}
+                  maxLength={128}
                   className="w-full bg-[#0B0E11] border border-[rgba(255,255,255,0.1)] rounded-lg px-4 py-3 text-white placeholder:text-[#5E6673] focus:outline-none focus:border-[#F0B90B]/50 transition-colors text-sm"
                   style={{ fontFamily: "'DM Mono', monospace" }}
                   autoFocus
                 />
 
                 <label className="block text-[#848E9C] text-xs uppercase tracking-wider mb-2 mt-4">
-                  {t('login.setUsername')}
+                  {t('login.setNickname')}
                 </label>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder={t('login.usernamePlaceholder')}
-                  maxLength={20}
-                  className="w-full bg-[#0B0E11] border border-[rgba(255,255,255,0.1)] rounded-lg px-4 py-3 text-white placeholder:text-[#5E6673] focus:outline-none focus:border-[#F0B90B]/50 transition-colors text-sm"
-                  style={{ fontFamily: "'DM Mono', monospace" }}
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => handleUsernameChange(e.target.value)}
+                    placeholder={t('login.nicknamePlaceholder')}
+                    maxLength={20}
+                    className={`w-full bg-[#0B0E11] border rounded-lg px-4 py-3 text-white placeholder:text-[#5E6673] focus:outline-none transition-colors text-sm pr-10 ${
+                      usernameStatus === 'taken'
+                        ? 'border-[#F6465D]/50 focus:border-[#F6465D]/70'
+                        : usernameStatus === 'available'
+                        ? 'border-[#0ECB81]/50 focus:border-[#0ECB81]/70'
+                        : 'border-[rgba(255,255,255,0.1)] focus:border-[#F0B90B]/50'
+                    }`}
+                    style={{ fontFamily: "'DM Mono', monospace" }}
+                  />
+                  {/* Username status indicator */}
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {usernameStatus === 'checking' && (
+                      <Loader2 className="w-4 h-4 text-[#848E9C] animate-spin" />
+                    )}
+                    {usernameStatus === 'available' && (
+                      <Check className="w-4 h-4 text-[#0ECB81]" />
+                    )}
+                    {usernameStatus === 'taken' && (
+                      <X className="w-4 h-4 text-[#F6465D]" />
+                    )}
+                  </div>
+                </div>
+                {/* Username status text */}
+                {usernameStatus === 'checking' && (
+                  <p className="text-[#848E9C] text-[10px] mt-1">{t('login.nicknameChecking')}</p>
+                )}
+                {usernameStatus === 'available' && (
+                  <p className="text-[#0ECB81] text-[10px] mt-1">{t('login.nicknameAvailable')}</p>
+                )}
+                {usernameStatus === 'taken' && (
+                  <p className="text-[#F6465D] text-[10px] mt-1">{t('login.nicknameTaken')}</p>
+                )}
 
                 <label className="block text-[#848E9C] text-xs uppercase tracking-wider mb-2 mt-4">
                   {t('login.password')}
@@ -245,7 +330,7 @@ export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickL
 
                 <button
                   type="submit"
-                  disabled={!inviteCode.trim() || !username.trim() || !password || isLoading}
+                  disabled={!email.trim() || !username.trim() || !password || password.length < 4 || usernameStatus === 'taken' || usernameStatus === 'checking' || isLoading}
                   className="w-full mt-4 bg-gradient-to-r from-[#F0B90B] to-[#F0B90B]/90 hover:from-[#F0B90B]/90 hover:to-[#F0B90B] text-[#0B0E11] font-bold py-3 rounded-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
                 >
                   {isLoading ? (
@@ -267,7 +352,7 @@ export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickL
             ) : (
               <form onSubmit={handleQuickLogin}>
                 <label className="block text-[#848E9C] text-xs uppercase tracking-wider mb-2">
-                  {t('login.username')}
+                  {t('login.nickname')}
                 </label>
                 <input
                   type="text"
@@ -337,6 +422,43 @@ export default function LoginPage({ onLogin: onLoginProp, onQuickLogin: onQuickL
           </div>
         </div>
       </div>
+
+      {/* Registration Confirmation Dialog */}
+      <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <AlertDialogContent className="bg-[#1C2030] border-[rgba(255,255,255,0.1)] max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white text-lg">
+              {t('login.confirmTitle')}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[#848E9C] text-sm">
+              {t('login.confirmDesc')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-3 py-2">
+            <div className="bg-[#0B0E11] rounded-lg p-3 border border-[rgba(255,255,255,0.06)]">
+              <div className="text-[#848E9C] text-[10px] uppercase tracking-wider mb-1">{t('login.confirmEmail')}</div>
+              <div className="text-white text-sm font-mono">{email}</div>
+            </div>
+            <div className="bg-[#0B0E11] rounded-lg p-3 border border-[rgba(255,255,255,0.06)]">
+              <div className="text-[#848E9C] text-[10px] uppercase tracking-wider mb-1">{t('login.confirmPassword')}</div>
+              <div className="text-white text-sm font-mono">{maskPassword(password)}</div>
+            </div>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-[rgba(255,255,255,0.1)] text-[#848E9C] hover:bg-[#0B0E11] hover:text-white">
+              {t('login.cancelBtn')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmRegister}
+              className="bg-[#F0B90B] text-[#0B0E11] hover:bg-[#F0B90B]/90 font-bold"
+            >
+              {t('login.confirmBtn')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

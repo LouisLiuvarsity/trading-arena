@@ -26,6 +26,8 @@ export const arenaAccounts = mysqlTable("arena_accounts", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
   username: varchar("username", { length: 64 }).notNull().unique(),
+  /** User email address (required for registration) */
+  email: varchar("email", { length: 128 }),
   /** Unique invite code / ID used for login */
   inviteCode: varchar("inviteCode", { length: 32 }).notNull().unique(),
   /** bcrypt-style password hash (scrypt) */

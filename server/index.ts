@@ -16,10 +16,14 @@ import { registerStatsRoutes } from "./stats-routes";
 import { initBinanceSymbols, startSymbolRefresh, getAllBinanceSymbols } from "./binance-symbols";
 import * as compDb from "./competition-db";
 
-const loginSchema = z.object({
-  inviteCode: z.string().trim().min(4).max(32),
+const registerSchema = z.object({
+  email: z.string().trim().email().max(128),
   username: z.string().trim().min(2).max(20),
   password: z.string().min(4).max(128),
+});
+
+const checkUsernameSchema = z.object({
+  username: z.string().trim().min(2).max(20),
 });
 
 const quickLoginSchema = z.object({
@@ -153,18 +157,33 @@ export async function registerArenaRoutes(app: Express) {
     res.json(getAllBinanceSymbols());
   });
 
-  // Arena login — ID-based with invite code + username
+  // Register — email + username + password
   app.post("/api/auth/login", async (req: Request, res: Response) => {
-    const parsed = loginSchema.safeParse(req.body);
+    const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ error: "Invalid invite code or username" });
+      res.status(400).json({ error: "Invalid email or username" });
       return;
     }
     try {
-      const result = await engine.login(parsed.data.inviteCode, parsed.data.username, parsed.data.password);
+      const result = await engine.register(parsed.data.email, parsed.data.username, parsed.data.password);
       res.json({ token: result.token, user: { id: result.account.id, username: result.account.username } });
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
+    }
+  });
+
+  // Check username availability
+  app.post("/api/auth/check-username", async (req: Request, res: Response) => {
+    const parsed = checkUsernameSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid username" });
+      return;
+    }
+    try {
+      const available = await dbHelpers.checkUsernameAvailable(parsed.data.username);
+      res.json({ available });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
     }
   });
 
