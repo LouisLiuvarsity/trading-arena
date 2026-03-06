@@ -288,7 +288,7 @@ export default function HubPage() {
             </span>
           </h2>
           <Carousel
-            opts={{ align: "start", loop: upcomingCompetitions.length > 2 }}
+            opts={{ align: "start", loop: upcomingCompetitions.length > 2, dragFree: true }}
             className="w-full"
           >
             <CarouselContent className="-ml-3">
@@ -304,10 +304,10 @@ export default function HubPage() {
               ))}
             </CarouselContent>
             {upcomingCompetitions.length > 1 && (
-              <>
-                <CarouselPrevious className="-left-3 bg-[#1C2030] border-[rgba(255,255,255,0.08)] text-[#848E9C] hover:text-white hover:bg-[#1C2030]" />
-                <CarouselNext className="-right-3 bg-[#1C2030] border-[rgba(255,255,255,0.08)] text-[#848E9C] hover:text-white hover:bg-[#1C2030]" />
-              </>
+              <div className="flex items-center justify-center gap-3 mt-4">
+                <CarouselPrevious className="static translate-y-0 bg-[#1C2030] border-[rgba(255,255,255,0.08)] text-[#848E9C] hover:text-white hover:bg-white/10" />
+                <CarouselNext className="static translate-y-0 bg-[#1C2030] border-[rgba(255,255,255,0.08)] text-[#848E9C] hover:text-white hover:bg-white/10" />
+              </div>
             )}
           </Carousel>
         </div>
