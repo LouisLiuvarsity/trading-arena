@@ -11,7 +11,6 @@ import NewsFeed from "@/components/NewsFeed";
 import NewsTicker from "@/components/NewsTicker";
 import CompetitionNotifications from "@/components/CompetitionNotifications";
 import MarketStats from "@/components/MarketStats";
-import RankAnxietyStrip from "@/components/RankAnxietyStrip";
 import TickerBar from "@/components/TickerBar";
 import TradeHistory from "@/components/TradeHistory";
 import { useBinanceKline, useBinanceTicker, useBinanceDepth } from "@/hooks/useBinanceWS";
@@ -287,7 +286,7 @@ export default function TradingPage({ authToken: authTokenProp, onLogout: onLogo
         )}
 
         {/* Mobile Status Bar */}
-        <MobileStatusBar account={account} match={match} season={season} onLogout={onLogout} />
+        <MobileStatusBar match={match} />
 
         {/* Mobile Toolbar — Chat, Trades, Rank, Stats, News */}
         <MobileToolbar
@@ -440,7 +439,7 @@ export default function TradingPage({ authToken: authTokenProp, onLogout: onLogo
             <TradeHistory trades={trades} />
           )}
           {mobilePanel === 'leaderboard' && (
-            <Leaderboard entries={leaderboard} myRank={account.rank} promotionLineRank={300} />
+            <Leaderboard entries={leaderboard} myRank={account.rank} promotionLineRank={300} account={account} social={social} />
           )}
           {mobilePanel === 'stats' && (
             <MarketStats social={social} account={account} match={match} prediction={prediction} pollData={pollData} ticker={ticker} />
@@ -473,7 +472,7 @@ export default function TradingPage({ authToken: authTokenProp, onLogout: onLogo
         </div>
       )}
 
-      <StatusBar account={account} match={match} season={season} onLogout={onLogout} />
+      <StatusBar match={match} />
       <NewsTicker news={news} />
       <CompetitionNotifications
         account={account}
@@ -555,7 +554,7 @@ export default function TradingPage({ authToken: authTokenProp, onLogout: onLogo
               <TradeHistory trades={trades} />
             </TabsContent>
             <TabsContent value="leaderboard" className="flex-1 overflow-hidden mt-0">
-              <Leaderboard entries={leaderboard} myRank={account.rank} promotionLineRank={300} />
+              <Leaderboard entries={leaderboard} myRank={account.rank} promotionLineRank={300} account={account} social={social} />
             </TabsContent>
             <TabsContent value="stats" className="flex-1 overflow-hidden mt-0">
               <MarketStats social={social} account={account} match={match} prediction={prediction} pollData={pollData} ticker={ticker} />
@@ -581,9 +580,7 @@ export default function TradingPage({ authToken: authTokenProp, onLogout: onLogo
         />
       </div>
 
-      <div className="shrink-0">
-        <RankAnxietyStrip account={account} social={social} />
-      </div>
+
     </div>
   );
 }

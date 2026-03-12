@@ -121,3 +121,11 @@
 
 ## Admin Account Creation
 - [x] Create admin account (Louis123) in arena_accounts — id=1, role=admin, email=admin@genfi.world
+
+## Trading Page Layout Refactor
+- [x] Simplify StatusBar: keep only Home + Language (left) + Countdown timer (center), remove all other metrics
+- [x] Remove season progress mini bar (StatusBar row 2)
+- [x] Move RankAnxietyStrip info into Leaderboard tab as a summary card at top
+- [x] Remove RankAnxietyStrip from TradingPage bottom
+- [x] TradingPanel: change "Available" to "Equity" with PnL% display (e.g. 5,230.5U (+4.6%))
+- [x] Apply equivalent changes to mobile layout (MobileStatusBar simplified, MobileTradingPanel equity+pnl%)

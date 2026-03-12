@@ -439,8 +439,11 @@ function MobileTradingPanel({
           <span className="font-mono text-[#D1D4DC] font-semibold">{formatPrice(currentPrice)}</span>
         </div>
         <div>
-          <span className="text-[#848E9C]">{t('tp.avail')} </span>
+          <span className="text-[#848E9C]">{t('tp.equity')} </span>
           <span className="font-mono text-[#D1D4DC] font-semibold">{account.equity.toFixed(1)}U</span>
+          <span className={`font-mono text-[10px] ml-0.5 ${account.pnlPct >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
+            ({account.pnlPct >= 0 ? '+' : ''}{account.pnlPct.toFixed(1)}%)
+          </span>
         </div>
         <div>
           <span className="text-[#848E9C]">{t('tp.left')} </span>

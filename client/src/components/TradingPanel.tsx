@@ -491,8 +491,13 @@ function TradingPanel({
           <div className="font-mono text-[#D1D4DC] tabular-nums text-base font-semibold">{formatPrice(currentPrice)}</div>
         </div>
         <div>
-          <div className="text-[10px] text-[#848E9C] mb-0.5">{t('tp.available')}</div>
-          <div className="font-mono text-[#D1D4DC] text-base font-semibold">{account.equity.toFixed(2)} U</div>
+          <div className="text-[10px] text-[#848E9C] mb-0.5">{t('tp.equity')}</div>
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-mono text-[#D1D4DC] text-base font-semibold tabular-nums">{account.equity.toFixed(2)} U</span>
+            <span className={`font-mono text-xs tabular-nums ${account.pnlPct >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
+              ({account.pnlPct >= 0 ? '+' : ''}{account.pnlPct.toFixed(2)}%)
+            </span>
+          </div>
         </div>
         <div>
           <div className="text-[10px] text-[#848E9C] mb-0.5">{t('tp.tradesLeft')}</div>
