@@ -134,3 +134,9 @@
 - [x] Change rankSnapshot refresh interval from 5s to 5min (300s)
 - [x] Redesign StatusBar countdown timer to be larger, more prominent and visually interesting
 - [x] Apply equivalent countdown redesign to MobileStatusBar
+
+## TradingView Indicator Integration
+- [x] Analyze current chart implementation (lightweight-charts v5, adding indicators on top)
+- [x] Replace lightweight-charts with TradingView free Advanced Chart Widget
+- [x] Ensure widget shows Binance perpetual data with built-in indicators (BINANCE:SYMBOL.P format)
+- [x] TP/SL handled by TradingPanel (chart TP/SL overlay removed since widget is iframe)

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import CandlestickChart from "@/components/CandlestickChart";
+import TradingViewChart from "@/components/TradingViewChart";
 import OrderBookPanel from "@/components/OrderBookPanel";
 import TradingPanel from "@/components/TradingPanel";
 import StatusBar from "@/components/StatusBar";
@@ -13,7 +13,7 @@ import CompetitionNotifications from "@/components/CompetitionNotifications";
 import MarketStats from "@/components/MarketStats";
 import TickerBar from "@/components/TickerBar";
 import TradeHistory from "@/components/TradeHistory";
-import { useBinanceKline, useBinanceTicker, useBinanceDepth } from "@/hooks/useBinanceWS";
+import { useBinanceTicker, useBinanceDepth } from "@/hooks/useBinanceWS";
 import { useArena } from "@/hooks/useArena";
 import { generateNewsItems } from "@/lib/mockData";
 import { useIsMobile } from "@/hooks/useMobile";
@@ -98,7 +98,6 @@ export default function TradingPage({ authToken: authTokenProp, onLogout: onLogo
   const [rightTab, setRightTab] = useState<string>("chat");
   const [mobilePanel, setMobilePanel] = useState<string | null>(null);
   const [mobileContentTab, setMobileContentTab] = useState<string>("chart");
-  const { klines, loading: klinesLoading } = useBinanceKline(tradingPair.symbol, timeframe);
   const { ticker: wsTicker, priceDirection: wsPriceDirection } = useBinanceTicker(tradingPair.symbol);
   const { orderBook: wsOrderBook } = useBinanceDepth(tradingPair.symbol);
 
@@ -348,17 +347,7 @@ export default function TradingPage({ authToken: authTokenProp, onLogout: onLogo
         {/* Main content area */}
         <div className="flex-1 overflow-hidden">
           {mobileContentTab === "chart" && (
-            <CandlestickChart
-              klines={klines}
-              loading={klinesLoading}
-              timeframe={timeframe}
-              onTimeframeChange={async next => {
-                setTimeframe(next);
-                await trackEvent("timeframe_change", { next });
-              }}
-              position={position}
-              onSetTpSl={handleSetTpSl}
-            />
+            <TradingViewChart interval={timeframe} />
           )}
           {mobileContentTab === "orderbook" && (
             <div className="h-full overflow-y-auto">
@@ -498,17 +487,7 @@ export default function TradingPage({ authToken: authTokenProp, onLogout: onLogo
           <div className="flex-1 flex overflow-hidden">
             {/* Chart */}
             <div className="flex-1 flex flex-col min-w-0">
-              <CandlestickChart
-                klines={klines}
-                loading={klinesLoading}
-                timeframe={timeframe}
-                onTimeframeChange={async next => {
-                  setTimeframe(next);
-                  await trackEvent("timeframe_change", { next });
-                }}
-                position={position}
-                onSetTpSl={handleSetTpSl}
-              />
+              <TradingViewChart interval={timeframe} />
             </div>
             {/* OrderBook resize handle + panel */}
             <ResizeHandle direction="horizontal" onMouseDown={orderBookResize.onMouseDown} />
