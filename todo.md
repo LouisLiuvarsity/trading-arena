@@ -129,3 +129,8 @@
 - [x] Remove RankAnxietyStrip from TradingPage bottom
 - [x] TradingPanel: change "Available" to "Equity" with PnL% display (e.g. 5,230.5U (+4.6%))
 - [x] Apply equivalent changes to mobile layout (MobileStatusBar simplified, MobileTradingPanel equity+pnl%)
+
+## Rank Snapshot & Countdown Improvements
+- [x] Change rankSnapshot refresh interval from 5s to 5min (300s)
+- [x] Redesign StatusBar countdown timer to be larger, more prominent and visually interesting
+- [x] Apply equivalent countdown redesign to MobileStatusBar

@@ -1313,7 +1313,7 @@ export class ArenaEngine {
 
   private refreshRankSnapshot(rows: LeaderboardRow[]) {
     const now = Date.now();
-    if (now - this.lastRankSnapshotAt < 5000) return;
+    if (now - this.lastRankSnapshotAt < 300_000) return; // 5 minutes
     const newMap = new Map<number, number>();
     for (const row of rows) newMap.set(row.arenaAccountId, row.rank);
     const nearCount = rows.filter((row) => row.rank >= 290 && row.rank <= 310).length;
