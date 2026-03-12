@@ -140,3 +140,11 @@
 - [x] Replace lightweight-charts with TradingView free Advanced Chart Widget
 - [x] Ensure widget shows Binance perpetual data with built-in indicators (BINANCE:SYMBOL.P format)
 - [x] TP/SL handled by TradingPanel (chart TP/SL overlay removed since widget is iframe)
+
+## Indicator System (lightweight-charts)
+- [x] Rollback to lightweight-charts CandlestickChart with TP/SL interaction
+- [x] Create indicator calculation library (13 indicators)
+- [x] Overlay indicators: MA, EMA, BOLL, SAR, AVL, SUPER
+- [x] Sub-chart indicators: VOL, MACD, RSI, KDJ, OBV, WR
+- [x] Indicator settings UI with editable parameters (like TradingView)
+- [x] Wire indicators into CandlestickChart (TradingPage already uses kline data)
