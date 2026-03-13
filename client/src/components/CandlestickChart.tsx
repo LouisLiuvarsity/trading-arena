@@ -88,6 +88,7 @@ const CHART_BG = '#0B0E11';
 const BOLL_COLORS = { mid: '#E6A817', upper: '#26a69a', lower: '#ef5350' };
 const SAR_COLOR = '#E040FB';
 const AVL_COLOR = '#00BCD4';
+const PRICE_SCALE_MIN_WIDTH = 84;
 
 // Sub-chart height strategy: returns height percentage per subchart
 function getSubchartHeight(count: number): number {
@@ -144,6 +145,29 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
   // Crosshair overlay: custom vertical line that spans all charts
   const chartAreaRef = useRef<HTMLDivElement>(null);
   const crosshairLineRef = useRef<HTMLDivElement>(null);
+  const setOverlayCrosshairX = useCallback((x: number | null) => {
+    const line = crosshairLineRef.current;
+    const area = chartAreaRef.current;
+    if (!line) return;
+    if (x === null || !Number.isFinite(x) || !area) {
+      line.style.opacity = '0';
+      return;
+    }
+
+    const clampedX = Math.max(0, Math.min(x, area.clientWidth));
+    line.style.transform = `translateX(${clampedX}px)`;
+    line.style.opacity = '1';
+  }, []);
+
+  const syncOverlayCrosshair = useCallback((chart: IChartApi, time?: Time) => {
+    if (time === undefined) {
+      setOverlayCrosshairX(null);
+      return;
+    }
+
+    const x = chart.timeScale().timeToCoordinate(time);
+    setOverlayCrosshairX(x ?? null);
+  }, [setOverlayCrosshairX]);
 
   // Memoize candles for indicator calculations
   const candles: Candle[] = useMemo(() =>
@@ -252,6 +276,10 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
       rightPriceScale: {
         borderColor: 'rgba(255,255,255,0.08)',
         scaleMargins: { top: 0.05, bottom: 0.15 },
+        minimumWidth: PRICE_SCALE_MIN_WIDTH,
+      },
+      overlayPriceScales: {
+        minimumWidth: PRICE_SCALE_MIN_WIDTH,
       },
       timeScale: {
         borderColor: 'rgba(255,255,255,0.08)',
@@ -389,6 +417,10 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
       },
       rightPriceScale: {
         borderColor: 'rgba(255,255,255,0.08)',
+        minimumWidth: PRICE_SCALE_MIN_WIDTH,
+      },
+      overlayPriceScales: {
+        minimumWidth: PRICE_SCALE_MIN_WIDTH,
       },
       timeScale: {
         borderColor: 'rgba(255,255,255,0.08)',
@@ -503,33 +535,21 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
     };
   }, [activeSubchartKeys]);
 
-  // ─── Crosshair overlay: CSS vertical line spanning all charts ─────
+  // ─── Crosshair overlay: hide when leaving the full chart area ─────
   useEffect(() => {
     const area = chartAreaRef.current;
-    const line = crosshairLineRef.current;
-    if (!area || !line) return;
-
-    const onMouseMove = (e: MouseEvent) => {
-      const rect = area.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      if (x >= 0 && x <= rect.width) {
-        line.style.transform = `translateX(${x}px)`;
-        line.style.opacity = '1';
-      }
-    };
+    if (!area) return;
 
     const onMouseLeave = () => {
-      line.style.opacity = '0';
+      setOverlayCrosshairX(null);
     };
 
-    area.addEventListener('mousemove', onMouseMove);
     area.addEventListener('mouseleave', onMouseLeave);
 
     return () => {
-      area.removeEventListener('mousemove', onMouseMove);
       area.removeEventListener('mouseleave', onMouseLeave);
     };
-  }, []);
+  }, [setOverlayCrosshairX]);
 
   // ─── Crosshair sync: propagate crosshair time between main chart and subcharts ───
   // We cache each subchart's first series data keyed by time for O(1) lookup
@@ -562,7 +582,6 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
     const mainChart = mainChartRef.current;
     const mainSeries = candleSeriesRef.current;
     if (!mainChart || !mainSeries) return;
-    if (subChartsRef.current.size === 0) return;
 
     const unsubs: (() => void)[] = [];
 
@@ -571,8 +590,9 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
       if (isSyncingRef.current) return;
       isSyncingRef.current = true;
       try {
-        const time = param.time;
-        if (!time) {
+        const time = param.time as Time | undefined;
+        syncOverlayCrosshair(mainChart, time);
+        if (time === undefined) {
           for (const instance of Array.from(subChartsRef.current.values())) {
             try { instance.chart.clearCrosshairPosition(); } catch {}
           }
@@ -596,14 +616,19 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
     mainChart.subscribeCrosshairMove(mainHandler);
     unsubs.push(() => { try { mainChart.unsubscribeCrosshairMove(mainHandler); } catch {} });
 
+    if (subChartsRef.current.size === 0) {
+      return () => unsubs.forEach(fn => fn());
+    }
+
     // Subcharts -> main chart (and other subcharts)
     for (const [srcKey, srcInstance] of Array.from(subChartsRef.current.entries())) {
       const handler = (param: any) => {
         if (isSyncingRef.current) return;
         isSyncingRef.current = true;
         try {
-          const time = param.time;
-          if (!time) {
+          const time = param.time as Time | undefined;
+          syncOverlayCrosshair(srcInstance.chart, time);
+          if (time === undefined) {
             try { mainChart.clearCrosshairPosition(); } catch {}
             for (const [k, inst] of Array.from(subChartsRef.current.entries())) {
               if (k !== srcKey) try { inst.chart.clearCrosshairPosition(); } catch {}
@@ -641,7 +666,7 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
     }
 
     return () => unsubs.forEach(fn => fn());
-  }, [activeSubchartKeys, candles, klines]);
+  }, [activeSubchartKeys, candles, klines, syncOverlayCrosshair]);
 
   // ─── Update candle + volume data ──────────────────────────
 
