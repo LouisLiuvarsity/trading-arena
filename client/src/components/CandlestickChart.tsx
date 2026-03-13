@@ -145,6 +145,8 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
   // Crosshair overlay: custom vertical line that spans all charts
   const chartAreaRef = useRef<HTMLDivElement>(null);
   const crosshairLineRef = useRef<HTMLDivElement>(null);
+  const priceScaleSyncFrameRef = useRef<number | null>(null);
+  const syncedPriceScaleWidthRef = useRef(PRICE_SCALE_MIN_WIDTH);
   const setOverlayCrosshairX = useCallback((x: number | null) => {
     const line = crosshairLineRef.current;
     const area = chartAreaRef.current;
@@ -168,6 +170,40 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
     const x = chart.timeScale().timeToCoordinate(time);
     setOverlayCrosshairX(x ?? null);
   }, [setOverlayCrosshairX]);
+
+  const syncPriceScaleWidths = useCallback(() => {
+    const charts: IChartApi[] = [];
+    if (mainChartRef.current) charts.push(mainChartRef.current);
+    Array.from(subChartsRef.current.values()).forEach(instance => {
+      charts.push(instance.chart);
+    });
+    if (charts.length === 0) return;
+
+    const maxWidth = charts.reduce((currentMax, chart) => {
+      const width = chart.priceScale('right').width();
+      return Number.isFinite(width) ? Math.max(currentMax, width) : currentMax;
+    }, PRICE_SCALE_MIN_WIDTH);
+
+    if (maxWidth <= syncedPriceScaleWidthRef.current) return;
+    syncedPriceScaleWidthRef.current = maxWidth;
+
+    charts.forEach(chart => {
+      chart.priceScale('right').applyOptions({ minimumWidth: maxWidth });
+      chart.applyOptions({
+        overlayPriceScales: { minimumWidth: maxWidth },
+      });
+    });
+  }, []);
+
+  const schedulePriceScaleWidthSync = useCallback(() => {
+    if (priceScaleSyncFrameRef.current !== null) {
+      cancelAnimationFrame(priceScaleSyncFrameRef.current);
+    }
+    priceScaleSyncFrameRef.current = requestAnimationFrame(() => {
+      priceScaleSyncFrameRef.current = null;
+      syncPriceScaleWidths();
+    });
+  }, [syncPriceScaleWidths]);
 
   // Memoize candles for indicator calculations
   const candles: Candle[] = useMemo(() =>
@@ -324,8 +360,13 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
     const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(mainContainerRef.current);
     handleResize();
+    schedulePriceScaleWidthSync();
 
     return () => {
+      if (priceScaleSyncFrameRef.current !== null) {
+        cancelAnimationFrame(priceScaleSyncFrameRef.current);
+        priceScaleSyncFrameRef.current = null;
+      }
       resizeObserver.disconnect();
       chart.remove();
       mainChartRef.current = null;
@@ -377,6 +418,7 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
           width: instance.container.clientWidth,
           height: instance.container.clientHeight,
         });
+        schedulePriceScaleWidthSync();
         return;
       }
 
@@ -442,6 +484,7 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
       const resizeObserver = new ResizeObserver(handleResize);
       resizeObserver.observe(containerDiv);
       requestAnimationFrame(handleResize);
+      schedulePriceScaleWidthSync();
 
       existingMap.set(ind.key, {
         chart,
@@ -466,24 +509,29 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
     if (mainChart) {
       mainChart.timeScale().applyOptions({ visible: activeSubcharts.length === 0 });
     }
+    schedulePriceScaleWidthSync();
 
     // Cleanup on unmount
     return () => {
       // Don't cleanup here — we handle it in the removal logic above
       // Only cleanup everything on full unmount
     };
-  }, [activeSubchartKeys]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeSubchartKeys, schedulePriceScaleWidthSync]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Show main chart time axis when no subcharts
   useEffect(() => {
     const mainChart = mainChartRef.current;
     if (!mainChart) return;
     mainChart.timeScale().applyOptions({ visible: !hasSubchart });
-  }, [hasSubchart]);
+    schedulePriceScaleWidthSync();
+  }, [hasSubchart, schedulePriceScaleWidthSync]);
 
   // Cleanup all subcharts on component unmount
   useEffect(() => {
     return () => {
+      if (priceScaleSyncFrameRef.current !== null) {
+        cancelAnimationFrame(priceScaleSyncFrameRef.current);
+      }
       Array.from(subChartsRef.current.values()).forEach(instance => {
         instance.resizeObserver.disconnect();
         try { instance.chart.remove(); } catch {}
@@ -521,6 +569,7 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
               targetChart.timeScale().setVisibleLogicalRange(range);
             }
           });
+          schedulePriceScaleWidthSync();
         }
         isSyncingRange = false;
       };
@@ -533,7 +582,7 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
     return () => {
       unsubscribers.forEach(fn => fn());
     };
-  }, [activeSubchartKeys]);
+  }, [activeSubchartKeys, schedulePriceScaleWidthSync]);
 
   // ─── Crosshair overlay: hide when leaving the full chart area ─────
   useEffect(() => {
@@ -689,7 +738,8 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
 
     candleSeriesRef.current.setData(candleData);
     mainVolumeSeriesRef.current.setData(volumeData);
-  }, [klines]);
+    schedulePriceScaleWidthSync();
+  }, [klines, schedulePriceScaleWidthSync]);
 
   // ─── Render overlay indicators on main chart ──────────────
 
@@ -938,7 +988,8 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
       // Set the first series as primary for crosshair sync
       instance.primarySeries = newSeries.length > 0 ? newSeries[0] : null;
     }
-  }, [activeSubcharts, candles, activeSubchartKeys]);
+    schedulePriceScaleWidthSync();
+  }, [activeSubcharts, candles, activeSubchartKeys, schedulePriceScaleWidthSync]);
 
   // ─── Price lines for position (entry, TP, SL) ────────────
 
