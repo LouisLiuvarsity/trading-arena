@@ -156,3 +156,7 @@
 - [x] Support multiple simultaneous subchart indicators (VOL + RSI + MACD etc.)
 - [x] Auto-distribute subchart heights based on number of active subcharts (1=25%, 2=17%, 3=14%, 4=12%)
 - [x] Synchronize crosshair (vertical line) between main chart and all subcharts via setCrosshairPosition API
+
+## Crosshair Sync Fix & Subchart Limit
+- [x] Fix crosshair synchronization — hybrid approach: CSS overlay dashed line + setCrosshairPosition with cached series data for native crosshair on subcharts
+- [x] Add max 4 subchart limit with toast notification when user tries to enable 5th

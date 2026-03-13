@@ -17,6 +17,7 @@ import type { IChartApi, ISeriesApi, CandlestickData, HistogramData, LineData, T
 import type { KlineData, TimeframeKey, Position } from '@/lib/types';
 import { useTradingPair } from '@/contexts/TradingPairContext';
 import { Settings2 } from 'lucide-react';
+import { toast } from 'sonner';
 import IndicatorSettings, { type ActiveIndicator } from './IndicatorSettings';
 import {
   type IndicatorKey, type Candle,
@@ -140,8 +141,9 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
   const [showSettings, setShowSettings] = useState(false);
   const [indicators, setIndicators] = useState<ActiveIndicator[]>(loadIndicatorState);
 
-  // Crosshair sync guard to prevent infinite loops
-  const isSyncingCrosshairRef = useRef(false);
+  // Crosshair overlay: custom vertical line that spans all charts
+  const chartAreaRef = useRef<HTMLDivElement>(null);
+  const crosshairLineRef = useRef<HTMLDivElement>(null);
 
   // Memoize candles for indicator calculations
   const candles: Candle[] = useMemo(() =>
@@ -177,11 +179,33 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
 
   const handleToggle = useCallback((key: IndicatorKey) => {
     setIndicators(prev => {
+      const ind = prev.find(i => i.key === key);
+      if (!ind) return prev;
+
+      // If trying to enable a subchart indicator, check the limit
+      if (!ind.enabled) {
+        const isSubchart = INDICATOR_REGISTRY.find(r => r.key === key)?.type === 'subchart';
+        if (isSubchart) {
+          const currentSubchartCount = prev.filter(
+            i => i.enabled && INDICATOR_REGISTRY.find(r => r.key === i.key)?.type === 'subchart'
+          ).length;
+          if (currentSubchartCount >= MAX_SUBCHARTS) {
+            toast.error(
+              lang === 'zh'
+                ? `最多同时显示 ${MAX_SUBCHARTS} 个副图指标`
+                : `Maximum ${MAX_SUBCHARTS} sub-chart indicators allowed`,
+              { duration: 2000 }
+            );
+            return prev;
+          }
+        }
+      }
+
       const next = prev.map(i => i.key === key ? { ...i, enabled: !i.enabled } : i);
       saveIndicatorState(next);
       return next;
     });
-  }, []);
+  }, [lang]);
 
   const handleParamsChange = useCallback((key: IndicatorKey, params: Record<string, unknown>) => {
     setIndicators(prev => {
@@ -220,11 +244,11 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
         vertLines: { color: 'rgba(255,255,255,0.04)' },
         horzLines: { color: 'rgba(255,255,255,0.04)' },
       },
-      crosshair: {
-        mode: CrosshairMode.Normal,
-        vertLine: { color: 'rgba(255,255,255,0.2)', width: 1, style: 2, labelBackgroundColor: '#1C2030' },
-        horzLine: { color: 'rgba(255,255,255,0.2)', width: 1, style: 2, labelBackgroundColor: '#1C2030' },
-      },
+        crosshair: {
+          mode: CrosshairMode.Normal,
+          vertLine: { color: 'rgba(255,255,255,0.2)', width: 1, style: 2, labelBackgroundColor: '#1C2030' },
+          horzLine: { color: 'rgba(255,255,255,0.2)', width: 1, style: 2, labelBackgroundColor: '#1C2030' },
+        },
       rightPriceScale: {
         borderColor: 'rgba(255,255,255,0.08)',
         scaleMargins: { top: 0.05, bottom: 0.15 },
@@ -358,20 +382,20 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
           vertLines: { color: 'rgba(255,255,255,0.04)' },
           horzLines: { color: 'rgba(255,255,255,0.04)' },
         },
-        crosshair: {
-          mode: CrosshairMode.Normal,
-          vertLine: { color: 'rgba(255,255,255,0.2)', width: 1, style: 2, labelBackgroundColor: '#1C2030' },
-          horzLine: { color: 'rgba(255,255,255,0.2)', width: 1, style: 2, labelBackgroundColor: '#1C2030' },
-        },
-        rightPriceScale: {
-          borderColor: 'rgba(255,255,255,0.08)',
-        },
-        timeScale: {
-          borderColor: 'rgba(255,255,255,0.08)',
-          timeVisible: true,
-          secondsVisible: false,
-          visible: isLast,
-        },
+      crosshair: {
+        mode: CrosshairMode.Normal,
+        vertLine: { color: 'rgba(255,255,255,0.2)', width: 1, style: 2, labelBackgroundColor: '#1C2030' },
+        horzLine: { color: 'rgba(255,255,255,0.2)', width: 1, style: 2, labelBackgroundColor: '#1C2030' },
+      },
+      rightPriceScale: {
+        borderColor: 'rgba(255,255,255,0.08)',
+      },
+      timeScale: {
+        borderColor: 'rgba(255,255,255,0.08)',
+        timeVisible: true,
+        secondsVisible: false,
+        visible: !hasSubchart,
+      },
         handleScroll: true,
         handleScale: true,
       });
@@ -479,83 +503,145 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
     };
   }, [activeSubchartKeys]);
 
-  // ─── Sync crosshair across all charts ─────────────────────
-
+  // ─── Crosshair overlay: CSS vertical line spanning all charts ─────
   useEffect(() => {
-    const mainChart = mainChartRef.current;
-    if (!mainChart) return;
+    const area = chartAreaRef.current;
+    const line = crosshairLineRef.current;
+    if (!area || !line) return;
 
-    const allCharts: IChartApi[] = [mainChart];
-    Array.from(subChartsRef.current.values()).forEach(instance => {
-      allCharts.push(instance.chart);
-    });
-
-    if (allCharts.length <= 1) return;
-
-    const unsubscribers: (() => void)[] = [];
-
-    // Build a map: chart -> its primary series for setCrosshairPosition
-    const chartSeriesMap = new Map<IChartApi, any>();
-    // Main chart uses candle series
-    if (candleSeriesRef.current) {
-      chartSeriesMap.set(mainChart, candleSeriesRef.current);
-    }
-    Array.from(subChartsRef.current.values()).forEach(instance => {
-      if (instance.primarySeries) {
-        chartSeriesMap.set(instance.chart, instance.primarySeries);
+    const onMouseMove = (e: MouseEvent) => {
+      const rect = area.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      if (x >= 0 && x <= rect.width) {
+        line.style.transform = `translateX(${x}px)`;
+        line.style.opacity = '1';
       }
-    });
+    };
 
-    // Helper: get data point from crosshair param for a given series
-    function getCrosshairDataPoint(series: any, param: any) {
-      if (!param.time) return null;
-      const dataPoint = param.seriesData?.get(series);
-      return dataPoint || null;
-    }
+    const onMouseLeave = () => {
+      line.style.opacity = '0';
+    };
 
-    // Helper: sync crosshair to target chart
-    function syncCrosshair(targetChart: IChartApi, dataPoint: any) {
-      const targetSeries = chartSeriesMap.get(targetChart);
-      if (!targetSeries) {
-        targetChart.clearCrosshairPosition();
-        return;
-      }
-      if (dataPoint) {
-        // Use value from dataPoint, or NaN to just show vertical line
-        const value = dataPoint.value ?? dataPoint.close ?? NaN;
-        targetChart.setCrosshairPosition(value, dataPoint.time, targetSeries);
-      } else {
-        targetChart.clearCrosshairPosition();
-      }
-    }
-
-    allCharts.forEach((sourceChart, sourceIdx) => {
-      const sourceSeries = chartSeriesMap.get(sourceChart);
-
-      const handler = (param: any) => {
-        if (isSyncingCrosshairRef.current) return;
-        isSyncingCrosshairRef.current = true;
-
-        const dataPoint = sourceSeries ? getCrosshairDataPoint(sourceSeries, param) : null;
-
-        allCharts.forEach((targetChart, targetIdx) => {
-          if (targetIdx === sourceIdx) return;
-          syncCrosshair(targetChart, dataPoint);
-        });
-
-        isSyncingCrosshairRef.current = false;
-      };
-
-      sourceChart.subscribeCrosshairMove(handler);
-      unsubscribers.push(() => {
-        try { sourceChart.unsubscribeCrosshairMove(handler); } catch {}
-      });
-    });
+    area.addEventListener('mousemove', onMouseMove);
+    area.addEventListener('mouseleave', onMouseLeave);
 
     return () => {
-      unsubscribers.forEach(fn => fn());
+      area.removeEventListener('mousemove', onMouseMove);
+      area.removeEventListener('mouseleave', onMouseLeave);
     };
-  }, [activeSubchartKeys]);
+  }, []);
+
+  // ─── Crosshair sync: propagate crosshair time between main chart and subcharts ───
+  // We cache each subchart's first series data keyed by time for O(1) lookup
+  const subSeriesDataRef = useRef<Map<IndicatorKey, Map<number, number>>>(new Map());
+
+  // Build the data cache whenever subchart data changes
+  useEffect(() => {
+    const cache = new Map<IndicatorKey, Map<number, number>>();
+    for (const [key, instance] of Array.from(subChartsRef.current.entries())) {
+      if (instance.primarySeries) {
+        const dataMap = new Map<number, number>();
+        try {
+          // Get all data points from the primary series
+          const data = (instance.primarySeries as any).data?.() ?? [];
+          for (const point of data) {
+            const t = typeof point.time === 'number' ? point.time : 0;
+            const v = point.value ?? point.close ?? 0;
+            if (t > 0) dataMap.set(t, v);
+          }
+        } catch {}
+        cache.set(key, dataMap);
+      }
+    }
+    subSeriesDataRef.current = cache;
+  }, [activeSubcharts, candles, activeSubchartKeys]);
+
+  // Subscribe to crosshair moves and sync across charts
+  const isSyncingRef = useRef(false);
+  useEffect(() => {
+    const mainChart = mainChartRef.current;
+    const mainSeries = candleSeriesRef.current;
+    if (!mainChart || !mainSeries) return;
+    if (subChartsRef.current.size === 0) return;
+
+    const unsubs: (() => void)[] = [];
+
+    // Main chart -> subcharts
+    const mainHandler = (param: any) => {
+      if (isSyncingRef.current) return;
+      isSyncingRef.current = true;
+      try {
+        const time = param.time;
+        if (!time) {
+          for (const instance of Array.from(subChartsRef.current.values())) {
+            try { instance.chart.clearCrosshairPosition(); } catch {}
+          }
+          return;
+        }
+        for (const [key, instance] of Array.from(subChartsRef.current.entries())) {
+          if (!instance.primarySeries) continue;
+          try {
+            // Look up cached data for this time
+            const dataMap = subSeriesDataRef.current.get(key);
+            const value = dataMap?.get(time as number);
+            if (value !== undefined) {
+              instance.chart.setCrosshairPosition(value, time, instance.primarySeries);
+            }
+          } catch {}
+        }
+      } finally {
+        isSyncingRef.current = false;
+      }
+    };
+    mainChart.subscribeCrosshairMove(mainHandler);
+    unsubs.push(() => { try { mainChart.unsubscribeCrosshairMove(mainHandler); } catch {} });
+
+    // Subcharts -> main chart (and other subcharts)
+    for (const [srcKey, srcInstance] of Array.from(subChartsRef.current.entries())) {
+      const handler = (param: any) => {
+        if (isSyncingRef.current) return;
+        isSyncingRef.current = true;
+        try {
+          const time = param.time;
+          if (!time) {
+            try { mainChart.clearCrosshairPosition(); } catch {}
+            for (const [k, inst] of Array.from(subChartsRef.current.entries())) {
+              if (k !== srcKey) try { inst.chart.clearCrosshairPosition(); } catch {}
+            }
+            return;
+          }
+          // Sync to main chart
+          try {
+            const mainData = param.seriesData?.get(mainSeries);
+            if (!mainData) {
+              // Get candle data at this time from klines
+              const kline = klines.find(k => k.time === time);
+              if (kline) {
+                mainChart.setCrosshairPosition(kline.close, time, mainSeries);
+              }
+            }
+          } catch {}
+          // Sync to other subcharts
+          for (const [k, inst] of Array.from(subChartsRef.current.entries())) {
+            if (k === srcKey || !inst.primarySeries) continue;
+            try {
+              const dataMap = subSeriesDataRef.current.get(k);
+              const value = dataMap?.get(time as number);
+              if (value !== undefined) {
+                inst.chart.setCrosshairPosition(value, time, inst.primarySeries);
+              }
+            } catch {}
+          }
+        } finally {
+          isSyncingRef.current = false;
+        }
+      };
+      srcInstance.chart.subscribeCrosshairMove(handler);
+      unsubs.push(() => { try { srcInstance.chart.unsubscribeCrosshairMove(handler); } catch {} });
+    }
+
+    return () => unsubs.forEach(fn => fn());
+  }, [activeSubchartKeys, candles, klines]);
 
   // ─── Update candle + volume data ──────────────────────────
 
@@ -1030,16 +1116,30 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
         )}
       </div>
 
-      {/* Main chart */}
-      <div ref={mainContainerRef} className="relative flex-1 min-h-0">
-        {loading && (
+      {/* Chart area wrapper for crosshair overlay */}
+      <div ref={chartAreaRef} className="relative flex-1 min-h-0 flex flex-col">
+        {/* Crosshair overlay line */}
+        <div
+          ref={crosshairLineRef}
+          className="absolute top-0 bottom-0 pointer-events-none z-[50]"
+          style={{
+            width: '1px',
+            backgroundImage: 'repeating-linear-gradient(to bottom, rgba(255,255,255,0.3) 0px, rgba(255,255,255,0.3) 4px, transparent 4px, transparent 8px)',
+            opacity: 0,
+            willChange: 'transform',
+          }}
+        />
+
+        {/* Main chart */}
+        <div ref={mainContainerRef} className="relative flex-1 min-h-0">
+          {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#0B0E11]/80 z-10">
             <div className="text-[#848E9C] text-sm">Loading chart data...</div>
           </div>
         )}
 
-        {/* Position overlay */}
-        {position && (
+          {/* Position overlay */}
+          {position && (
           <div className="absolute top-2 left-3 z-10 flex items-center gap-2 flex-wrap">
             <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-mono ${
               position.direction === 'long'
@@ -1071,8 +1171,8 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
           </div>
         )}
 
-        {/* TP/SL Popover */}
-        {tpSlPopover && (
+          {/* TP/SL Popover */}
+          {tpSlPopover && (
           <>
             <div className="absolute inset-0 z-20" onClick={() => setTpSlPopover(null)} />
             <div
@@ -1114,10 +1214,11 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
             </div>
           </>
         )}
-      </div>
+        </div> {/* end mainContainerRef */}
 
-      {/* Sub-charts wrapper — dynamically managed by useEffect */}
-      <div ref={subContainersWrapperRef} className="flex flex-col shrink-0" />
+        {/* Sub-charts wrapper — dynamically managed by useEffect */}
+        <div ref={subContainersWrapperRef} className="flex flex-col shrink-0" />
+      </div> {/* end chartAreaRef wrapper */}
 
       {/* Indicator Settings Panel */}
       {showSettings && (
