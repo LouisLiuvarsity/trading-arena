@@ -102,6 +102,7 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
   const subContainerRef = useRef<HTMLDivElement>(null);
   const subChartRef = useRef<IChartApi | null>(null);
   const subSeriesRef = useRef<(ISeriesApi<'Line'> | ISeriesApi<'Histogram'>)[]>([]);
+  const [subChartReady, setSubChartReady] = useState(false);
 
   // State
   const [tpSlPopover, setTpSlPopover] = useState<TpSlPopover | null>(null);
@@ -286,6 +287,7 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
     });
 
     subChartRef.current = chart;
+    setSubChartReady(true);
 
     const handleResize = () => {
       if (subContainerRef.current) {
@@ -298,7 +300,9 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
 
     const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(subContainerRef.current);
-    handleResize();
+
+    // Use requestAnimationFrame to ensure container has layout dimensions on first render
+    requestAnimationFrame(handleResize);
 
     // Sync time scales
     const mainChart = mainChartRef.current;
@@ -324,7 +328,15 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
       chart.remove();
       subChartRef.current = null;
       subSeriesRef.current = [];
+      setSubChartReady(false);
     };
+  }, [hasSubchart]);
+
+  // Hide main chart time axis when subchart is active, show on subchart instead
+  useEffect(() => {
+    const mainChart = mainChartRef.current;
+    if (!mainChart) return;
+    mainChart.timeScale().applyOptions({ visible: !hasSubchart });
   }, [hasSubchart]);
 
   // ─── Update candle + volume data ──────────────────────────
@@ -604,7 +616,7 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
     }
 
     subSeriesRef.current = newSeries;
-  }, [activeSubchart, candles]);
+  }, [activeSubchart, candles, subChartReady]);
 
   // ─── Price lines for position (entry, TP, SL) ────────────
 
@@ -822,7 +834,7 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
       </div>
 
       {/* Main chart */}
-      <div ref={mainContainerRef} className={`relative ${hasSubchart ? 'flex-[3]' : 'flex-1'}`}>
+      <div ref={mainContainerRef} className="relative flex-1 min-h-0">
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#0B0E11]/80 z-10">
             <div className="text-[#848E9C] text-sm">Loading chart data...</div>
@@ -910,10 +922,10 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
       {/* Sub-chart area */}
       {hasSubchart && (
         <>
-          <div className="flex items-center px-3 py-0.5 border-t border-[rgba(255,255,255,0.06)] bg-[#0B0E11]">
+          <div className="flex items-center px-3 py-0.5 border-t border-[rgba(255,255,255,0.06)] bg-[#0B0E11] shrink-0">
             <span className="text-[10px] font-mono text-[#848E9C]">{subchartLabel}</span>
           </div>
-          <div ref={subContainerRef} className="flex-[1] min-h-[80px]" />
+          <div ref={subContainerRef} className="shrink-0" style={{ height: '25%', minHeight: '120px' }} />
         </>
       )}
 

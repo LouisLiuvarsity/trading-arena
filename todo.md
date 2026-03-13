@@ -148,3 +148,6 @@
 - [x] Sub-chart indicators: VOL, MACD, RSI, KDJ, OBV, WR
 - [x] Indicator settings UI with editable parameters (like TradingView)
 - [x] Wire indicators into CandlestickChart (TradingPage already uses kline data)
+
+## Sub-chart Indicator Display Fix
+- [x] Fix sub-chart indicators (VOL, RSI, MACD, etc.) not displaying — removed duplicate ResizeObserver, used requestAnimationFrame for initial sizing
