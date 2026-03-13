@@ -1,7 +1,7 @@
 // ============================================================
 // Candlestick Chart — lightweight-charts v5 integration
 // Supports: TP/SL/Entry price lines, 6 overlay indicators,
-// 6 sub-chart indicators, indicator settings panel
+// Multiple simultaneous sub-chart indicators with crosshair sync
 // ============================================================
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
@@ -88,6 +88,38 @@ const BOLL_COLORS = { mid: '#E6A817', upper: '#26a69a', lower: '#ef5350' };
 const SAR_COLOR = '#E040FB';
 const AVL_COLOR = '#00BCD4';
 
+// Sub-chart height strategy: returns height percentage per subchart
+function getSubchartHeight(count: number): number {
+  if (count <= 0) return 0;
+  if (count === 1) return 25;
+  if (count === 2) return 17;
+  return 13; // 3+
+}
+
+// Max simultaneous subcharts
+const MAX_SUBCHARTS = 4;
+
+// ─── Sub-chart instance type ───────────────────────────────
+interface SubChartInstance {
+  chart: IChartApi;
+  container: HTMLDivElement;
+  series: (ISeriesApi<'Line'> | ISeriesApi<'Histogram'>)[];
+  primarySeries: ISeriesApi<'Line'> | ISeriesApi<'Histogram'> | null;
+  resizeObserver: ResizeObserver;
+}
+
+function getSubchartLabel(ind: ActiveIndicator): string {
+  switch (ind.key) {
+    case 'VOL': return 'VOL';
+    case 'MACD': { const p = ind.params as any; return `MACD(${p.fast},${p.slow},${p.signal})`; }
+    case 'RSI': { const p = ind.params as any; return `RSI(${p.period})`; }
+    case 'KDJ': { const p = ind.params as any; return `KDJ(${p.kPeriod},${p.dPeriod},${p.jSmooth})`; }
+    case 'OBV': return 'OBV';
+    case 'WR': { const p = ind.params as any; return `WR(${p.period})`; }
+    default: return '';
+  }
+}
+
 export default function CandlestickChart({ klines, loading, timeframe, onTimeframeChange, position, onSetTpSl, lang = 'en' }: Props) {
   const tradingPair = useTradingPair();
 
@@ -98,17 +130,18 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
   const mainVolumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
   const overlaySeriesRef = useRef<ISeriesApi<'Line'>[]>([]);
 
-  // Sub-chart refs
-  const subContainerRef = useRef<HTMLDivElement>(null);
-  const subChartRef = useRef<IChartApi | null>(null);
-  const subSeriesRef = useRef<(ISeriesApi<'Line'> | ISeriesApi<'Histogram'>)[]>([]);
-  const [subChartReady, setSubChartReady] = useState(false);
+  // Multi sub-chart refs: keyed by indicator key
+  const subChartsRef = useRef<Map<IndicatorKey, SubChartInstance>>(new Map());
+  const subContainersWrapperRef = useRef<HTMLDivElement>(null);
 
   // State
   const [tpSlPopover, setTpSlPopover] = useState<TpSlPopover | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [indicators, setIndicators] = useState<ActiveIndicator[]>(loadIndicatorState);
+
+  // Crosshair sync guard to prevent infinite loops
+  const isSyncingCrosshairRef = useRef(false);
 
   // Memoize candles for indicator calculations
   const candles: Candle[] = useMemo(() =>
@@ -128,11 +161,17 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
     () => indicators.filter(i => i.enabled && INDICATOR_REGISTRY.find(r => r.key === i.key)?.type === 'overlay'),
     [indicators]
   );
-  const activeSubchart = useMemo(
-    () => indicators.filter(i => i.enabled && INDICATOR_REGISTRY.find(r => r.key === i.key)?.type === 'subchart'),
+  const activeSubcharts = useMemo(
+    () => indicators.filter(i => i.enabled && INDICATOR_REGISTRY.find(r => r.key === i.key)?.type === 'subchart').slice(0, MAX_SUBCHARTS),
     [indicators]
   );
-  const hasSubchart = activeSubchart.length > 0;
+  const hasSubchart = activeSubcharts.length > 0;
+
+  // Stable key for tracking which subcharts are active
+  const activeSubchartKeys = useMemo(
+    () => activeSubcharts.map(s => s.key).join(','),
+    [activeSubcharts]
+  );
 
   // ─── Indicator callbacks ──────────────────────────────────
 
@@ -244,100 +283,279 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
     };
   }, []);
 
-  // ─── Initialize sub-chart ─────────────────────────────────
+  // ─── Manage sub-charts lifecycle ──────────────────────────
 
   useEffect(() => {
-    if (!hasSubchart || !subContainerRef.current) {
-      if (subChartRef.current) {
-        subChartRef.current.remove();
-        subChartRef.current = null;
-        subSeriesRef.current = [];
-      }
-      return;
-    }
+    const wrapper = subContainersWrapperRef.current;
+    if (!wrapper) return;
 
-    // Create sub chart
-    const chart = createChart(subContainerRef.current, {
-      layout: {
-        background: { type: ColorType.Solid, color: CHART_BG },
-        textColor: '#848E9C',
-        fontFamily: "'DM Mono', monospace",
-        fontSize: 10,
-      },
-      grid: {
-        vertLines: { color: 'rgba(255,255,255,0.04)' },
-        horzLines: { color: 'rgba(255,255,255,0.04)' },
-      },
-      crosshair: {
-        mode: CrosshairMode.Normal,
-        vertLine: { color: 'rgba(255,255,255,0.2)', width: 1, style: 2, labelBackgroundColor: '#1C2030' },
-        horzLine: { color: 'rgba(255,255,255,0.2)', width: 1, style: 2, labelBackgroundColor: '#1C2030' },
-      },
-      rightPriceScale: {
-        borderColor: 'rgba(255,255,255,0.08)',
-      },
-      timeScale: {
-        borderColor: 'rgba(255,255,255,0.08)',
-        timeVisible: true,
-        secondsVisible: false,
-        visible: true,
-      },
-      handleScroll: true,
-      handleScale: true,
+    const currentKeys = new Set(activeSubcharts.map(s => s.key));
+    const existingMap = subChartsRef.current;
+
+    // Remove subcharts that are no longer active
+    Array.from(existingMap.entries()).forEach(([key, instance]) => {
+      if (!currentKeys.has(key)) {
+        instance.resizeObserver.disconnect();
+        instance.chart.remove();
+        // Remove the label div too
+        const labelEl = wrapper.querySelector(`[data-subchart-label="${key}"]`);
+        if (labelEl && labelEl.parentNode) labelEl.parentNode.removeChild(labelEl);
+        if (instance.container.parentNode) {
+          instance.container.parentNode.removeChild(instance.container);
+        }
+        existingMap.delete(key);
+      }
     });
 
-    subChartRef.current = chart;
-    setSubChartReady(true);
+    if (activeSubcharts.length === 0) return;
 
-    const handleResize = () => {
-      if (subContainerRef.current) {
-        chart.applyOptions({
-          width: subContainerRef.current.clientWidth,
-          height: subContainerRef.current.clientHeight,
+    const heightPct = getSubchartHeight(activeSubcharts.length);
+
+    // Create or update each subchart
+    activeSubcharts.forEach((ind, idx) => {
+      const isLast = idx === activeSubcharts.length - 1;
+
+      if (existingMap.has(ind.key)) {
+        // Update existing: resize height and time axis visibility
+        const instance = existingMap.get(ind.key)!;
+        instance.container.style.height = `${heightPct}%`;
+        instance.chart.timeScale().applyOptions({ visible: isLast });
+        // Trigger resize
+        instance.chart.applyOptions({
+          width: instance.container.clientWidth,
+          height: instance.container.clientHeight,
         });
+        return;
       }
-    };
 
-    const resizeObserver = new ResizeObserver(handleResize);
-    resizeObserver.observe(subContainerRef.current);
+      // Find or create the label+container pair in the wrapper
+      // We need a label div + chart container div for each subchart
+      const labelDiv = document.createElement('div');
+      labelDiv.className = 'flex items-center px-3 py-0.5 border-t border-[rgba(255,255,255,0.06)] bg-[#0B0E11] shrink-0';
+      labelDiv.setAttribute('data-subchart-label', ind.key);
+      const labelSpan = document.createElement('span');
+      labelSpan.className = 'text-[10px] font-mono text-[#848E9C]';
+      labelSpan.textContent = getSubchartLabel(ind);
+      labelDiv.appendChild(labelSpan);
 
-    // Use requestAnimationFrame to ensure container has layout dimensions on first render
-    requestAnimationFrame(handleResize);
+      const containerDiv = document.createElement('div');
+      containerDiv.className = 'shrink-0';
+      containerDiv.style.height = `${heightPct}%`;
+      containerDiv.style.minHeight = '80px';
+      containerDiv.setAttribute('data-subchart', ind.key);
 
-    // Sync time scales
-    const mainChart = mainChartRef.current;
-    if (mainChart) {
-      const syncFromMain = () => {
-        const mainRange = mainChart.timeScale().getVisibleLogicalRange();
-        if (mainRange && chart) {
-          chart.timeScale().setVisibleLogicalRange(mainRange);
-        }
+      wrapper.appendChild(labelDiv);
+      wrapper.appendChild(containerDiv);
+
+      const chart = createChart(containerDiv, {
+        layout: {
+          background: { type: ColorType.Solid, color: CHART_BG },
+          textColor: '#848E9C',
+          fontFamily: "'DM Mono', monospace",
+          fontSize: 10,
+        },
+        grid: {
+          vertLines: { color: 'rgba(255,255,255,0.04)' },
+          horzLines: { color: 'rgba(255,255,255,0.04)' },
+        },
+        crosshair: {
+          mode: CrosshairMode.Normal,
+          vertLine: { color: 'rgba(255,255,255,0.2)', width: 1, style: 2, labelBackgroundColor: '#1C2030' },
+          horzLine: { color: 'rgba(255,255,255,0.2)', width: 1, style: 2, labelBackgroundColor: '#1C2030' },
+        },
+        rightPriceScale: {
+          borderColor: 'rgba(255,255,255,0.08)',
+        },
+        timeScale: {
+          borderColor: 'rgba(255,255,255,0.08)',
+          timeVisible: true,
+          secondsVisible: false,
+          visible: isLast,
+        },
+        handleScroll: true,
+        handleScale: true,
+      });
+
+      const handleResize = () => {
+        chart.applyOptions({
+          width: containerDiv.clientWidth,
+          height: containerDiv.clientHeight,
+        });
       };
-      const syncFromSub = () => {
-        const subRange = chart.timeScale().getVisibleLogicalRange();
-        if (subRange && mainChart) {
-          mainChart.timeScale().setVisibleLogicalRange(subRange);
-        }
-      };
-      mainChart.timeScale().subscribeVisibleLogicalRangeChange(syncFromMain);
-      chart.timeScale().subscribeVisibleLogicalRangeChange(syncFromSub);
+
+      const resizeObserver = new ResizeObserver(handleResize);
+      resizeObserver.observe(containerDiv);
+      requestAnimationFrame(handleResize);
+
+      existingMap.set(ind.key, {
+        chart,
+        container: containerDiv,
+        series: [],
+        primarySeries: null,
+        resizeObserver,
+      });
+    });
+
+    // Reorder DOM children to match activeSubcharts order
+    const orderedKeys = activeSubcharts.map(s => s.key);
+    for (const key of orderedKeys) {
+      const labelEl = wrapper.querySelector(`[data-subchart-label="${key}"]`);
+      const chartEl = wrapper.querySelector(`[data-subchart="${key}"]`);
+      if (labelEl) wrapper.appendChild(labelEl);
+      if (chartEl) wrapper.appendChild(chartEl);
     }
 
-    return () => {
-      resizeObserver.disconnect();
-      chart.remove();
-      subChartRef.current = null;
-      subSeriesRef.current = [];
-      setSubChartReady(false);
-    };
-  }, [hasSubchart]);
+    // Hide main chart time axis when subcharts are active
+    const mainChart = mainChartRef.current;
+    if (mainChart) {
+      mainChart.timeScale().applyOptions({ visible: activeSubcharts.length === 0 });
+    }
 
-  // Hide main chart time axis when subchart is active, show on subchart instead
+    // Cleanup on unmount
+    return () => {
+      // Don't cleanup here — we handle it in the removal logic above
+      // Only cleanup everything on full unmount
+    };
+  }, [activeSubchartKeys]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Show main chart time axis when no subcharts
   useEffect(() => {
     const mainChart = mainChartRef.current;
     if (!mainChart) return;
     mainChart.timeScale().applyOptions({ visible: !hasSubchart });
   }, [hasSubchart]);
+
+  // Cleanup all subcharts on component unmount
+  useEffect(() => {
+    return () => {
+      Array.from(subChartsRef.current.values()).forEach(instance => {
+        instance.resizeObserver.disconnect();
+        try { instance.chart.remove(); } catch {}
+      });
+      subChartsRef.current.clear();
+    };
+  }, []);
+
+  // ─── Sync time scales across all charts ───────────────────
+
+  useEffect(() => {
+    const mainChart = mainChartRef.current;
+    if (!mainChart) return;
+
+    const allCharts: IChartApi[] = [mainChart];
+    Array.from(subChartsRef.current.values()).forEach(instance => {
+      allCharts.push(instance.chart);
+    });
+
+    if (allCharts.length <= 1) return;
+
+    let isSyncingRange = false;
+
+    const unsubscribers: (() => void)[] = [];
+
+    // Sync visible logical range (scroll/zoom)
+    allCharts.forEach((sourceChart, sourceIdx) => {
+      const handler = () => {
+        if (isSyncingRange) return;
+        isSyncingRange = true;
+        const range = sourceChart.timeScale().getVisibleLogicalRange();
+        if (range) {
+          allCharts.forEach((targetChart, targetIdx) => {
+            if (targetIdx !== sourceIdx) {
+              targetChart.timeScale().setVisibleLogicalRange(range);
+            }
+          });
+        }
+        isSyncingRange = false;
+      };
+      sourceChart.timeScale().subscribeVisibleLogicalRangeChange(handler);
+      unsubscribers.push(() => {
+        try { sourceChart.timeScale().unsubscribeVisibleLogicalRangeChange(handler); } catch {}
+      });
+    });
+
+    return () => {
+      unsubscribers.forEach(fn => fn());
+    };
+  }, [activeSubchartKeys]);
+
+  // ─── Sync crosshair across all charts ─────────────────────
+
+  useEffect(() => {
+    const mainChart = mainChartRef.current;
+    if (!mainChart) return;
+
+    const allCharts: IChartApi[] = [mainChart];
+    Array.from(subChartsRef.current.values()).forEach(instance => {
+      allCharts.push(instance.chart);
+    });
+
+    if (allCharts.length <= 1) return;
+
+    const unsubscribers: (() => void)[] = [];
+
+    // Build a map: chart -> its primary series for setCrosshairPosition
+    const chartSeriesMap = new Map<IChartApi, any>();
+    // Main chart uses candle series
+    if (candleSeriesRef.current) {
+      chartSeriesMap.set(mainChart, candleSeriesRef.current);
+    }
+    Array.from(subChartsRef.current.values()).forEach(instance => {
+      if (instance.primarySeries) {
+        chartSeriesMap.set(instance.chart, instance.primarySeries);
+      }
+    });
+
+    // Helper: get data point from crosshair param for a given series
+    function getCrosshairDataPoint(series: any, param: any) {
+      if (!param.time) return null;
+      const dataPoint = param.seriesData?.get(series);
+      return dataPoint || null;
+    }
+
+    // Helper: sync crosshair to target chart
+    function syncCrosshair(targetChart: IChartApi, dataPoint: any) {
+      const targetSeries = chartSeriesMap.get(targetChart);
+      if (!targetSeries) {
+        targetChart.clearCrosshairPosition();
+        return;
+      }
+      if (dataPoint) {
+        // Use value from dataPoint, or NaN to just show vertical line
+        const value = dataPoint.value ?? dataPoint.close ?? NaN;
+        targetChart.setCrosshairPosition(value, dataPoint.time, targetSeries);
+      } else {
+        targetChart.clearCrosshairPosition();
+      }
+    }
+
+    allCharts.forEach((sourceChart, sourceIdx) => {
+      const sourceSeries = chartSeriesMap.get(sourceChart);
+
+      const handler = (param: any) => {
+        if (isSyncingCrosshairRef.current) return;
+        isSyncingCrosshairRef.current = true;
+
+        const dataPoint = sourceSeries ? getCrosshairDataPoint(sourceSeries, param) : null;
+
+        allCharts.forEach((targetChart, targetIdx) => {
+          if (targetIdx === sourceIdx) return;
+          syncCrosshair(targetChart, dataPoint);
+        });
+
+        isSyncingCrosshairRef.current = false;
+      };
+
+      sourceChart.subscribeCrosshairMove(handler);
+      unsubscribers.push(() => {
+        try { sourceChart.unsubscribeCrosshairMove(handler); } catch {}
+      });
+    });
+
+    return () => {
+      unsubscribers.forEach(fn => fn());
+    };
+  }, [activeSubchartKeys]);
 
   // ─── Update candle + volume data ──────────────────────────
 
@@ -456,17 +674,6 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
         }
         case 'SUPER': {
           const data = calcSUPER(candles, ind.params as any);
-          // Split into up/down segments for coloring
-          const upData: LineData[] = [];
-          const downData: LineData[] = [];
-          data.forEach(p => {
-            if (p.direction === 'up') {
-              upData.push({ time: p.time as Time, value: p.value });
-            } else {
-              downData.push({ time: p.time as Time, value: p.value });
-            }
-          });
-          // Render as single line with last color (simplified)
           const s = chart.addSeries(LineSeries, {
             color: '#26a69a',
             lineWidth: 2,
@@ -484,139 +691,143 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
     overlaySeriesRef.current = newSeries;
   }, [activeOverlays, candles]);
 
-  // ─── Render sub-chart indicators ──────────────────────────
+  // ─── Render sub-chart indicator data ──────────────────────
 
   useEffect(() => {
-    const chart = subChartRef.current;
-    if (!chart || candles.length === 0 || activeSubchart.length === 0) return;
+    if (candles.length === 0 || activeSubcharts.length === 0) return;
 
-    // Remove old sub series
-    subSeriesRef.current.forEach(s => {
-      try { chart.removeSeries(s); } catch {}
-    });
-    subSeriesRef.current = [];
+    for (const ind of activeSubcharts) {
+      const instance = subChartsRef.current.get(ind.key);
+      if (!instance) continue;
 
-    const newSeries: (ISeriesApi<'Line'> | ISeriesApi<'Histogram'>)[] = [];
+      const chart = instance.chart;
 
-    // Only render the first active subchart indicator (one at a time)
-    const ind = activeSubchart[0];
+      // Remove old series
+      instance.series.forEach(s => {
+        try { chart.removeSeries(s); } catch {}
+      });
+      instance.series = [];
 
-    switch (ind.key) {
-      case 'VOL': {
-        const { bars, ma } = calcVOL(candles, ind.params as any);
-        const histS = chart.addSeries(HistogramSeries, {
-          priceFormat: { type: 'volume' },
-          priceScaleId: 'vol',
-        });
-        histS.setData(bars.map(b => ({ time: b.time as Time, value: b.value, color: b.color })));
-        newSeries.push(histS);
-        const maS = chart.addSeries(LineSeries, {
-          color: '#E6A817',
-          lineWidth: 1,
-          priceLineVisible: false,
-          lastValueVisible: false,
-          priceScaleId: 'vol',
-        });
-        maS.setData(ma.map(p => ({ time: p.time as Time, value: p.value })));
-        newSeries.push(maS);
-        break;
+      const newSeries: (ISeriesApi<'Line'> | ISeriesApi<'Histogram'>)[] = [];
+
+      switch (ind.key) {
+        case 'VOL': {
+          const { bars, ma } = calcVOL(candles, ind.params as any);
+          const histS = chart.addSeries(HistogramSeries, {
+            priceFormat: { type: 'volume' },
+            priceScaleId: 'vol',
+          });
+          histS.setData(bars.map(b => ({ time: b.time as Time, value: b.value, color: b.color })));
+          newSeries.push(histS);
+          const maS = chart.addSeries(LineSeries, {
+            color: '#E6A817',
+            lineWidth: 1,
+            priceLineVisible: false,
+            lastValueVisible: false,
+            priceScaleId: 'vol',
+          });
+          maS.setData(ma.map(p => ({ time: p.time as Time, value: p.value })));
+          newSeries.push(maS);
+          break;
+        }
+        case 'MACD': {
+          const { macd, signal, histogram } = calcMACD(candles, ind.params as any);
+          const histS = chart.addSeries(HistogramSeries, {
+            priceScaleId: 'macd',
+            priceFormat: { type: 'price', precision: 4, minMove: 0.0001 },
+          });
+          histS.setData(histogram.map(h => ({ time: h.time as Time, value: h.value, color: h.color })));
+          newSeries.push(histS);
+          const macdS = chart.addSeries(LineSeries, {
+            color: '#2196F3',
+            lineWidth: 1,
+            priceLineVisible: false,
+            lastValueVisible: false,
+            priceScaleId: 'macd',
+          });
+          macdS.setData(macd.map(p => ({ time: p.time as Time, value: p.value })));
+          newSeries.push(macdS);
+          const sigS = chart.addSeries(LineSeries, {
+            color: '#FF9800',
+            lineWidth: 1,
+            priceLineVisible: false,
+            lastValueVisible: false,
+            priceScaleId: 'macd',
+          });
+          sigS.setData(signal.map(p => ({ time: p.time as Time, value: p.value })));
+          newSeries.push(sigS);
+          break;
+        }
+        case 'RSI': {
+          const data = calcRSI(candles, ind.params as any);
+          const s = chart.addSeries(LineSeries, {
+            color: '#E040FB',
+            lineWidth: 1,
+            priceLineVisible: false,
+            lastValueVisible: true,
+          });
+          s.setData(data.map(p => ({ time: p.time as Time, value: p.value })));
+          newSeries.push(s);
+          s.createPriceLine({ price: 70, color: 'rgba(239,83,80,0.3)', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' });
+          s.createPriceLine({ price: 30, color: 'rgba(38,166,154,0.3)', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' });
+          break;
+        }
+        case 'KDJ': {
+          const { k, d, j } = calcKDJ(candles, ind.params as any);
+          const kS = chart.addSeries(LineSeries, { color: '#2196F3', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+          kS.setData(k.map(p => ({ time: p.time as Time, value: p.value })));
+          newSeries.push(kS);
+          const dS = chart.addSeries(LineSeries, { color: '#FF9800', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+          dS.setData(d.map(p => ({ time: p.time as Time, value: p.value })));
+          newSeries.push(dS);
+          const jS = chart.addSeries(LineSeries, { color: '#E040FB', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+          jS.setData(j.map(p => ({ time: p.time as Time, value: p.value })));
+          newSeries.push(jS);
+          break;
+        }
+        case 'OBV': {
+          const { obv, ma } = calcOBV(candles, ind.params as any);
+          const obvS = chart.addSeries(LineSeries, {
+            color: '#26a69a',
+            lineWidth: 1,
+            priceLineVisible: false,
+            lastValueVisible: false,
+            priceScaleId: 'obv',
+          });
+          obvS.setData(obv.map(p => ({ time: p.time as Time, value: p.value })));
+          newSeries.push(obvS);
+          const maS = chart.addSeries(LineSeries, {
+            color: '#FF9800',
+            lineWidth: 1,
+            priceLineVisible: false,
+            lastValueVisible: false,
+            priceScaleId: 'obv',
+          });
+          maS.setData(ma.map(p => ({ time: p.time as Time, value: p.value })));
+          newSeries.push(maS);
+          break;
+        }
+        case 'WR': {
+          const data = calcWR(candles, ind.params as any);
+          const s = chart.addSeries(LineSeries, {
+            color: '#00BCD4',
+            lineWidth: 1,
+            priceLineVisible: false,
+            lastValueVisible: true,
+          });
+          s.setData(data.map(p => ({ time: p.time as Time, value: p.value })));
+          newSeries.push(s);
+          s.createPriceLine({ price: -20, color: 'rgba(239,83,80,0.3)', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' });
+          s.createPriceLine({ price: -80, color: 'rgba(38,166,154,0.3)', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' });
+          break;
+        }
       }
-      case 'MACD': {
-        const { macd, signal, histogram } = calcMACD(candles, ind.params as any);
-        const histS = chart.addSeries(HistogramSeries, {
-          priceScaleId: 'macd',
-          priceFormat: { type: 'price', precision: 4, minMove: 0.0001 },
-        });
-        histS.setData(histogram.map(h => ({ time: h.time as Time, value: h.value, color: h.color })));
-        newSeries.push(histS);
-        const macdS = chart.addSeries(LineSeries, {
-          color: '#2196F3',
-          lineWidth: 1,
-          priceLineVisible: false,
-          lastValueVisible: false,
-          priceScaleId: 'macd',
-        });
-        macdS.setData(macd.map(p => ({ time: p.time as Time, value: p.value })));
-        newSeries.push(macdS);
-        const sigS = chart.addSeries(LineSeries, {
-          color: '#FF9800',
-          lineWidth: 1,
-          priceLineVisible: false,
-          lastValueVisible: false,
-          priceScaleId: 'macd',
-        });
-        sigS.setData(signal.map(p => ({ time: p.time as Time, value: p.value })));
-        newSeries.push(sigS);
-        break;
-      }
-      case 'RSI': {
-        const data = calcRSI(candles, ind.params as any);
-        const s = chart.addSeries(LineSeries, {
-          color: '#E040FB',
-          lineWidth: 1,
-          priceLineVisible: false,
-          lastValueVisible: true,
-        });
-        s.setData(data.map(p => ({ time: p.time as Time, value: p.value })));
-        newSeries.push(s);
-        // Add reference lines at 30 and 70
-        s.createPriceLine({ price: 70, color: 'rgba(239,83,80,0.3)', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' });
-        s.createPriceLine({ price: 30, color: 'rgba(38,166,154,0.3)', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' });
-        break;
-      }
-      case 'KDJ': {
-        const { k, d, j } = calcKDJ(candles, ind.params as any);
-        const kS = chart.addSeries(LineSeries, { color: '#2196F3', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
-        kS.setData(k.map(p => ({ time: p.time as Time, value: p.value })));
-        newSeries.push(kS);
-        const dS = chart.addSeries(LineSeries, { color: '#FF9800', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
-        dS.setData(d.map(p => ({ time: p.time as Time, value: p.value })));
-        newSeries.push(dS);
-        const jS = chart.addSeries(LineSeries, { color: '#E040FB', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
-        jS.setData(j.map(p => ({ time: p.time as Time, value: p.value })));
-        newSeries.push(jS);
-        break;
-      }
-      case 'OBV': {
-        const { obv, ma } = calcOBV(candles, ind.params as any);
-        const obvS = chart.addSeries(LineSeries, {
-          color: '#26a69a',
-          lineWidth: 1,
-          priceLineVisible: false,
-          lastValueVisible: false,
-          priceScaleId: 'obv',
-        });
-        obvS.setData(obv.map(p => ({ time: p.time as Time, value: p.value })));
-        newSeries.push(obvS);
-        const maS = chart.addSeries(LineSeries, {
-          color: '#FF9800',
-          lineWidth: 1,
-          priceLineVisible: false,
-          lastValueVisible: false,
-          priceScaleId: 'obv',
-        });
-        maS.setData(ma.map(p => ({ time: p.time as Time, value: p.value })));
-        newSeries.push(maS);
-        break;
-      }
-      case 'WR': {
-        const data = calcWR(candles, ind.params as any);
-        const s = chart.addSeries(LineSeries, {
-          color: '#00BCD4',
-          lineWidth: 1,
-          priceLineVisible: false,
-          lastValueVisible: true,
-        });
-        s.setData(data.map(p => ({ time: p.time as Time, value: p.value })));
-        newSeries.push(s);
-        s.createPriceLine({ price: -20, color: 'rgba(239,83,80,0.3)', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' });
-        s.createPriceLine({ price: -80, color: 'rgba(38,166,154,0.3)', lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' });
-        break;
-      }
+
+      instance.series = newSeries;
+      // Set the first series as primary for crosshair sync
+      instance.primarySeries = newSeries.length > 0 ? newSeries[0] : null;
     }
-
-    subSeriesRef.current = newSeries;
-  }, [activeSubchart, candles, subChartReady]);
+  }, [activeSubcharts, candles, activeSubchartKeys]);
 
   // ─── Price lines for position (entry, TP, SL) ────────────
 
@@ -775,20 +986,6 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
     return labels;
   }, [activeOverlays]);
 
-  const subchartLabel = useMemo(() => {
-    if (activeSubchart.length === 0) return '';
-    const ind = activeSubchart[0];
-    switch (ind.key) {
-      case 'VOL': return 'VOL';
-      case 'MACD': { const p = ind.params as any; return `MACD(${p.fast},${p.slow},${p.signal})`; }
-      case 'RSI': { const p = ind.params as any; return `RSI(${p.period})`; }
-      case 'KDJ': { const p = ind.params as any; return `KDJ(${p.kPeriod},${p.dPeriod},${p.jSmooth})`; }
-      case 'OBV': return 'OBV';
-      case 'WR': { const p = ind.params as any; return `WR(${p.period})`; }
-      default: return '';
-    }
-  }, [activeSubchart]);
-
   return (
     <div className="flex flex-col h-full relative">
       {/* Timeframe selector + indicator button */}
@@ -919,15 +1116,8 @@ export default function CandlestickChart({ klines, loading, timeframe, onTimefra
         )}
       </div>
 
-      {/* Sub-chart area */}
-      {hasSubchart && (
-        <>
-          <div className="flex items-center px-3 py-0.5 border-t border-[rgba(255,255,255,0.06)] bg-[#0B0E11] shrink-0">
-            <span className="text-[10px] font-mono text-[#848E9C]">{subchartLabel}</span>
-          </div>
-          <div ref={subContainerRef} className="shrink-0" style={{ height: '25%', minHeight: '120px' }} />
-        </>
-      )}
+      {/* Sub-charts wrapper — dynamically managed by useEffect */}
+      <div ref={subContainersWrapperRef} className="flex flex-col shrink-0" />
 
       {/* Indicator Settings Panel */}
       {showSettings && (

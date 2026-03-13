@@ -151,3 +151,8 @@
 
 ## Sub-chart Indicator Display Fix
 - [x] Fix sub-chart indicators (VOL, RSI, MACD, etc.) not displaying — removed duplicate ResizeObserver, used requestAnimationFrame for initial sizing
+
+## Multi-Subchart & Crosshair Sync
+- [x] Support multiple simultaneous subchart indicators (VOL + RSI + MACD etc.)
+- [x] Auto-distribute subchart heights based on number of active subcharts (1=25%, 2=17%, 3=14%, 4=12%)
+- [x] Synchronize crosshair (vertical line) between main chart and all subcharts via setCrosshairPosition API
