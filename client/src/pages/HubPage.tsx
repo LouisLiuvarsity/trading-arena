@@ -1,44 +1,100 @@
+import type { ReactNode } from "react";
 import { Link } from "wouter";
+import type {
+  CompetitionStatus,
+  CompetitionSummary,
+  CompetitionType,
+  HubData,
+  RegistrationStatus,
+} from "@shared/competitionTypes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/lib/i18n";
 import { useHubData, useRegister } from "@/hooks/useCompetitionData";
 import { RANK_TIERS, getRankTier } from "@/lib/types";
 import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselPrevious,
-  CarouselNext,
-} from "@/components/ui/carousel";
-import {
-  Loader2,
-  TrendingUp,
+  AlertCircle,
+  ArrowUpRight,
+  Calendar,
   ChevronRight,
   Clock,
-  AlertCircle,
-  Calendar,
-  Users,
-  Trophy,
   Coins,
+  Loader2,
+  Sparkles,
+  TrendingUp,
+  Trophy,
+  Users,
 } from "lucide-react";
 
-const STATUS_BADGE_COLORS: Record<string, string> = {
-  pending: "#F0B90B",
-  accepted: "#0ECB81",
-  rejected: "#F6465D",
-  withdrawn: "#5E6673",
-  waitlisted: "#848E9C",
+type Translator = (key: string, vars?: Record<string, string | number>) => string;
+type ActiveCompetition = NonNullable<HubData["activeCompetition"]>;
+
+type JoinedCompetitionCardData = {
+  competitionId: number;
+  title: string;
+  competitionType: CompetitionType;
+  registrationStatus: RegistrationStatus;
+  competitionStatus: CompetitionStatus | null;
+  startTime: number;
+  appliedAt: number;
+  slug: string | null;
+  prizePool: number | null;
+  symbol: string | null;
+  registeredCount: number | null;
+  maxParticipants: number | null;
+  registrationCloseAt: number | null;
 };
 
-const STATUS_STYLE: Record<string, { color: string; bg: string; label: string }> = {
-  live: { color: "#0ECB81", bg: "rgba(14,203,129,0.15)", label: "LIVE" },
-  registration_open: { color: "#F0B90B", bg: "rgba(240,185,11,0.15)", label: "报名中" },
-  announced: { color: "#F0B90B", bg: "rgba(240,185,11,0.15)", label: "已公布" },
-  registration_closed: { color: "#848E9C", bg: "rgba(132,142,156,0.15)", label: "报名截止" },
-  completed: { color: "#5E6673", bg: "rgba(94,102,115,0.15)", label: "已结束" },
-  ended_early: { color: "#FF6B35", bg: "rgba(255,107,53,0.15)", label: "提前结束" },
-  settling: { color: "#848E9C", bg: "rgba(132,142,156,0.15)", label: "结算中" },
-  draft: { color: "#848E9C", bg: "rgba(132,142,156,0.15)", label: "草稿" },
+const SECTION_CLASS =
+  "rounded-[28px] border border-white/[0.08] bg-[#141826] shadow-[0_18px_60px_rgba(0,0,0,0.28)]";
+
+const COMPETITION_STATUS_STYLE: Record<CompetitionStatus, { color: string; bg: string }> = {
+  draft: { color: "#848E9C", bg: "rgba(132,142,156,0.14)" },
+  announced: { color: "#7AA2F7", bg: "rgba(122,162,247,0.16)" },
+  registration_open: { color: "#F0B90B", bg: "rgba(240,185,11,0.16)" },
+  registration_closed: { color: "#848E9C", bg: "rgba(132,142,156,0.14)" },
+  live: { color: "#0ECB81", bg: "rgba(14,203,129,0.16)" },
+  settling: { color: "#B8C1D1", bg: "rgba(184,193,209,0.14)" },
+  completed: { color: "#5E6673", bg: "rgba(94,102,115,0.14)" },
+  ended_early: { color: "#FF6B35", bg: "rgba(255,107,53,0.14)" },
+  cancelled: { color: "#5E6673", bg: "rgba(94,102,115,0.14)" },
+};
+
+const REGISTRATION_STATUS_STYLE: Record<RegistrationStatus, { color: string; bg: string }> = {
+  pending: { color: "#F0B90B", bg: "rgba(240,185,11,0.16)" },
+  accepted: { color: "#0ECB81", bg: "rgba(14,203,129,0.16)" },
+  rejected: { color: "#F6465D", bg: "rgba(246,70,93,0.14)" },
+  waitlisted: { color: "#7AA2F7", bg: "rgba(122,162,247,0.16)" },
+  withdrawn: { color: "#848E9C", bg: "rgba(132,142,156,0.14)" },
+};
+
+const TYPE_STYLE: Record<
+  CompetitionType,
+  {
+    badgeClass: string;
+    heroGradient: string;
+    cardGradient: string;
+  }
+> = {
+  regular: {
+    badgeClass: "border border-[#0ECB81]/20 bg-[#0ECB81]/10 text-[#0ECB81]",
+    heroGradient: "from-[#0ECB81]/18 via-transparent to-transparent",
+    cardGradient: "from-[#0ECB81]/12 via-transparent to-transparent",
+  },
+  grand_final: {
+    badgeClass: "border border-[#F0B90B]/20 bg-[#F0B90B]/10 text-[#F0B90B]",
+    heroGradient: "from-[#F0B90B]/18 via-[#FF6B35]/8 to-transparent",
+    cardGradient: "from-[#F0B90B]/12 via-[#FF6B35]/6 to-transparent",
+  },
+  special: {
+    badgeClass: "border border-[#8B5CF6]/20 bg-[#8B5CF6]/10 text-[#B59CFF]",
+    heroGradient: "from-[#8B5CF6]/16 via-[#5B7CFA]/8 to-transparent",
+    cardGradient: "from-[#8B5CF6]/10 via-[#5B7CFA]/6 to-transparent",
+  },
+  practice: {
+    badgeClass: "border border-white/10 bg-white/[0.04] text-[#C0C7D4]",
+    heroGradient: "from-white/[0.08] via-transparent to-transparent",
+    cardGradient: "from-white/[0.05] via-transparent to-transparent",
+  },
 };
 
 const TIER_COLORS: Record<string, string> = {
@@ -50,135 +106,583 @@ const TIER_COLORS: Record<string, string> = {
   diamond: "#B9F2FF",
 };
 
-const TYPE_GRADIENTS: Record<string, string> = {
-  grand_final: "from-[#F0B90B]/30 via-[#FF6B35]/15 to-[#1C2030]",
-  special: "from-[#8B5CF6]/30 via-[#6366F1]/15 to-[#1C2030]",
-  regular: "from-[#0ECB81]/20 via-[#0ECB81]/8 to-[#1C2030]",
-  practice: "from-[#848E9C]/20 via-[#848E9C]/8 to-[#1C2030]",
+type HubPageCopy = {
+  joinedSection: string;
+  joinedSectionHint: string;
+  recommendedSection: string;
+  recommendedSectionHint: string;
+  noJoinedComps: string;
+  noJoinedCompsHint: string;
+  exploreCompetitions: string;
+  noOpenCompetitions: string;
+  noOpenCompetitionsHint: string;
+  seasonHint: string;
+  startTimeLabel: string;
+  endsIn: string;
+  startsIn: string;
+  participantsLabel: string;
+  prizePoolLabel: string;
+  deadlineLabel: string;
+  symbolLabel: string;
+  appliedAtLabel: string;
+  viewCompetition: string;
+  toNextTier: string;
+  competitionTypes: Record<CompetitionType, string>;
 };
 
-function formatTime(ts: number): string {
-  return new Date(ts).toLocaleString("zh-CN", {
+const HUB_PAGE_COPY: Record<"zh" | "en", HubPageCopy> = {
+  zh: {
+    joinedSection: "我正在参与的比赛",
+    joinedSectionHint: "进行中和已锁定席位的比赛会优先显示在这里",
+    recommendedSection: "其他开放中的比赛",
+    recommendedSectionHint: "集中推荐当前还能报名的比赛，方便你快速补位",
+    noJoinedComps: "你当前还没有参与中的比赛",
+    noJoinedCompsHint: "先报名一场比赛，首页会在这里展示你的进行中和待开赛赛事。",
+    exploreCompetitions: "去看比赛",
+    noOpenCompetitions: "当前没有开放报名的比赛",
+    noOpenCompetitionsHint: "可以先查看赛程，或者等待下一场比赛开放报名。",
+    seasonHint: "本月积分和总决赛资格进度",
+    startTimeLabel: "开赛时间",
+    endsIn: "距结束",
+    startsIn: "距开赛",
+    participantsLabel: "参与人数",
+    prizePoolLabel: "总奖池",
+    deadlineLabel: "距截止",
+    symbolLabel: "交易币种",
+    appliedAtLabel: "报名时间",
+    viewCompetition: "查看详情",
+    toNextTier: "距离下一段位",
+    competitionTypes: {
+      regular: "常规赛",
+      grand_final: "总决赛",
+      special: "特别赛",
+      practice: "练习赛",
+    },
+  },
+  en: {
+    joinedSection: "Competitions You're In",
+    joinedSectionHint: "Your live and locked-in competitions are surfaced here first.",
+    recommendedSection: "Other Open Competitions",
+    recommendedSectionHint: "A focused list of competitions you can still join right now.",
+    noJoinedComps: "You are not in any active competitions yet",
+    noJoinedCompsHint:
+      "Join a competition first and this area will show your live and upcoming matches.",
+    exploreCompetitions: "Browse Competitions",
+    noOpenCompetitions: "No competitions are open for registration",
+    noOpenCompetitionsHint:
+      "Check the schedule page or wait for the next registration window to open.",
+    seasonHint: "Monthly points progress and Grand Final qualification status",
+    startTimeLabel: "Start time",
+    endsIn: "Ends in",
+    startsIn: "Starts in",
+    participantsLabel: "Participants",
+    prizePoolLabel: "Prize pool",
+    deadlineLabel: "Registration closes in",
+    symbolLabel: "Trading pair",
+    appliedAtLabel: "Applied at",
+    viewCompetition: "View details",
+    toNextTier: "Points to next tier",
+    competitionTypes: {
+      regular: "Regular",
+      grand_final: "Grand Final",
+      special: "Special",
+      practice: "Practice",
+    },
+  },
+};
+
+function formatTime(ts: number, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
     month: "numeric",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  });
+  }).format(ts);
 }
 
-/** Competition card: image on top, text on bottom */
-function CompetitionCard({
-  comp,
+function formatCompactNumber(value: number, locale: string, digits = 0): string {
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits: digits,
+    minimumFractionDigits: digits,
+  }).format(value);
+}
+
+function formatDuration(totalSeconds: number): string {
+  if (totalSeconds <= 0) return "0m";
+
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${Math.max(1, minutes)}m`;
+}
+
+function formatCountdown(targetTs: number | null): string {
+  if (!targetTs) return "--";
+  const seconds = Math.max(0, Math.floor((targetTs - Date.now()) / 1000));
+  return formatDuration(seconds);
+}
+
+function getCompetitionTypeLabel(type: CompetitionType, copy: HubPageCopy): string {
+  return copy.competitionTypes[type] ?? copy.competitionTypes.regular;
+}
+
+function getCompetitionHref(slug: string | null | undefined): string {
+  return slug ? `/competitions/${slug}` : "/competitions";
+}
+
+function renderBadge(
+  label: string,
+  colors: { color: string; bg: string },
+  withPulse = false,
+) {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+      style={{ color: colors.color, backgroundColor: colors.bg }}
+    >
+      {withPulse && <span className="h-2 w-2 rounded-full bg-current animate-pulse" />}
+      {label}
+    </span>
+  );
+}
+
+function SectionHeader({
+  icon,
+  title,
+  description,
+  count,
+  linkHref,
+  linkLabel,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  count?: number;
+  linkHref?: string;
+  linkLabel?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2 text-[#F0B90B]">
+          {icon}
+          <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#F0B90B]/80">
+            Hub
+          </span>
+        </div>
+        <div>
+          <h2 className="text-xl font-display font-bold text-white">{title}</h2>
+          <p className="text-sm text-[#8D97A8]">{description}</p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        {typeof count === "number" && (
+          <span className="inline-flex h-9 min-w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] px-3 text-sm font-semibold text-[#DCE2EB]">
+            {count}
+          </span>
+        )}
+        {linkHref && linkLabel && (
+          <Link
+            href={linkHref}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-[#AAB4C3] transition-colors hover:text-white"
+          >
+            {linkLabel}
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function InfoTile({
+  label,
+  value,
+  toneClass = "text-white",
+}: {
+  label: string;
+  value: string;
+  toneClass?: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/[0.06] bg-black/10 px-4 py-3">
+      <p className="text-[11px] text-[#778296]">{label}</p>
+      <p className={`mt-1 text-lg font-display font-bold ${toneClass}`}>{value}</p>
+    </div>
+  );
+}
+
+function MiniInfoChip({ icon, text }: { icon: ReactNode; text: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.04] px-3 py-1.5 text-[11px] text-[#AEB7C6]">
+      {icon}
+      {text}
+    </span>
+  );
+}
+
+function LiveCompetitionHero({
+  competition,
   t,
+  copy,
+  locale,
+}: {
+  competition: ActiveCompetition;
+  t: Translator;
+  copy: HubPageCopy;
+  locale: string;
+}) {
+  return (
+    <div className="relative overflow-hidden rounded-[24px] border border-[#0ECB81]/18 bg-[#161D29] p-6">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,203,129,0.18),transparent_48%)]" />
+      <div className="relative space-y-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {renderBadge(t("common.compStatus.live"), COMPETITION_STATUS_STYLE.live, true)}
+              <span
+                className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                  TYPE_STYLE[competition.competitionType].badgeClass
+                }`}
+              >
+                {getCompetitionTypeLabel(competition.competitionType, copy)}
+              </span>
+            </div>
+
+            <div>
+              <h3 className="text-[28px] font-display font-bold text-white">
+                {competition.title}
+              </h3>
+              <p className="mt-2 text-sm text-[#97A2B2]">
+                {copy.startTimeLabel}: {formatTime(competition.startTime, locale)}
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/[0.08] bg-black/15 px-4 py-3 text-left lg:min-w-[150px] lg:text-right">
+            <p className="text-[11px] text-[#7D8899]">{copy.endsIn}</p>
+            <p className="mt-1 font-mono text-2xl font-bold text-white">
+              {formatDuration(competition.remainingSeconds)}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <InfoTile
+            label={t("hub.rank")}
+            value={
+              competition.myRank > 0
+                ? `#${competition.myRank} / ${competition.participantCount}`
+                : "--"
+            }
+          />
+          <InfoTile
+            label={t("hub.returnRate")}
+            value={`${competition.myPnlPct >= 0 ? "+" : ""}${competition.myPnlPct.toFixed(2)}%`}
+            toneClass={competition.myPnlPct >= 0 ? "text-[#0ECB81]" : "text-[#F6465D]"}
+          />
+          <InfoTile
+            label={copy.participantsLabel}
+            value={formatCompactNumber(competition.participantCount, locale)}
+          />
+          <InfoTile
+            label={copy.prizePoolLabel}
+            value={`${formatCompactNumber(competition.prizePool, locale)} USDT`}
+            toneClass="text-[#F0B90B]"
+          />
+        </div>
+
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap gap-2">
+            <MiniInfoChip
+              icon={<Calendar className="h-3.5 w-3.5" />}
+              text={`${copy.startTimeLabel} ${formatTime(competition.startTime, locale)}`}
+            />
+            <MiniInfoChip
+              icon={<Trophy className="h-3.5 w-3.5" />}
+              text={getCompetitionTypeLabel(competition.competitionType, copy)}
+            />
+          </div>
+
+          <Link
+            href={`/arena/${competition.id}`}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#0ECB81] px-5 py-3 text-sm font-semibold text-[#07120C] transition-colors hover:bg-[#0ECB81]/90"
+          >
+            {t("hub.enterArena")}
+            <ChevronRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RegisteredCompetitionHero({
+  competition,
+  t,
+  copy,
+  locale,
+}: {
+  competition: JoinedCompetitionCardData;
+  t: Translator;
+  copy: HubPageCopy;
+  locale: string;
+}) {
+  const typeStyle = TYPE_STYLE[competition.competitionType];
+  const registrationStyle = REGISTRATION_STATUS_STYLE[competition.registrationStatus];
+  const competitionStyle =
+    COMPETITION_STATUS_STYLE[competition.competitionStatus ?? "announced"];
+  const countdownTarget = competition.registrationCloseAt ?? competition.startTime;
+
+  return (
+    <div className="relative overflow-hidden rounded-[24px] border border-white/[0.08] bg-[#161B29] p-6">
+      <div className={`absolute inset-0 bg-gradient-to-br ${typeStyle.heroGradient}`} />
+      <div className="relative space-y-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {renderBadge(
+                t(`common.status.${competition.registrationStatus}`),
+                registrationStyle,
+              )}
+              {competition.competitionStatus &&
+                renderBadge(
+                  t(`common.compStatus.${competition.competitionStatus}`),
+                  competitionStyle,
+                )}
+              <span
+                className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${typeStyle.badgeClass}`}
+              >
+                {getCompetitionTypeLabel(competition.competitionType, copy)}
+              </span>
+            </div>
+
+            <div>
+              <h3 className="text-[28px] font-display font-bold text-white">
+                {competition.title}
+              </h3>
+              <p className="mt-2 text-sm text-[#97A2B2]">
+                {copy.startTimeLabel}: {formatTime(competition.startTime, locale)}
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/[0.08] bg-black/15 px-4 py-3 text-left lg:min-w-[150px] lg:text-right">
+            <p className="text-[11px] text-[#7D8899]">{copy.startsIn}</p>
+            <p className="mt-1 font-mono text-2xl font-bold text-white">
+              {formatCountdown(competition.startTime)}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <InfoTile
+            label={copy.startTimeLabel}
+            value={formatTime(competition.startTime, locale)}
+          />
+          <InfoTile
+            label={copy.deadlineLabel}
+            value={formatCountdown(countdownTarget)}
+          />
+          <InfoTile
+            label={copy.symbolLabel}
+            value={competition.symbol ?? "--"}
+          />
+          <InfoTile
+            label={copy.prizePoolLabel}
+            value={
+              competition.prizePool
+                ? `${formatCompactNumber(competition.prizePool, locale)} USDT`
+                : "--"
+            }
+            toneClass="text-[#F0B90B]"
+          />
+        </div>
+
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap gap-2">
+            {competition.registeredCount !== null && competition.maxParticipants !== null && (
+              <MiniInfoChip
+                icon={<Users className="h-3.5 w-3.5" />}
+                text={`${competition.registeredCount}/${competition.maxParticipants}`}
+              />
+            )}
+            <MiniInfoChip
+              icon={<Clock className="h-3.5 w-3.5" />}
+              text={`${copy.appliedAtLabel} ${formatTime(competition.appliedAt, locale)}`}
+            />
+          </div>
+
+          <Link
+            href={getCompetitionHref(competition.slug)}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/[0.08]"
+          >
+            {copy.viewCompetition}
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function JoinedCompetitionListCard({
+  competition,
+  t,
+  copy,
+  locale,
+}: {
+  competition: JoinedCompetitionCardData;
+  t: Translator;
+  copy: HubPageCopy;
+  locale: string;
+}) {
+  const competitionStyle =
+    COMPETITION_STATUS_STYLE[competition.competitionStatus ?? "announced"];
+  const registrationStyle = REGISTRATION_STATUS_STYLE[competition.registrationStatus];
+  const typeStyle = TYPE_STYLE[competition.competitionType];
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[#171C2A] p-4">
+      <div className={`absolute inset-0 bg-gradient-to-br ${typeStyle.cardGradient}`} />
+      <div className="relative">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              {renderBadge(
+                t(`common.status.${competition.registrationStatus}`),
+                registrationStyle,
+              )}
+              {competition.competitionStatus &&
+                renderBadge(
+                  t(`common.compStatus.${competition.competitionStatus}`),
+                  competitionStyle,
+                )}
+            </div>
+            <h4 className="line-clamp-2 text-base font-display font-bold text-white">
+              {competition.title}
+            </h4>
+            <p className="mt-1 text-sm text-[#8E98A8]">
+              {formatTime(competition.startTime, locale)}
+            </p>
+          </div>
+
+          <Link
+            href={getCompetitionHref(competition.slug)}
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-[#B9C1D0] transition-colors hover:bg-white/[0.08] hover:text-white"
+            aria-label={copy.viewCompetition}
+          >
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <MiniInfoChip
+            icon={<Trophy className="h-3.5 w-3.5" />}
+            text={getCompetitionTypeLabel(competition.competitionType, copy)}
+          />
+          {competition.symbol && (
+            <MiniInfoChip
+              icon={<Coins className="h-3.5 w-3.5" />}
+              text={competition.symbol}
+            />
+          )}
+          <MiniInfoChip
+            icon={<Clock className="h-3.5 w-3.5" />}
+            text={`${copy.startsIn} ${formatCountdown(competition.startTime)}`}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RecommendationCard({
+  competition,
+  t,
+  copy,
+  locale,
   onRegister,
   registerPending,
 }: {
-  comp: any;
-  t: (key: string, vars?: Record<string, string | number>) => string;
+  competition: CompetitionSummary;
+  t: Translator;
+  copy: HubPageCopy;
+  locale: string;
   onRegister: (slug: string) => void;
   registerPending: boolean;
 }) {
-  const statusCfg = STATUS_STYLE[comp.status] ?? STATUS_STYLE.draft;
-  const gradient = TYPE_GRADIENTS[comp.competitionType] ?? TYPE_GRADIENTS.regular;
+  const typeStyle = TYPE_STYLE[competition.competitionType];
+  const closeCountdown = formatCountdown(competition.registrationCloseAt ?? competition.startTime);
 
   return (
-    <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl overflow-hidden hover:border-[rgba(255,255,255,0.15)] transition-colors">
-      {/* Cover image area */}
-      <div className="relative h-40 overflow-hidden">
-        {comp.coverImageUrl ? (
-          <img
-            src={comp.coverImageUrl}
-            alt={comp.title}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className={`w-full h-full bg-gradient-to-b ${gradient}`}>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Trophy className="w-10 h-10 text-white/10" />
-            </div>
-          </div>
-        )}
-        {/* Status badge overlay */}
-        <div className="absolute top-3 left-3">
-          <span
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-full backdrop-blur-sm"
-            style={{ backgroundColor: statusCfg.bg, color: statusCfg.color }}
-          >
-            {comp.status === "live" && <span className="w-2 h-2 rounded-full bg-current animate-pulse" />}
-            {statusCfg.label}
-          </span>
-        </div>
-        {/* Prize badge */}
-        {comp.prizePool > 0 && (
-          <div className="absolute top-3 right-3">
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-black/50 backdrop-blur-sm text-[#F0B90B] text-[11px] font-bold rounded-full">
-              <Coins className="w-3 h-3" />
-              {comp.prizePool}U
-            </span>
-          </div>
-        )}
-      </div>
+    <div className="relative overflow-hidden rounded-[24px] border border-white/[0.08] bg-[#161B29]">
+      {competition.coverImageUrl && (
+        <img
+          src={competition.coverImageUrl}
+          alt={competition.title}
+          className="absolute inset-y-0 right-0 hidden h-full w-[34%] object-cover opacity-[0.14] lg:block"
+        />
+      )}
+      <div className={`absolute inset-0 bg-gradient-to-r ${typeStyle.heroGradient}`} />
 
-      {/* Text content */}
-      <div className="p-4 space-y-3">
-        <h3 className="text-[#D1D4DC] text-sm font-display font-bold truncate">{comp.title}</h3>
-
-        {/* Description (if available) */}
-        {comp.description && (
-          <p className="text-[#848E9C] text-[11px] line-clamp-2">{comp.description}</p>
-        )}
-
-        {/* Info row */}
-        <div className="flex items-center gap-3 text-[11px] text-[#848E9C] flex-wrap">
-          <span className="flex items-center gap-1">
-            <Clock className="w-3 h-3" />
-            {formatTime(comp.startTime)}
-          </span>
-          <span className="flex items-center gap-1">
-            <Users className="w-3 h-3" />
-            {comp.registeredCount}/{comp.maxParticipants}
-          </span>
-          {comp.symbol && (
-            <span className="font-mono text-[#D1D4DC]">{comp.symbol}</span>
-          )}
-        </div>
-
-        {/* Registration status / Action */}
-        <div className="pt-1">
-          {comp.myRegistrationStatus ? (
+      <div className="relative flex flex-col gap-6 p-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
             <span
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold"
-              style={{
-                backgroundColor: `${STATUS_BADGE_COLORS[comp.myRegistrationStatus] ?? "#848E9C"}20`,
-                color: STATUS_BADGE_COLORS[comp.myRegistrationStatus] ?? "#848E9C",
-              }}
+              className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${typeStyle.badgeClass}`}
             >
-              {t("common.status." + comp.myRegistrationStatus)}
+              {getCompetitionTypeLabel(competition.competitionType, copy)}
             </span>
-          ) : comp.status === "registration_open" ? (
-            <button
-              onClick={() => onRegister(comp.slug)}
-              disabled={registerPending}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#F0B90B] text-[#0B0E11] text-[11px] font-bold rounded-lg hover:bg-[#F0B90B]/90 transition-colors disabled:opacity-50"
-            >
-              {registerPending && <Loader2 className="w-3 h-3 animate-spin" />}
-              {t("hub.signUp")} <ChevronRight className="w-3 h-3" />
-            </button>
-          ) : comp.status === "live" ? (
-            <Link
-              href={`/arena/${comp.id}`}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0ECB81] text-[#0B0E11] text-[11px] font-bold rounded-lg hover:bg-[#0ECB81]/90 transition-colors"
-            >
-              {t("hub.enterArena")} <ChevronRight className="w-3 h-3" />
-            </Link>
-          ) : (
-            <Link
-              href={`/competitions/${comp.slug}`}
-              className="inline-flex items-center gap-1 text-[11px] text-[#848E9C] hover:text-[#D1D4DC] transition-colors"
-            >
-              {t("comp.details")} <ChevronRight className="w-3 h-3" />
-            </Link>
-          )}
+            {renderBadge(
+              t("common.compStatus.registration_open"),
+              COMPETITION_STATUS_STYLE.registration_open,
+            )}
+          </div>
+
+          <div className="max-w-3xl">
+            <h3 className="text-2xl font-display font-bold text-white">{competition.title}</h3>
+            <p className="mt-2 text-sm text-[#94A0B1]">
+              {copy.startTimeLabel}: {formatTime(competition.startTime, locale)}
+            </p>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <InfoTile
+              label={copy.prizePoolLabel}
+              value={`${formatCompactNumber(competition.prizePool, locale)} USDT`}
+              toneClass="text-[#F0B90B]"
+            />
+            <InfoTile label={copy.symbolLabel} value={competition.symbol} />
+            <InfoTile
+              label={copy.participantsLabel}
+              value={`${competition.registeredCount}/${competition.maxParticipants}`}
+            />
+            <InfoTile label={copy.deadlineLabel} value={closeCountdown} />
+          </div>
+        </div>
+
+        <div className="flex w-full flex-col gap-3 lg:w-[180px]">
+          <button
+            onClick={() => onRegister(competition.slug)}
+            disabled={registerPending}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#F0B90B] px-5 py-3 text-sm font-semibold text-[#0B0E11] transition-colors hover:bg-[#F0B90B]/90 disabled:opacity-50"
+          >
+            {registerPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            {t("hub.registerNow")}
+          </button>
+
+          <Link
+            href={`/competitions/${competition.slug}`}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/[0.08]"
+          >
+            {copy.viewCompetition}
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
         </div>
       </div>
     </div>
@@ -187,195 +691,309 @@ function CompetitionCard({
 
 export default function HubPage() {
   const { username } = useAuth();
-  const { t } = useT();
+  const { lang, t } = useT();
   const { data: hub, isLoading: loading, error: queryError } = useHubData();
   const registerMutation = useRegister();
+  const locale = lang === "zh" ? "zh-CN" : "en-US";
+  const copy = HUB_PAGE_COPY[lang === "en" ? "en" : "zh"];
   const error = queryError ? (queryError as Error).message : null;
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <Loader2 className="w-6 h-6 text-[#F0B90B] animate-spin" />
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-[#F0B90B]" />
       </div>
     );
   }
 
   if (error || !hub) {
     return (
-      <div className="p-6 max-w-5xl mx-auto">
-        <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-8 text-center">
-          <AlertCircle className="w-8 h-8 text-[#F6465D] mx-auto mb-3" />
-          <p className="text-[#D1D4DC] text-sm">{error ?? t('common.loadFailed')}</p>
+      <div className="mx-auto max-w-5xl p-6">
+        <div className="rounded-2xl border border-white/[0.08] bg-[#1C2030] p-8 text-center">
+          <AlertCircle className="mx-auto mb-3 h-8 w-8 text-[#F6465D]" />
+          <p className="text-sm text-[#D1D4DC]">{error ?? t("common.loadFailed")}</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-[#F0B90B] text-[#0B0E11] text-xs font-bold rounded-lg hover:bg-[#F0B90B]/90 transition-colors"
+            className="mt-4 rounded-lg bg-[#F0B90B] px-4 py-2 text-xs font-bold text-[#0B0E11] transition-colors hover:bg-[#F0B90B]/90"
           >
-            {t('common.retry')}
+            {t("common.retry")}
           </button>
         </div>
       </div>
     );
   }
 
-  const { activeCompetition, upcomingCompetitions, season } = hub;
+  const { activeCompetition, myRegistrations, upcomingCompetitions, season } = hub;
+  const now = Date.now();
+  const upcomingMap = new Map<number, CompetitionSummary>(
+    upcomingCompetitions.map((competition) => [competition.id, competition]),
+  );
+
+  const joinedUpcoming = myRegistrations
+    .filter(
+      (registration) =>
+        registration.competitionId !== activeCompetition?.id && registration.startTime >= now,
+    )
+    .sort((a, b) => a.startTime - b.startTime)
+    .map((registration): JoinedCompetitionCardData => {
+      const summary = upcomingMap.get(registration.competitionId);
+
+      return {
+        competitionId: registration.competitionId,
+        title: registration.competitionTitle,
+        competitionType: registration.competitionType,
+        registrationStatus: registration.status,
+        competitionStatus: summary?.status ?? null,
+        startTime: registration.startTime,
+        appliedAt: registration.appliedAt,
+        slug: summary?.slug ?? null,
+        prizePool: summary?.prizePool ?? null,
+        symbol: summary?.symbol ?? null,
+        registeredCount: summary?.registeredCount ?? null,
+        maxParticipants: summary?.maxParticipants ?? null,
+        registrationCloseAt: summary?.registrationCloseAt ?? null,
+      };
+    });
+
+  const primaryJoined = activeCompetition ? null : joinedUpcoming[0] ?? null;
+  const additionalJoined = activeCompetition ? joinedUpcoming : joinedUpcoming.slice(1);
+  const joinedCount = (activeCompetition ? 1 : 0) + joinedUpcoming.length;
+  const joinedIds = new Set<number>([
+    ...myRegistrations.map((registration) => registration.competitionId),
+    ...(activeCompetition ? [activeCompetition.id] : []),
+  ]);
+
+  const recommendedCompetitions = upcomingCompetitions
+    .filter(
+      (competition) =>
+        competition.status === "registration_open" && !joinedIds.has(competition.id),
+    )
+    .slice(0, 4);
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-5">
-      {/* Header */}
-      <div className="mb-2">
-        <h1 className="text-xl font-display font-bold text-white">
-          {t('hub.welcome', { name: username })}
+    <div className="mx-auto max-w-6xl space-y-6 p-6">
+      <div className="mb-1">
+        <h1 className="text-3xl font-display font-bold text-white">
+          {t("hub.welcome", { name: username })}
         </h1>
-        <p className="text-[#848E9C] text-[11px] mt-1">{t('hub.subtitle')}</p>
+        <p className="mt-2 text-sm text-[#8F98A8]">{t("hub.subtitle")}</p>
       </div>
 
-      {/* Active Competition — always on top if live */}
-      {activeCompetition && (
-        <div className="bg-[#1C2030] border border-[#0ECB81]/30 rounded-xl p-6">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#0ECB81]/15 text-[#0ECB81] text-[11px] font-bold rounded-full">
-              <span className="w-2 h-2 rounded-full bg-[#0ECB81] animate-pulse" />
-              LIVE
-            </span>
-            <span className="text-[#D1D4DC] text-sm font-display font-bold">
-              {activeCompetition.title}
-            </span>
-          </div>
-          <div className="flex items-center gap-6 mb-4">
-            <div>
-              <p className="text-[10px] text-[#848E9C]">{t('hub.rank')}</p>
-              <p className="text-2xl font-mono font-bold text-white">
-                #{activeCompetition.myRank}
-                <span className="text-[11px] text-[#848E9C] ml-1">/ {activeCompetition.participantCount}</span>
-              </p>
-            </div>
-            <div>
-              <p className="text-[10px] text-[#848E9C]">{t('hub.returnRate')}</p>
-              <p className={`text-2xl font-mono font-bold ${activeCompetition.myPnlPct >= 0 ? "text-[#0ECB81]" : "text-[#F6465D]"}`}>
-                {activeCompetition.myPnlPct >= 0 ? "+" : ""}
-                {activeCompetition.myPnlPct.toFixed(2)}%
-              </p>
-            </div>
-            <div>
-              <p className="text-[10px] text-[#848E9C]">{t('hub.remaining')}</p>
-              <p className="text-lg font-mono text-white">
-                {(() => {
-                  const s = activeCompetition.remainingSeconds;
-                  if (s <= 0) return t('common.ended');
-                  const h = Math.floor(s / 3600);
-                  const m = Math.floor((s % 3600) / 60);
-                  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-                })()}
-              </p>
-            </div>
-          </div>
-          <Link
-            href={`/arena/${activeCompetition.id}`}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-[#0ECB81] text-[#0B0E11] text-sm font-bold rounded-lg hover:bg-[#0ECB81]/90 transition-colors"
-          >
-            {t('hub.enterArena')} <ChevronRight className="w-4 h-4" />
-          </Link>
-        </div>
-      )}
+      <section className={`${SECTION_CLASS} p-6 md:p-7`}>
+        <SectionHeader
+          icon={<Trophy className="h-4 w-4" />}
+          title={copy.joinedSection}
+          description={copy.joinedSectionHint}
+          count={joinedCount}
+          linkHref="/competitions"
+          linkLabel={t("hub.browseSchedule")}
+        />
 
-      {/* Competition Carousel — swipeable cards with image on top */}
-      {upcomingCompetitions.length > 0 ? (
-        <div>
-          <h2 className="text-sm font-display font-bold text-[#D1D4DC] mb-3 flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-[#F0B90B]" />
-            {t('hub.pushedComp')}
-            <span className="text-[10px] text-[#848E9C] font-normal ml-auto">
-              {upcomingCompetitions.length} {t('hub.upcoming')}
-            </span>
-          </h2>
-          <Carousel
-            opts={{ align: "start", loop: upcomingCompetitions.length > 2, dragFree: true }}
-            className="w-full"
-          >
-            <CarouselContent className="-ml-3">
-              {upcomingCompetitions.map((comp) => (
-                <CarouselItem key={comp.id} className="pl-3 basis-[85%] sm:basis-[48%] lg:basis-[33%]">
-                  <CompetitionCard
-                    comp={comp}
+        <div className="mt-6">
+          {activeCompetition || primaryJoined ? (
+            <div
+              className={
+                additionalJoined.length > 0
+                  ? "grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_360px]"
+                  : "space-y-4"
+              }
+            >
+              <div>
+                {activeCompetition ? (
+                  <LiveCompetitionHero
+                    competition={activeCompetition}
                     t={t}
-                    onRegister={(slug) => registerMutation.mutate(slug)}
-                    registerPending={registerMutation.isPending}
+                    copy={copy}
+                    locale={locale}
                   />
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            {upcomingCompetitions.length > 1 && (
-              <div className="flex items-center justify-center gap-3 mt-4">
-                <CarouselPrevious className="static translate-y-0 bg-[#1C2030] border-[rgba(255,255,255,0.08)] text-[#848E9C] hover:text-white hover:bg-white/10" />
-                <CarouselNext className="static translate-y-0 bg-[#1C2030] border-[rgba(255,255,255,0.08)] text-[#848E9C] hover:text-white hover:bg-white/10" />
+                ) : primaryJoined ? (
+                  <RegisteredCompetitionHero
+                    competition={primaryJoined}
+                    t={t}
+                    copy={copy}
+                    locale={locale}
+                  />
+                ) : null}
               </div>
-            )}
-          </Carousel>
-        </div>
-      ) : !activeCompetition ? (
-        <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-8 text-center">
-          <Calendar className="w-8 h-8 text-[#848E9C] mx-auto mb-3" />
-          <p className="text-[#D1D4DC] text-sm font-bold">{t('hub.noPushed')}</p>
-          <p className="text-[#848E9C] text-[11px] mt-1">{t('hub.noPushedHint')}</p>
-        </div>
-      ) : null}
 
-      {/* Season Progress */}
+              {additionalJoined.length > 0 && (
+                <div className="space-y-4">
+                  {additionalJoined.slice(0, 3).map((competition) => (
+                    <JoinedCompetitionListCard
+                      key={competition.competitionId}
+                      competition={competition}
+                      t={t}
+                      copy={copy}
+                      locale={locale}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-[24px] border border-dashed border-white/10 bg-[radial-gradient(circle_at_top,rgba(240,185,11,0.08),transparent_45%)] px-6 py-12 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-[#F0B90B]">
+                <Sparkles className="h-6 w-6" />
+              </div>
+              <h3 className="mt-4 text-xl font-display font-bold text-white">
+                {copy.noJoinedComps}
+              </h3>
+              <p className="mx-auto mt-2 max-w-xl text-sm text-[#8F98A8]">
+                {copy.noJoinedCompsHint}
+              </p>
+              <Link
+                href="/competitions"
+                className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-[#F0B90B] px-5 py-3 text-sm font-semibold text-[#0B0E11] transition-colors hover:bg-[#F0B90B]/90"
+              >
+                {copy.exploreCompetitions}
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className={`${SECTION_CLASS} p-6 md:p-7`}>
+        <SectionHeader
+          icon={<Sparkles className="h-4 w-4" />}
+          title={copy.recommendedSection}
+          description={copy.recommendedSectionHint}
+          count={recommendedCompetitions.length}
+          linkHref="/competitions"
+          linkLabel={t("hub.browseSchedule")}
+        />
+
+        <div className="mt-6 space-y-4">
+          {recommendedCompetitions.length > 0 ? (
+            recommendedCompetitions.map((competition) => (
+              <RecommendationCard
+                key={competition.id}
+                competition={competition}
+                t={t}
+                copy={copy}
+                locale={locale}
+                onRegister={(slug) => registerMutation.mutate(slug)}
+                registerPending={registerMutation.isPending}
+              />
+            ))
+          ) : (
+            <div className="rounded-[24px] border border-dashed border-white/10 bg-white/[0.02] px-6 py-12 text-center">
+              <Calendar className="mx-auto h-10 w-10 text-[#7E8897]" />
+              <h3 className="mt-4 text-xl font-display font-bold text-white">
+                {copy.noOpenCompetitions}
+              </h3>
+              <p className="mt-2 text-sm text-[#8F98A8]">{copy.noOpenCompetitionsHint}</p>
+            </div>
+          )}
+        </div>
+      </section>
+
       {season && (
-        <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-5">
-          <h2 className="text-sm font-display font-bold text-[#D1D4DC] mb-3 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-[#F0B90B]" />
-            {t('hub.seasonProgress')}
-            <span className="text-[10px] text-[#848E9C] font-normal ml-auto">{season.name}</span>
-          </h2>
-          <div className="mb-3">
+        <section className={`${SECTION_CLASS} p-6 md:p-7`}>
+          <SectionHeader
+            icon={<TrendingUp className="h-4 w-4" />}
+            title={t("hub.seasonProgress")}
+            description={copy.seasonHint}
+            linkHref="/leaderboard"
+            linkLabel={t("nav.leaderboard")}
+          />
+
+          <div className="mt-6 rounded-[24px] border border-white/[0.08] bg-[#171B29] p-5">
             {(() => {
               const currentTier = getRankTier(season.mySeasonPoints);
               const tierColor = TIER_COLORS[season.myRankTier] ?? "#5E6673";
-              const nextTierInfo = RANK_TIERS.find((t) => t.minPoints > season.mySeasonPoints);
+              const nextTierInfo = RANK_TIERS.find((tier) => tier.minPoints > season.mySeasonPoints);
               const progressMax = nextTierInfo ? nextTierInfo.minPoints : currentTier.maxPoints;
               const progressMin = currentTier.minPoints;
-              const progressPct = progressMax === Infinity
-                ? 100
-                : Math.min(100, ((season.mySeasonPoints - progressMin) / (progressMax - progressMin)) * 100);
+              const progressPct =
+                progressMax === Infinity
+                  ? 100
+                  : Math.min(
+                      100,
+                      ((season.mySeasonPoints - progressMin) / (progressMax - progressMin)) * 100,
+                    );
 
               return (
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-mono text-lg font-bold" style={{ color: tierColor }}>
-                      {season.mySeasonPoints}pts
-                    </span>
-                    <span className="text-[11px] font-bold" style={{ color: tierColor }}>
-                      {currentTier.icon} {currentTier.label}
-                    </span>
+                <div className="space-y-5">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span
+                          className="text-3xl font-display font-bold"
+                          style={{ color: tierColor }}
+                        >
+                          {formatCompactNumber(season.mySeasonPoints, locale)} pts
+                        </span>
+                        <span
+                          className="rounded-full px-3 py-1 text-[11px] font-semibold"
+                          style={{
+                            color: tierColor,
+                            backgroundColor: `${tierColor}20`,
+                          }}
+                        >
+                          {currentTier.icon} {currentTier.label}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm text-[#8E98A8]">{season.name}</p>
+                    </div>
+
                     {nextTierInfo && (
-                      <span className="text-[10px] text-[#848E9C] ml-auto">
-                        {nextTierInfo.label}({nextTierInfo.minPoints}pts)
-                      </span>
+                      <div className="rounded-2xl border border-white/[0.08] bg-black/10 px-4 py-3">
+                        <p className="text-[11px] text-[#7D8899]">{copy.toNextTier}</p>
+                        <p className="mt-1 text-sm font-semibold text-white">
+                          {nextTierInfo.label} · {formatCompactNumber(season.pointsToNextTier, locale)} pts
+                        </p>
+                      </div>
                     )}
                   </div>
-                  <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{ width: `${progressPct}%`, backgroundColor: tierColor }}
-                    />
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-[11px] text-[#7E8898]">
+                      <span>{t("hub.matchProgress", { done: season.matchesCompleted, total: season.matchesTotal })}</span>
+                      {nextTierInfo && (
+                        <span>
+                          {nextTierInfo.label} ({formatCompactNumber(nextTierInfo.minPoints, locale)} pts)
+                        </span>
+                      )}
+                    </div>
+                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/5">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{ width: `${progressPct}%`, backgroundColor: tierColor }}
+                      />
+                    </div>
                   </div>
+
+                  <div className="flex flex-wrap items-center gap-3 text-[13px]">
+                    <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-[#AEB6C5]">
+                      {t("hub.matchProgress", {
+                        done: season.matchesCompleted,
+                        total: season.matchesTotal,
+                      })}
+                    </span>
+                    <span
+                      className="rounded-full px-3 py-1.5 font-semibold"
+                      style={{
+                        color: season.grandFinalQualified ? "#0ECB81" : "#F6465D",
+                        backgroundColor: season.grandFinalQualified
+                          ? "rgba(14,203,129,0.12)"
+                          : "rgba(246,70,93,0.12)",
+                      }}
+                    >
+                      {season.grandFinalQualified
+                        ? t("hub.gfQualified")
+                        : t("hub.gfNotQualified", { pts: season.grandFinalLine })}
+                    </span>
+                  </div>
+
+                  <p className="border-t border-white/[0.04] pt-4 text-[11px] text-[#798395]">
+                    {t("hub.prizeEligibility")}
+                  </p>
                 </div>
               );
             })()}
           </div>
-          <div className="flex flex-wrap items-center gap-3 text-[11px]">
-            <span className="text-[#848E9C]">
-              {t('hub.matchProgress', { done: season.matchesCompleted, total: season.matchesTotal })}
-            </span>
-            <span className={`font-bold ${season.grandFinalQualified ? "text-[#0ECB81]" : "text-[#F6465D]"}`}>
-              {season.grandFinalQualified ? t('hub.gfQualified') : t('hub.gfNotQualified', { pts: season.grandFinalLine })}
-            </span>
-          </div>
-          <p className="mt-3 text-[10px] text-[#848E9C]/70 border-t border-white/[0.04] pt-3">
-            {t('hub.prizeEligibility')}
-          </p>
-        </div>
+        </section>
       )}
     </div>
   );
