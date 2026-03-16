@@ -71,6 +71,13 @@
       "when": 1772794778593,
       "tag": "0009_real_madripoor",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1773645603421,
+      "tag": "0010_fine_valeria_richards",
+      "breakpoints": true
     }
   ]
 }
