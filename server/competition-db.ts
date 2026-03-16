@@ -8,6 +8,7 @@
 import { eq, and, desc, sql, lt, inArray } from "drizzle-orm";
 import {
   arenaAccounts,
+  agentProfiles,
   seasons,
   competitions,
   competitionRegistrations,
@@ -81,6 +82,7 @@ export async function createCompetition(
     description?: string;
     competitionNumber: number;
     competitionType?: string;
+    participantMode?: string;
     status?: string;
     maxParticipants?: number;
     minParticipants?: number;
@@ -269,16 +271,91 @@ export async function withdrawRegistration(
 export async function listRegistrations(
   competitionId: number,
   statusFilter?: string,
-): Promise<Array<typeof competitionRegistrations.$inferSelect>> {
+): Promise<Array<{
+  id: number;
+  competitionId: number;
+  arenaAccountId: number;
+  status: string;
+  appliedAt: number;
+  reviewedAt: number | null;
+  reviewedBy: number | null;
+  adminNote: string | null;
+  priority: number;
+  username: string;
+  seasonPoints: number;
+  institutionName: string | null;
+  country: string | null;
+  accountType: string;
+  ownerArenaAccountId: number | null;
+  ownerUsername: string | null;
+  agentName: string | null;
+}>> {
   const conditions = [eq(competitionRegistrations.competitionId, competitionId)];
   if (statusFilter) {
     conditions.push(eq(competitionRegistrations.status, statusFilter));
   }
-  return db
-    .select()
+  const rows = await db
+    .select({
+      id: competitionRegistrations.id,
+      competitionId: competitionRegistrations.competitionId,
+      arenaAccountId: competitionRegistrations.arenaAccountId,
+      status: competitionRegistrations.status,
+      appliedAt: competitionRegistrations.appliedAt,
+      reviewedAt: competitionRegistrations.reviewedAt,
+      reviewedBy: competitionRegistrations.reviewedBy,
+      adminNote: competitionRegistrations.adminNote,
+      priority: competitionRegistrations.priority,
+      username: arenaAccounts.username,
+      seasonPoints: arenaAccounts.seasonPoints,
+      accountType: arenaAccounts.accountType,
+      ownerArenaAccountId: arenaAccounts.ownerArenaAccountId,
+      institutionName: userProfiles.institutionName,
+      country: userProfiles.country,
+      agentName: agentProfiles.name,
+    })
     .from(competitionRegistrations)
+    .innerJoin(arenaAccounts, eq(arenaAccounts.id, competitionRegistrations.arenaAccountId))
+    .leftJoin(userProfiles, eq(userProfiles.arenaAccountId, competitionRegistrations.arenaAccountId))
+    .leftJoin(agentProfiles, eq(agentProfiles.arenaAccountId, competitionRegistrations.arenaAccountId))
     .where(and(...conditions))
     .orderBy(desc(competitionRegistrations.appliedAt));
+
+  const ownerIds = Array.from(new Set(
+    rows
+      .map((row) => row.ownerArenaAccountId)
+      .filter((id): id is number => typeof id === "number"),
+  ));
+
+  const ownerMap = new Map<number, string>();
+  if (ownerIds.length > 0) {
+    const owners = await db
+      .select({ id: arenaAccounts.id, username: arenaAccounts.username })
+      .from(arenaAccounts)
+      .where(inArray(arenaAccounts.id, ownerIds));
+    owners.forEach((owner) => ownerMap.set(owner.id, owner.username));
+  }
+
+  return rows.map((row) => ({
+    id: row.id,
+    competitionId: row.competitionId,
+    arenaAccountId: row.arenaAccountId,
+    status: row.status,
+    appliedAt: row.appliedAt,
+    reviewedAt: row.reviewedAt,
+    reviewedBy: row.reviewedBy,
+    adminNote: row.adminNote,
+    priority: row.priority,
+    username: row.username,
+    seasonPoints: row.seasonPoints,
+    institutionName: row.institutionName ?? null,
+    country: row.country ?? null,
+    accountType: row.accountType ?? "human",
+    ownerArenaAccountId: row.ownerArenaAccountId ?? null,
+    ownerUsername: row.ownerArenaAccountId
+      ? ownerMap.get(row.ownerArenaAccountId) ?? null
+      : null,
+    agentName: row.agentName ?? null,
+  }));
 }
 
 export async function countRegistrations(
@@ -314,14 +391,25 @@ export async function getAcceptedAccountIds(
 /** Get all registrations for a specific user account (across all competitions) */
 export async function getRegistrationsForAccount(
   arenaAccountId: number,
-): Promise<Array<{ competitionId: number; status: string; appliedAt: number }>> {
+): Promise<Array<{
+  competitionId: number;
+  competitionTitle: string;
+  participantMode: string;
+  status: string;
+  startTime: number;
+  appliedAt: number;
+}>> {
   const rows = await db
     .select({
       competitionId: competitionRegistrations.competitionId,
+      competitionTitle: competitions.title,
+      participantMode: competitions.participantMode,
       status: competitionRegistrations.status,
+      startTime: competitions.startTime,
       appliedAt: competitionRegistrations.appliedAt,
     })
     .from(competitionRegistrations)
+    .innerJoin(competitions, eq(competitions.id, competitionRegistrations.competitionId))
     .where(eq(competitionRegistrations.arenaAccountId, arenaAccountId))
     .orderBy(desc(competitionRegistrations.appliedAt));
   return rows;

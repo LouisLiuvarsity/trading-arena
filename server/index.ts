@@ -10,6 +10,7 @@ import { MarketService } from "./market";
 import * as dbHelpers from "./db";
 import { CompetitionEngine } from "./competition-engine";
 import { registerCompetitionRoutes } from "./competition-routes";
+import { registerAgentRoutes } from "./agent-routes";
 import { registerProfileRoutes } from "./profile-routes";
 import { registerAnalyticsRoutes } from "./analytics-routes";
 import { registerStatsRoutes } from "./stats-routes";
@@ -143,6 +144,7 @@ export async function registerArenaRoutes(app: Express) {
   app.use("/api/auth/", authLimiter);
   app.use("/api/arena/trade/", tradeLimiter);
   app.use("/api/trade/", tradeLimiter);
+  app.use("/api/agent/trade/", tradeLimiter);
   app.use("/api/arena/chat", chatLimiter);
   app.use("/api/chat", chatLimiter);
   app.use("/api/", generalLimiter);
@@ -567,6 +569,7 @@ export async function registerArenaRoutes(app: Express) {
 
   // ─── Competition System v2 Routes ─────────────────────────────────────────
   registerCompetitionRoutes(app, competitionEngine, engine);
+  registerAgentRoutes(app, engine, competitionEngine);
 
   // ─── Profile & Institution Routes ──────────────────────────────────────────
   registerProfileRoutes(app, engine);

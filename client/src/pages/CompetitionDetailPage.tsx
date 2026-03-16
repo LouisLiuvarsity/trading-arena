@@ -22,6 +22,7 @@ import {
   BarChart3,
   Eye,
   ArrowLeft,
+  Bot,
 } from "lucide-react";
 
 const TIER_COLORS: Record<string, string> = {
@@ -143,6 +144,7 @@ export default function CompetitionDetailPage({ slug }: Props) {
   const statusColor = STATUS_COLORS[comp.status] ?? STATUS_COLORS.draft;
   const statusLabel = t("common.compStatus." + comp.status);
   const isParticipant = comp.myRegistrationStatus === "accepted";
+  const isAgentCompetition = comp.participantMode === "agent";
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-5">
@@ -155,6 +157,10 @@ export default function CompetitionDetailPage({ slug }: Props) {
       <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-6">
         <div className="flex items-center gap-2 mb-3 flex-wrap">
           <h1 className="text-xl font-display font-bold text-white">{comp.title}</h1>
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-bold bg-white/5 text-[#D1D4DC]">
+            <Bot className="w-3 h-3" />
+            {isAgentCompetition ? "Agent vs Agent" : "Human vs Human"}
+          </span>
           <span
             className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-bold"
             style={{ backgroundColor: `${statusColor}20`, color: statusColor }}
@@ -191,7 +197,14 @@ export default function CompetitionDetailPage({ slug }: Props) {
         {/* Registration action */}
         {comp.status === "registration_open" && (
           <div className="border-t border-[rgba(255,255,255,0.08)] pt-4 mt-4">
-            {comp.myRegistrationStatus ? (
+            {isAgentCompetition ? (
+              <Link
+                href="/agents"
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#F0B90B] text-[#0B0E11] text-sm font-bold rounded-lg hover:bg-[#F0B90B]/90 transition-colors"
+              >
+                通过 Agent API 报名 <ChevronRight className="w-4 h-4" />
+              </Link>
+            ) : comp.myRegistrationStatus ? (
               <div className="flex items-center gap-3">
                 <span
                   className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold"
@@ -288,10 +301,13 @@ export default function CompetitionDetailPage({ slug }: Props) {
             </div>
           </div>
           {(comp.requireMinSeasonPoints > 0 || comp.inviteOnly) && (
-            <div className="mt-3 flex items-center gap-3 text-[11px]">
-              {comp.requireMinSeasonPoints > 0 && (
-                <span className="text-[#F0B90B]">{t("compDetail.minSeasonPts", { n: comp.requireMinSeasonPoints })}</span>
-              )}
+          <div className="mt-3 flex items-center gap-3 text-[11px]">
+            {isAgentCompetition && (
+              <span className="text-[#F0B90B]">本场仅允许 Agent 使用 API Key 参赛</span>
+            )}
+            {comp.requireMinSeasonPoints > 0 && (
+              <span className="text-[#F0B90B]">{t("compDetail.minSeasonPts", { n: comp.requireMinSeasonPoints })}</span>
+            )}
               {comp.inviteOnly && (
                 <span className="text-[#F6465D]">{t("compDetail.inviteOnly")}</span>
               )}

@@ -272,7 +272,7 @@ export default function AdminRegistrationsPage({ competitionId }: Props) {
       {/* Table */}
       <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl overflow-hidden">
         {/* Header */}
-        <div className="grid grid-cols-[2.5rem_1fr_5rem_4.5rem_5rem_6rem] gap-2 px-4 py-2.5 text-[10px] text-[#848E9C] font-bold border-b border-[rgba(255,255,255,0.08)]">
+        <div className="grid grid-cols-[2.5rem_1.3fr_5rem_4.5rem_5rem_6rem] gap-2 px-4 py-2.5 text-[10px] text-[#848E9C] font-bold border-b border-[rgba(255,255,255,0.08)]">
           <span className="flex items-center">
             {pendingRegs.length > 0 && (
               <input
@@ -307,7 +307,7 @@ export default function AdminRegistrationsPage({ competitionId }: Props) {
               return (
                 <div
                   key={reg.id}
-                  className={`grid grid-cols-[2.5rem_1fr_5rem_4.5rem_5rem_6rem] gap-2 px-4 py-2.5 text-[11px] items-center ${
+                  className={`grid grid-cols-[2.5rem_1.3fr_5rem_4.5rem_5rem_6rem] gap-2 px-4 py-2.5 text-[11px] items-center ${
                     isPending ? "hover:bg-white/[0.02]" : ""
                   }`}
                 >
@@ -326,7 +326,15 @@ export default function AdminRegistrationsPage({ competitionId }: Props) {
                   {/* Username + tier */}
                   <span className="flex items-center gap-1.5 min-w-0">
                     <span className="text-[9px]" style={{ color: tierColor }}>{tierInfo?.icon ?? ""}</span>
-                    <span className="text-[#D1D4DC] font-bold truncate">{reg.username}</span>
+                    <span className="text-[#D1D4DC] font-bold truncate">
+                      {reg.agentName ?? reg.username}
+                    </span>
+                    <span className={`rounded-full px-1.5 py-0.5 text-[9px] ${reg.accountType === "agent" ? "bg-[#F0B90B]/10 text-[#F0B90B]" : "bg-white/8 text-[#AAB4C3]"}`}>
+                      {reg.accountType === "agent" ? "Agent" : "Human"}
+                    </span>
+                    {reg.ownerUsername && (
+                      <span className="text-[9px] text-[#848E9C] truncate">Owner: {reg.ownerUsername}</span>
+                    )}
                     {reg.institutionName && (
                       <span className="text-[9px] text-[#848E9C] truncate">({reg.institutionName})</span>
                     )}

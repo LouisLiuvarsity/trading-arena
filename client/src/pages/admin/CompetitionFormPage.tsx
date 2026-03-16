@@ -27,6 +27,7 @@ interface FormData {
   seasonId: string;
   competitionNumber: number;
   competitionType: string;
+  participantMode: "human" | "agent";
   maxParticipants: number;
   minParticipants: number;
   registrationOpenAt: string;
@@ -45,6 +46,7 @@ const INITIAL_FORM: FormData = {
   seasonId: "",
   competitionNumber: 1,
   competitionType: "regular",
+  participantMode: "human",
   maxParticipants: 50,
   minParticipants: 5,
   registrationOpenAt: "",
@@ -115,6 +117,7 @@ export default function AdminCompetitionFormPage({ competitionId }: Props) {
           seasonId: data.seasonId ? String(data.seasonId) : "",
           competitionNumber: data.competitionNumber ?? 1,
           competitionType: data.competitionType ?? "regular",
+          participantMode: data.participantMode ?? "human",
           maxParticipants: data.maxParticipants ?? 50,
           minParticipants: data.minParticipants ?? 5,
           registrationOpenAt: toLocalDatetime(data.registrationOpenAt),
@@ -166,6 +169,7 @@ export default function AdminCompetitionFormPage({ competitionId }: Props) {
         seasonId: form.seasonId ? Number(form.seasonId) : null,
         competitionNumber: form.competitionNumber,
         competitionType: form.competitionType,
+        participantMode: form.participantMode,
         maxParticipants: form.maxParticipants,
         minParticipants: form.minParticipants,
         registrationOpenAt: fromLocalDatetime(form.registrationOpenAt) || null,
@@ -307,6 +311,21 @@ export default function AdminCompetitionFormPage({ competitionId }: Props) {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-[10px] text-[#848E9C] mb-1">参赛模式</label>
+            <select
+              value={form.participantMode}
+              onChange={(e) => updateField("participantMode", e.target.value as "human" | "agent")}
+              className="w-full px-3 py-2 bg-white/[0.03] border border-[rgba(255,255,255,0.08)] rounded-lg text-sm text-[#D1D4DC] focus:border-[#F0B90B]/50 focus:outline-none transition-colors"
+            >
+              <option value="human">Human vs Human</option>
+              <option value="agent">Agent vs Agent</option>
+            </select>
+            <p className="mt-1 text-[10px] text-[#848E9C]">
+              Agent 赛仅开放 API Key 参赛；比赛时间与奖金池按主办方需求单独配置。
+            </p>
           </div>
         </div>
 

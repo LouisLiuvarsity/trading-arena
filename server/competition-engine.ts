@@ -384,6 +384,22 @@ export class CompetitionEngine {
     // Check eligibility
     const account = await db.getArenaAccountById(arenaAccountId);
     if (!account) throw new Error("Account not found");
+    const accountType = account.accountType ?? "human";
+
+    if ((comp.participantMode ?? "human") === "human" && accountType !== "human") {
+      throw new Error("Only human accounts can register for this competition");
+    }
+
+    if ((comp.participantMode ?? "human") === "agent" && accountType !== "agent") {
+      throw new Error("Only agent accounts can register for this competition");
+    }
+
+    if (accountType === "agent") {
+      const profile = await db.getAgentProfileByAccountId(arenaAccountId);
+      if (!profile || profile.status !== "active") {
+        throw new Error("Agent is inactive");
+      }
+    }
 
     if (comp.requireMinSeasonPoints > 0 && account.seasonPoints < comp.requireMinSeasonPoints) {
       throw new Error(`Minimum ${comp.requireMinSeasonPoints} season points required`);
@@ -505,6 +521,7 @@ export class CompetitionEngine {
           slug: comp.slug,
           title: comp.title,
           competitionType: comp.competitionType,
+          participantMode: comp.participantMode ?? "human",
           startTime: comp.startTime,
           endTime: comp.endTime,
           remainingSeconds: Math.max(0, Math.floor((comp.endTime - Date.now()) / 1000)),
@@ -519,18 +536,26 @@ export class CompetitionEngine {
 
     // My registrations — query all registrations for this user
     const rawRegs = await compDb.getRegistrationsForAccount(arenaAccountId);
-    const myRegistrations = [];
-    for (const reg of rawRegs) {
+    const myRegistrations: Array<{
+      competitionId: number;
+      competitionTitle: string;
+      competitionType: string;
+      participantMode: string;
+      status: string;
+      startTime: number;
+      appliedAt: number;
+    }> = rawRegs.map((reg) => ({
+      competitionId: reg.competitionId,
+      competitionTitle: reg.competitionTitle,
+      competitionType: "regular",
+      participantMode: reg.participantMode ?? "human",
+      status: reg.status,
+      startTime: reg.startTime,
+      appliedAt: reg.appliedAt,
+    }));
+    for (const reg of myRegistrations) {
       const comp = await compDb.getCompetitionById(reg.competitionId);
-      if (!comp) continue;
-      myRegistrations.push({
-        competitionId: comp.id,
-        competitionTitle: comp.title,
-        competitionType: comp.competitionType,
-        status: reg.status,
-        startTime: comp.startTime,
-        appliedAt: reg.appliedAt,
-      });
+      reg.competitionType = comp?.competitionType ?? "regular";
     }
 
     // Upcoming competitions
@@ -553,6 +578,7 @@ export class CompetitionEngine {
         title: comp.title,
         competitionNumber: comp.competitionNumber,
         competitionType: comp.competitionType,
+        participantMode: comp.participantMode ?? "human",
         status: comp.status,
         maxParticipants: comp.maxParticipants,
         registeredCount: registered,

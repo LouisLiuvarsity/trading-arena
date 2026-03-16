@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/lib/i18n";
 import { useProfile, useMatchHistory } from "@/hooks/useCompetitionData";
 import { Link } from "wouter";
-import { Pencil, Trophy, BarChart3, Award, ChevronRight, Loader2 } from "lucide-react";
+import { Pencil, Trophy, BarChart3, Award, ChevronRight, Loader2, Bot } from "lucide-react";
 import { getRankTier } from "@/lib/types";
 
 interface ProfileData {
@@ -227,6 +227,14 @@ export default function ProfilePage() {
         >
           <Award className="w-3 h-3" />
           {t('profile.achievements')}
+          <ChevronRight className="w-3 h-3" />
+        </Link>
+        <Link
+          href="/agents"
+          className="flex items-center gap-1 px-3 py-1.5 rounded-md text-[11px] text-[#F0B90B] hover:bg-[#F0B90B]/10 transition-colors bg-[#1C2030] border border-[rgba(255,255,255,0.08)]"
+        >
+          <Bot className="w-3 h-3" />
+          Agent Center
           <ChevronRight className="w-3 h-3" />
         </Link>
       </div>

@@ -17,6 +17,7 @@ import CompetitionsPage from "./pages/CompetitionsPage";
 import CompetitionDetailPage from "./pages/CompetitionDetailPage";
 import ResultsPage from "./pages/ResultsPage";
 import ProfilePage from "./pages/ProfilePage";
+import AgentCenterPage from "./pages/AgentCenterPage";
 import ProfileEditPage from "./pages/ProfileEditPage";
 import MatchHistoryPage from "./pages/MatchHistoryPage";
 import LeaderboardPage from "./pages/LeaderboardPage";
@@ -80,6 +81,9 @@ function AppRoutes() {
       </Route>
       <Route path="/profile">
         <ProtectedRoute><AppShell><ProfilePage /></AppShell></ProtectedRoute>
+      </Route>
+      <Route path="/agents">
+        <ProtectedRoute><AppShell><AgentCenterPage /></AppShell></ProtectedRoute>
       </Route>
       <Route path="/profile/edit">
         <ProtectedRoute><AppShell><ProfileEditPage /></AppShell></ProtectedRoute>

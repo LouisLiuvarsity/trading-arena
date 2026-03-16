@@ -13,6 +13,8 @@ import {
   users,
   arenaAccounts,
   arenaSessions,
+  agentProfiles,
+  agentApiKeys,
   matches,
   positions,
   trades,
@@ -132,6 +134,8 @@ export async function getOrCreateArenaAccount(
   const result = await db.insert(arenaAccounts).values({
     userId,
     username,
+    accountType: "human",
+    ownerArenaAccountId: null,
     inviteCode: username, // legacy fallback
     capital: STARTING_CAPITAL,
     seasonPoints: 0,
@@ -177,6 +181,8 @@ export async function registerArenaAccount(
     userId: 0,
     username,
     email,
+    accountType: "human",
+    ownerArenaAccountId: null,
     inviteCode: autoCode,
     passwordHash: hashed,
     inviteConsumed: 1,
@@ -202,7 +208,16 @@ export async function checkUsernameAvailable(username: string): Promise<boolean>
 /** Login existing account by username (returning users) — returns passwordHash for verification */
 export async function getArenaAccountByUsernameForLogin(
   username: string,
-): Promise<{ id: number; username: string; capital: number; seasonPoints: number; passwordHash: string | null } | null> {
+): Promise<{
+  id: number;
+  username: string;
+  capital: number;
+  seasonPoints: number;
+  passwordHash: string | null;
+  role: string;
+  accountType: string;
+  ownerArenaAccountId: number | null;
+} | null> {
   const rows = await db
     .select()
     .from(arenaAccounts)
@@ -215,21 +230,37 @@ export async function getArenaAccountByUsernameForLogin(
     capital: rows[0].capital,
     seasonPoints: rows[0].seasonPoints,
     passwordHash: rows[0].passwordHash,
+    role: rows[0].role,
+    accountType: rows[0].accountType ?? "human",
+    ownerArenaAccountId: rows[0].ownerArenaAccountId ?? null,
   };
 }
 
 export async function getArenaAccountById(
   arenaAccountId: number,
   dbOrTx: DbOrTx = db,
-): Promise<{ id: number; userId: number; username: string; capital: number; seasonPoints: number; role: string } | null> {
+): Promise<{
+  id: number;
+  userId: number;
+  username: string;
+  email: string | null;
+  capital: number;
+  seasonPoints: number;
+  role: string;
+  accountType: string;
+  ownerArenaAccountId: number | null;
+} | null> {
   const rows = await dbOrTx
     .select({
       id: arenaAccounts.id,
       userId: arenaAccounts.userId,
       username: arenaAccounts.username,
+      email: arenaAccounts.email,
       capital: arenaAccounts.capital,
       seasonPoints: arenaAccounts.seasonPoints,
       role: arenaAccounts.role,
+      accountType: arenaAccounts.accountType,
+      ownerArenaAccountId: arenaAccounts.ownerArenaAccountId,
     })
     .from(arenaAccounts)
     .where(eq(arenaAccounts.id, arenaAccountId))
@@ -239,7 +270,15 @@ export async function getArenaAccountById(
 
 export async function getArenaAccountByUsername(
   username: string,
-): Promise<{ id: number; userId: number; username: string; capital: number; seasonPoints: number } | null> {
+): Promise<{
+  id: number;
+  userId: number;
+  username: string;
+  capital: number;
+  seasonPoints: number;
+  accountType: string;
+  ownerArenaAccountId: number | null;
+} | null> {
   const rows = await db
     .select()
     .from(arenaAccounts)
@@ -265,7 +304,16 @@ const LAST_SEEN_THROTTLE_MS = 5 * 60 * 1000;
 
 export async function getArenaAccountByToken(
   token: string,
-): Promise<{ id: number; userId: number; username: string; capital: number; seasonPoints: number } | null> {
+): Promise<{
+  id: number;
+  userId: number;
+  username: string;
+  capital: number;
+  seasonPoints: number;
+  role: string;
+  accountType: string;
+  ownerArenaAccountId: number | null;
+} | null> {
   const now = Date.now();
   const rows = await db
     .select({
@@ -274,6 +322,9 @@ export async function getArenaAccountByToken(
       username: arenaAccounts.username,
       capital: arenaAccounts.capital,
       seasonPoints: arenaAccounts.seasonPoints,
+      role: arenaAccounts.role,
+      accountType: arenaAccounts.accountType,
+      ownerArenaAccountId: arenaAccounts.ownerArenaAccountId,
       expiresAt: arenaSessions.expiresAt,
     })
     .from(arenaSessions)
@@ -307,7 +358,337 @@ export async function getArenaAccountByToken(
     username: rows[0].username,
     capital: rows[0].capital,
     seasonPoints: rows[0].seasonPoints,
+    role: rows[0].role,
+    accountType: rows[0].accountType ?? "human",
+    ownerArenaAccountId: rows[0].ownerArenaAccountId ?? null,
   };
+}
+
+function hashAgentApiKey(rawKey: string): string {
+  return crypto.createHash("sha256").update(rawKey).digest("hex");
+}
+
+export async function countAgentsForOwner(
+  ownerArenaAccountId: number,
+  dbOrTx: DbOrTx = db,
+): Promise<number> {
+  const rows = await dbOrTx
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(arenaAccounts)
+    .where(
+      and(
+        eq(arenaAccounts.ownerArenaAccountId, ownerArenaAccountId),
+        eq(arenaAccounts.accountType, "agent"),
+      ),
+    );
+  return rows[0]?.count ?? 0;
+}
+
+export async function getAgentProfileByAccountId(
+  arenaAccountId: number,
+  dbOrTx: DbOrTx = db,
+): Promise<{
+  arenaAccountId: number;
+  ownerArenaAccountId: number;
+  name: string;
+  description: string | null;
+  status: string;
+  createdAt: number;
+  updatedAt: number;
+} | null> {
+  const rows = await dbOrTx
+    .select({
+      arenaAccountId: agentProfiles.arenaAccountId,
+      ownerArenaAccountId: agentProfiles.ownerArenaAccountId,
+      name: agentProfiles.name,
+      description: agentProfiles.description,
+      status: agentProfiles.status,
+      createdAt: agentProfiles.createdAt,
+      updatedAt: agentProfiles.updatedAt,
+    })
+    .from(agentProfiles)
+    .where(eq(agentProfiles.arenaAccountId, arenaAccountId))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getOwnedAgentById(
+  ownerArenaAccountId: number,
+  arenaAccountId: number,
+  dbOrTx: DbOrTx = db,
+): Promise<{
+  arenaAccountId: number;
+  ownerArenaAccountId: number;
+  username: string;
+  name: string;
+  description: string | null;
+  status: string;
+  capital: number;
+  seasonPoints: number;
+  createdAt: number;
+  updatedAt: number;
+} | null> {
+  const rows = await dbOrTx
+    .select({
+      arenaAccountId: arenaAccounts.id,
+      ownerArenaAccountId: arenaAccounts.ownerArenaAccountId,
+      username: arenaAccounts.username,
+      name: agentProfiles.name,
+      description: agentProfiles.description,
+      status: agentProfiles.status,
+      capital: arenaAccounts.capital,
+      seasonPoints: arenaAccounts.seasonPoints,
+      createdAt: agentProfiles.createdAt,
+      updatedAt: agentProfiles.updatedAt,
+    })
+    .from(arenaAccounts)
+    .innerJoin(agentProfiles, eq(agentProfiles.arenaAccountId, arenaAccounts.id))
+    .where(
+      and(
+        eq(arenaAccounts.id, arenaAccountId),
+        eq(arenaAccounts.accountType, "agent"),
+        eq(arenaAccounts.ownerArenaAccountId, ownerArenaAccountId),
+      ),
+    )
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function listAgentsForOwner(
+  ownerArenaAccountId: number,
+): Promise<
+  Array<{
+    arenaAccountId: number;
+    username: string;
+    name: string;
+    description: string | null;
+    status: string;
+    capital: number;
+    seasonPoints: number;
+    createdAt: number;
+    updatedAt: number;
+  }>
+> {
+  return db
+    .select({
+      arenaAccountId: arenaAccounts.id,
+      username: arenaAccounts.username,
+      name: agentProfiles.name,
+      description: agentProfiles.description,
+      status: agentProfiles.status,
+      capital: arenaAccounts.capital,
+      seasonPoints: arenaAccounts.seasonPoints,
+      createdAt: agentProfiles.createdAt,
+      updatedAt: agentProfiles.updatedAt,
+    })
+    .from(arenaAccounts)
+    .innerJoin(agentProfiles, eq(agentProfiles.arenaAccountId, arenaAccounts.id))
+    .where(
+      and(
+        eq(arenaAccounts.ownerArenaAccountId, ownerArenaAccountId),
+        eq(arenaAccounts.accountType, "agent"),
+      ),
+    )
+    .orderBy(desc(agentProfiles.createdAt));
+}
+
+export async function createAgentForOwner(
+  ownerArenaAccountId: number,
+  input: { username: string; name: string; description?: string | null },
+): Promise<{
+  id: number;
+  username: string;
+  name: string;
+  description: string | null;
+  capital: number;
+  seasonPoints: number;
+}> {
+  const owner = await getArenaAccountById(ownerArenaAccountId);
+  if (!owner) throw new Error("Owner account not found");
+  if ((owner.accountType ?? "human") !== "human") {
+    throw new Error("Only human accounts can own agents");
+  }
+
+  const usernameCheck = await db
+    .select({ id: arenaAccounts.id })
+    .from(arenaAccounts)
+    .where(eq(arenaAccounts.username, input.username))
+    .limit(1);
+  if (usernameCheck[0]) {
+    throw new Error("Agent username already taken");
+  }
+
+  const now = Date.now();
+  const inviteCode = `agent_${crypto.randomBytes(12).toString("hex")}`;
+  return db.transaction(async (tx) => {
+    const result = await tx.insert(arenaAccounts).values({
+      userId: owner.userId,
+      username: input.username,
+      email: null,
+      accountType: "agent",
+      ownerArenaAccountId,
+      inviteCode,
+      passwordHash: null,
+      inviteConsumed: 1,
+      role: "user",
+      capital: STARTING_CAPITAL,
+      seasonPoints: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const id = Number(result[0].insertId);
+    await tx.insert(agentProfiles).values({
+      arenaAccountId: id,
+      ownerArenaAccountId,
+      name: input.name,
+      description: input.description ?? null,
+      status: "active",
+      createdAt: now,
+      updatedAt: now,
+    });
+    return {
+      id,
+      username: input.username,
+      name: input.name,
+      description: input.description ?? null,
+      capital: STARTING_CAPITAL,
+      seasonPoints: 0,
+    };
+  });
+}
+
+export async function updateOwnedAgentProfile(
+  ownerArenaAccountId: number,
+  arenaAccountId: number,
+  updates: { name?: string; description?: string | null; status?: string },
+  dbOrTx: DbOrTx = db,
+): Promise<void> {
+  const agent = await getOwnedAgentById(ownerArenaAccountId, arenaAccountId, dbOrTx);
+  if (!agent) throw new Error("Agent not found");
+
+  await dbOrTx
+    .update(agentProfiles)
+    .set({
+      ...(updates.name !== undefined ? { name: updates.name } : {}),
+      ...(updates.description !== undefined ? { description: updates.description } : {}),
+      ...(updates.status !== undefined ? { status: updates.status } : {}),
+      updatedAt: Date.now(),
+    })
+    .where(eq(agentProfiles.arenaAccountId, arenaAccountId));
+}
+
+export async function getActiveAgentApiKeyForOwner(
+  ownerArenaAccountId: number,
+  dbOrTx: DbOrTx = db,
+): Promise<{
+  id: number;
+  ownerArenaAccountId: number;
+  keyPrefix: string;
+  status: string;
+  createdAt: number;
+  lastUsedAt: number | null;
+} | null> {
+  const rows = await dbOrTx
+    .select({
+      id: agentApiKeys.id,
+      ownerArenaAccountId: agentApiKeys.ownerArenaAccountId,
+      keyPrefix: agentApiKeys.keyPrefix,
+      status: agentApiKeys.status,
+      createdAt: agentApiKeys.createdAt,
+      lastUsedAt: agentApiKeys.lastUsedAt,
+    })
+    .from(agentApiKeys)
+    .where(
+      and(
+        eq(agentApiKeys.ownerArenaAccountId, ownerArenaAccountId),
+        eq(agentApiKeys.status, "active"),
+      ),
+    )
+    .orderBy(desc(agentApiKeys.createdAt))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function revokeAgentApiKeysForOwner(
+  ownerArenaAccountId: number,
+  dbOrTx: DbOrTx = db,
+): Promise<void> {
+  await dbOrTx
+    .update(agentApiKeys)
+    .set({
+      status: "revoked",
+      revokedAt: Date.now(),
+    })
+    .where(
+      and(
+        eq(agentApiKeys.ownerArenaAccountId, ownerArenaAccountId),
+        eq(agentApiKeys.status, "active"),
+      ),
+    );
+}
+
+export async function rotateAgentApiKeyForOwner(
+  ownerArenaAccountId: number,
+  rawKey: string,
+): Promise<{ id: number; keyPrefix: string; createdAt: number }> {
+  const now = Date.now();
+  const keyPrefix = rawKey.slice(0, 8);
+  const keyHash = hashAgentApiKey(rawKey);
+  return db.transaction(async (tx) => {
+    await revokeAgentApiKeysForOwner(ownerArenaAccountId, tx);
+    const result = await tx.insert(agentApiKeys).values({
+      ownerArenaAccountId,
+      keyPrefix,
+      keyHash,
+      status: "active",
+      createdAt: now,
+      lastUsedAt: null,
+      revokedAt: null,
+    });
+    return {
+      id: Number(result[0].insertId),
+      keyPrefix,
+      createdAt: now,
+    };
+  });
+}
+
+export async function getOwnerByAgentApiKey(
+  rawKey: string,
+): Promise<{
+  apiKeyId: number;
+  ownerArenaAccountId: number;
+  ownerUsername: string;
+} | null> {
+  const keyPrefix = rawKey.slice(0, 8);
+  const keyHash = hashAgentApiKey(rawKey);
+  const rows = await db
+    .select({
+      apiKeyId: agentApiKeys.id,
+      ownerArenaAccountId: agentApiKeys.ownerArenaAccountId,
+      ownerUsername: arenaAccounts.username,
+    })
+    .from(agentApiKeys)
+    .innerJoin(arenaAccounts, eq(arenaAccounts.id, agentApiKeys.ownerArenaAccountId))
+    .where(
+      and(
+        eq(agentApiKeys.keyPrefix, keyPrefix),
+        eq(agentApiKeys.keyHash, keyHash),
+        eq(agentApiKeys.status, "active"),
+      ),
+    )
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function touchAgentApiKeyLastUsed(
+  id: number,
+  dbOrTx: DbOrTx = db,
+): Promise<void> {
+  await dbOrTx
+    .update(agentApiKeys)
+    .set({ lastUsedAt: Date.now() })
+    .where(eq(agentApiKeys.id, id));
 }
 
 // ─── Cleanup Jobs ─────────────────────────────────────────────────────────────

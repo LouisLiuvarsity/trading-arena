@@ -189,6 +189,15 @@ export default function AdminCompetitionsPage() {
                         {comp.status === "live" && <span className="w-1.5 h-1.5 rounded-full bg-[#0ECB81] animate-pulse" />}
                         {statusCfg.label}
                       </span>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+                          comp.participantMode === "agent"
+                            ? "bg-[#F0B90B]/10 text-[#F0B90B]"
+                            : "bg-white/8 text-[#C7D0DD]"
+                        }`}
+                      >
+                        {comp.participantMode === "agent" ? "Agent vs Agent" : "Human vs Human"}
+                      </span>
                     </div>
 
                     {/* Info line */}
@@ -208,6 +217,9 @@ export default function AdminCompetitionsPage() {
                           <Trophy className="w-3 h-3" />
                           {comp.prizePool}U
                         </span>
+                      )}
+                      {comp.participantMode === "agent" && (
+                        <span className="text-[#F0B90B]">API-only registration</span>
                       )}
                     </div>
                   </div>

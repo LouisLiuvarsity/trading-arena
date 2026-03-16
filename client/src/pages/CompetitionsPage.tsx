@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useT } from "@/lib/i18n";
 import { useCompetitions, useRegister, useWithdraw } from "@/hooks/useCompetitionData";
-import type { CompetitionStatus, CompetitionSummary, CompetitionType } from "@shared/competitionTypes";
+import type { CompetitionStatus, CompetitionSummary, CompetitionType, ParticipantMode } from "@shared/competitionTypes";
 import { toast } from "sonner";
 import {
   AlertCircle,
@@ -97,6 +97,8 @@ type ScheduleCopy = {
   acceptedLabel: string;
   registeredLabel: string;
   typeLabels: Record<CompetitionType, string>;
+  participantLabels: Record<ParticipantMode, string>;
+  agentApiAction: string;
 };
 
 const SCHEDULE_COPY: Record<"zh" | "en", ScheduleCopy> = {
@@ -135,6 +137,11 @@ const SCHEDULE_COPY: Record<"zh" | "en", ScheduleCopy> = {
       special: "特别赛",
       practice: "练习赛",
     },
+    participantLabels: {
+      human: "Human vs Human",
+      agent: "Agent vs Agent",
+    },
+    agentApiAction: "通过 Agent API 报名",
   },
   en: {
     title: "Schedule",
@@ -171,6 +178,11 @@ const SCHEDULE_COPY: Record<"zh" | "en", ScheduleCopy> = {
       special: "Special",
       practice: "Practice",
     },
+    participantLabels: {
+      human: "Human vs Human",
+      agent: "Agent vs Agent",
+    },
+    agentApiAction: "Register via Agent API",
   },
 };
 
@@ -306,12 +318,19 @@ function getActionHref(comp: CompetitionSummary): string {
   return `/competitions/${comp.slug}`;
 }
 
-function getPrimaryActionLabel(comp: CompetitionSummary, t: Translator): string {
+function getParticipantLabel(mode: ParticipantMode, copy: ScheduleCopy): string {
+  return copy.participantLabels[mode] ?? copy.participantLabels.human;
+}
+
+function getPrimaryActionLabel(comp: CompetitionSummary, t: Translator, copy: ScheduleCopy): string {
   if (comp.status === "live" && comp.myRegistrationStatus === "accepted") {
     return t("comp.enterArena");
   }
   if (comp.status === "completed" || comp.status === "ended_early") {
     return t("comp.viewResults");
+  }
+  if (comp.participantMode === "agent" && comp.status === "registration_open") {
+    return copy.agentApiAction;
   }
   if (comp.status === "registration_open" && !comp.myRegistrationStatus) {
     return t("comp.register");
@@ -375,10 +394,11 @@ function CompetitionCard({
   const statusCfg = STATUS_STYLE[comp.status] ?? STATUS_STYLE.draft;
   const regColor = comp.myRegistrationStatus ? REG_STATUS_COLOR[comp.myRegistrationStatus] : null;
   const typeCfg = TYPE_STYLE[comp.competitionType] ?? TYPE_STYLE.regular;
+  const isAgentCompetition = comp.participantMode === "agent";
   const isRegistering = registeringSlug === comp.slug;
   const isWithdrawing = withdrawingSlug === comp.slug;
   const countdown = formatCountdown(comp.startTime, comp.endTime, now, t);
-  const primaryActionLabel = getPrimaryActionLabel(comp, t);
+  const primaryActionLabel = getPrimaryActionLabel(comp, t, copy);
 
   return (
     <div className="relative overflow-hidden rounded-[24px] border border-white/[0.08] bg-[#161B29]">
@@ -398,6 +418,9 @@ function CompetitionCard({
               className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${typeCfg.badgeClass}`}
             >
               {getTypeLabel(comp.competitionType, copy)}
+            </span>
+            <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-[#D1D4DC]">
+              {getParticipantLabel(comp.participantMode, copy)}
             </span>
             {renderBadge(
               t(`common.compStatus.${comp.status}`),
@@ -456,7 +479,7 @@ function CompetitionCard({
         </div>
 
         <div className="flex w-full flex-col gap-3 xl:w-[220px]">
-          {comp.status === "registration_open" && !comp.myRegistrationStatus ? (
+          {comp.status === "registration_open" && !comp.myRegistrationStatus && !isAgentCompetition ? (
             <button
               onClick={() => onRegister(comp.slug)}
               disabled={isRegistering}
@@ -465,6 +488,14 @@ function CompetitionCard({
               {isRegistering && <Loader2 className="h-4 w-4 animate-spin" />}
               {primaryActionLabel}
             </button>
+          ) : isAgentCompetition && comp.status === "registration_open" ? (
+            <Link
+              href="/agents"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#F0B90B] px-5 py-3 text-sm font-semibold text-[#0B0E11] transition-colors hover:bg-[#F0B90B]/90"
+            >
+              {primaryActionLabel}
+              <ChevronRight className="h-4 w-4" />
+            </Link>
           ) : (
             <Link
               href={getActionHref(comp)}

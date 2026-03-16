@@ -12,6 +12,7 @@ import {
   getCompetitionLeaderboard,
   getCompetitionResults,
   getHubData,
+  getAgentCenterData,
   getMatchHistory,
   getNotifications,
   getUnreadNotificationCount,
@@ -19,8 +20,12 @@ import {
   markAllNotificationsRead,
   registerForCompetition,
   withdrawFromCompetition,
+  createAgent,
+  updateAgent,
+  rotateAgentApiKey,
+  revokeAgentApiKey,
 } from "@/lib/competition-api";
-import type { HubData, CompetitionSummary, NotificationItem } from "@shared/competitionTypes";
+import type { HubData, CompetitionSummary, NotificationItem, AgentCenterData } from "@shared/competitionTypes";
 
 // ─── Query Hooks (Read) ─────────────────────────────────────
 
@@ -145,6 +150,15 @@ export function useResultsLeaderboard(competitionId: string) {
   });
 }
 
+export function useAgentCenter() {
+  const { token } = useAuth();
+  return useQuery({
+    queryKey: ["agent-center", token],
+    queryFn: () => getAgentCenterData(token!),
+    enabled: !!token,
+  });
+}
+
 export function useResultsHistory(competitionId: string) {
   const { token } = useAuth();
   return useQuery({
@@ -166,6 +180,52 @@ export function useRegister() {
       qc.invalidateQueries({ queryKey: ["competitions"] });
       qc.invalidateQueries({ queryKey: ["competition"] });
       qc.invalidateQueries({ queryKey: ["hub"] });
+    },
+  });
+}
+
+export function useCreateAgent() {
+  const qc = useQueryClient();
+  const { token } = useAuth();
+  return useMutation({
+    mutationFn: (body: { username: string; name: string; description?: string }) =>
+      createAgent(body, token!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["agent-center"] });
+    },
+  });
+}
+
+export function useUpdateAgent() {
+  const qc = useQueryClient();
+  const { token } = useAuth();
+  return useMutation({
+    mutationFn: (input: { agentId: number; body: { name?: string; description?: string | null; status?: "active" | "inactive" } }) =>
+      updateAgent(input.agentId, input.body, token!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["agent-center"] });
+    },
+  });
+}
+
+export function useRotateAgentKey() {
+  const qc = useQueryClient();
+  const { token } = useAuth();
+  return useMutation({
+    mutationFn: () => rotateAgentApiKey(token!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["agent-center"] });
+    },
+  });
+}
+
+export function useRevokeAgentKey() {
+  const qc = useQueryClient();
+  const { token } = useAuth();
+  return useMutation({
+    mutationFn: () => revokeAgentApiKey(token!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["agent-center"] });
     },
   });
 }

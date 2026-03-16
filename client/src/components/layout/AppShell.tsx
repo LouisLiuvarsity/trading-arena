@@ -2,7 +2,7 @@ import { type ReactNode } from "react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/lib/i18n";
-import { Home, Calendar, Trophy, BarChart3, User, LogOut, Settings } from "lucide-react";
+import { Home, Calendar, Trophy, BarChart3, User, LogOut, Bot } from "lucide-react";
 import { useIsMobile } from "@/hooks/useMobile";
 import NotificationBell from "./NotificationBell";
 
@@ -11,7 +11,7 @@ interface Props {
 }
 
 export default function AppShell({ children }: Props) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const { username, logout } = useAuth();
   const [location] = useLocation();
   const isMobile = useIsMobile();
@@ -19,6 +19,7 @@ export default function AppShell({ children }: Props) {
   const navItems = [
     { path: "/hub", label: t('nav.hub'), icon: Home },
     { path: "/competitions", label: t('nav.competitions'), icon: Calendar },
+    { path: "/agents", label: lang === "zh" ? "Agent中心" : "Agents", icon: Bot },
     { path: "/leaderboard", label: t('nav.leaderboard'), icon: Trophy },
     { path: "/stats", label: t('nav.stats'), icon: BarChart3 },
   ];
@@ -72,8 +73,8 @@ export default function AppShell({ children }: Props) {
           {[
             { path: "/hub", label: t('nav.hub'), icon: Home },
             { path: "/competitions", label: t('nav.competitions'), icon: Calendar },
+            { path: "/agents", label: lang === "zh" ? "Agent" : "Agents", icon: Bot },
             { path: "/stats", label: t('nav.stats'), icon: BarChart3 },
-            { path: "/leaderboard", label: t('nav.leaderboard'), icon: Trophy },
             { path: "/profile", label: t('nav.profile'), icon: User },
           ].map((item) => (
             <Link

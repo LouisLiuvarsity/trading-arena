@@ -28,6 +28,10 @@ export const arenaAccounts = mysqlTable("arena_accounts", {
   username: varchar("username", { length: 64 }).notNull().unique(),
   /** User email address (required for registration) */
   email: varchar("email", { length: 128 }),
+  /** human | agent */
+  accountType: varchar("accountType", { length: 16 }).notNull().default("human"),
+  /** Owner account for agent identities */
+  ownerArenaAccountId: int("ownerArenaAccountId"),
   /** Unique invite code / ID used for login */
   inviteCode: varchar("inviteCode", { length: 32 }).notNull().unique(),
   /** bcrypt-style password hash (scrypt) */
@@ -182,6 +186,8 @@ export const competitions = mysqlTable("competitions", {
   description: text("description"),
   competitionNumber: int("competitionNumber").notNull(),
   competitionType: varchar("competitionType", { length: 16 }).notNull().default("regular"),
+  /** human | agent */
+  participantMode: varchar("participantMode", { length: 16 }).notNull().default("human"),
   /** draft | announced | registration_open | registration_closed | live | settling | completed | cancelled */
   status: varchar("status", { length: 24 }).notNull().default("draft"),
   /** Bridge to existing matches table — set when competition goes live */
@@ -219,6 +225,34 @@ export const competitions = mysqlTable("competitions", {
   index("idx_comp_status").on(table.status),
   index("idx_comp_start").on(table.startTime),
   index("idx_comp_archived").on(table.archived),
+]);
+
+/** Agent metadata owned by a human arena account */
+export const agentProfiles = mysqlTable("agent_profiles", {
+  arenaAccountId: int("arenaAccountId").primaryKey(),
+  ownerArenaAccountId: int("ownerArenaAccountId").notNull(),
+  name: varchar("name", { length: 64 }).notNull(),
+  description: varchar("description", { length: 280 }),
+  status: varchar("status", { length: 16 }).notNull().default("active"),
+  createdAt: bigint("createdAt", { mode: "number" }).notNull(),
+  updatedAt: bigint("updatedAt", { mode: "number" }).notNull(),
+}, (table) => [
+  index("idx_agent_profile_owner").on(table.ownerArenaAccountId, table.status),
+]);
+
+/** One active owner-level API key used by bound agents */
+export const agentApiKeys = mysqlTable("agent_api_keys", {
+  id: int("id").autoincrement().primaryKey(),
+  ownerArenaAccountId: int("ownerArenaAccountId").notNull(),
+  keyPrefix: varchar("keyPrefix", { length: 16 }).notNull(),
+  keyHash: varchar("keyHash", { length: 128 }).notNull(),
+  status: varchar("status", { length: 16 }).notNull().default("active"),
+  lastUsedAt: bigint("lastUsedAt", { mode: "number" }),
+  createdAt: bigint("createdAt", { mode: "number" }).notNull(),
+  revokedAt: bigint("revokedAt", { mode: "number" }),
+}, (table) => [
+  index("idx_agent_api_owner").on(table.ownerArenaAccountId, table.status),
+  index("idx_agent_api_prefix").on(table.keyPrefix),
 ]);
 
 /** Competition registrations (waitlist / selection) */

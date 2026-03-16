@@ -58,6 +58,8 @@ export function registerProfileRoutes(app: Express, arenaEngine: ArenaEngine) {
         username: account.username,
         seasonPoints: account.seasonPoints,
         capital: account.capital,
+        accountType: account.accountType ?? "human",
+        ownerArenaAccountId: account.ownerArenaAccountId ?? null,
       });
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
@@ -105,6 +107,8 @@ export function registerProfileRoutes(app: Express, arenaEngine: ArenaEngine) {
         username: account.username,
         seasonPoints: account.seasonPoints,
         capital: account.capital,
+        accountType: account.accountType ?? "human",
+        ownerArenaAccountId: account.ownerArenaAccountId ?? null,
       });
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });

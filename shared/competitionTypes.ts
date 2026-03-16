@@ -20,6 +20,8 @@ export type CompetitionStatus =
   | "cancelled";
 
 export type CompetitionType = "regular" | "grand_final" | "special" | "practice";
+export type ParticipantMode = "human" | "agent";
+export type AccountType = "human" | "agent";
 
 export type RegistrationStatus = "pending" | "accepted" | "rejected" | "waitlisted" | "withdrawn";
 
@@ -44,6 +46,7 @@ export interface CompetitionSummary {
   title: string;
   competitionNumber: number;
   competitionType: CompetitionType;
+  participantMode: ParticipantMode;
   status: CompetitionStatus;
   maxParticipants: number;
   registeredCount: number;
@@ -83,6 +86,7 @@ export interface MyRegistration {
   competitionId: number;
   competitionTitle: string;
   competitionType: CompetitionType;
+  participantMode: ParticipantMode;
   status: RegistrationStatus;
   startTime: number;
   appliedAt: number;
@@ -93,6 +97,9 @@ export interface AdminRegistration {
   competitionId: number;
   arenaAccountId: number;
   username: string;
+  accountType: AccountType;
+  ownerUsername: string | null;
+  agentName: string | null;
   status: RegistrationStatus;
   seasonPoints: number;
   rankTier: RankTier;
@@ -142,6 +149,7 @@ export interface HubData {
     slug: string;
     title: string;
     competitionType: CompetitionType;
+    participantMode: ParticipantMode;
     startTime: number;
     endTime: number;
     remainingSeconds: number;
@@ -231,6 +239,43 @@ export interface UserProfileData {
   isProfilePublic: boolean;
   rankTier: RankTier;
   seasonPoints: number;
+}
+
+export interface AgentSummary {
+  arenaAccountId: number;
+  username: string;
+  name: string;
+  description: string | null;
+  status: string;
+  seasonPoints: number;
+  capital: number;
+  createdAt: number;
+  updatedAt: number;
+  activeCompetitionId: number | null;
+  activeCompetitionTitle: string | null;
+  registrations: Array<{
+    competitionId: number;
+    competitionTitle: string;
+    participantMode: ParticipantMode;
+    status: RegistrationStatus;
+    startTime: number;
+    appliedAt: number;
+  }>;
+}
+
+export interface AgentApiKeySummary {
+  exists: boolean;
+  keyPrefix: string | null;
+  status: string | null;
+  createdAt: number | null;
+  lastUsedAt: number | null;
+}
+
+export interface AgentCenterData {
+  ownerAccountId: number;
+  maxAgents: number;
+  agents: AgentSummary[];
+  apiKey: AgentApiKeySummary;
 }
 
 // ─── Stats (Geographic / Institutional) ─────────────────────

@@ -26,6 +26,9 @@ type ArenaAccount = {
   username: string;
   capital: number;
   seasonPoints: number;
+  role?: string;
+  accountType?: string;
+  ownerArenaAccountId?: number | null;
 };
 
 type MatchRow = {
@@ -210,7 +213,18 @@ export class ArenaEngine {
     }
     const token = crypto.randomBytes(24).toString("hex");
     await dbHelpers.createArenaSession(account.id, token);
-    return { token, account: { id: account.id, username: account.username, capital: account.capital, seasonPoints: account.seasonPoints } };
+    return {
+      token,
+      account: {
+        id: account.id,
+        username: account.username,
+        capital: account.capital,
+        seasonPoints: account.seasonPoints,
+        role: account.role,
+        accountType: account.accountType,
+        ownerArenaAccountId: account.ownerArenaAccountId,
+      },
+    };
   }
 
   async getAccountByToken(token: string | null | undefined): Promise<ArenaAccount | null> {
@@ -222,6 +236,9 @@ export class ArenaEngine {
       username: account.username,
       capital: account.capital,
       seasonPoints: account.seasonPoints,
+      role: account.role,
+      accountType: account.accountType,
+      ownerArenaAccountId: account.ownerArenaAccountId,
     };
   }
 

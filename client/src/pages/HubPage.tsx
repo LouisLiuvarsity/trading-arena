@@ -5,6 +5,7 @@ import type {
   CompetitionSummary,
   CompetitionType,
   HubData,
+  ParticipantMode,
   RegistrationStatus,
 } from "@shared/competitionTypes";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,6 +33,7 @@ type JoinedCompetitionCardData = {
   competitionId: number;
   title: string;
   competitionType: CompetitionType;
+  participantMode: ParticipantMode;
   registrationStatus: RegistrationStatus;
   competitionStatus: CompetitionStatus | null;
   startTime: number;
@@ -106,6 +108,11 @@ const TIER_COLORS: Record<string, string> = {
   diamond: "#B9F2FF",
 };
 
+const PARTICIPANT_MODE_STYLE: Record<ParticipantMode, { color: string; bg: string }> = {
+  human: { color: "#B8C1D1", bg: "rgba(184,193,209,0.14)" },
+  agent: { color: "#F0B90B", bg: "rgba(240,185,11,0.16)" },
+};
+
 type HubPageCopy = {
   joinedSection: string;
   joinedSectionHint: string;
@@ -128,6 +135,8 @@ type HubPageCopy = {
   viewCompetition: string;
   toNextTier: string;
   competitionTypes: Record<CompetitionType, string>;
+  participantLabels: Record<ParticipantMode, string>;
+  agentApiAction: string;
 };
 
 const HUB_PAGE_COPY: Record<"zh" | "en", HubPageCopy> = {
@@ -158,6 +167,11 @@ const HUB_PAGE_COPY: Record<"zh" | "en", HubPageCopy> = {
       special: "特别赛",
       practice: "练习赛",
     },
+    participantLabels: {
+      human: "Human vs Human",
+      agent: "Agent vs Agent",
+    },
+    agentApiAction: "通过 Agent API 报名",
   },
   en: {
     joinedSection: "Competitions You're In",
@@ -188,6 +202,11 @@ const HUB_PAGE_COPY: Record<"zh" | "en", HubPageCopy> = {
       special: "Special",
       practice: "Practice",
     },
+    participantLabels: {
+      human: "Human vs Human",
+      agent: "Agent vs Agent",
+    },
+    agentApiAction: "Register via Agent API",
   },
 };
 
@@ -227,6 +246,10 @@ function formatCountdown(targetTs: number | null): string {
 
 function getCompetitionTypeLabel(type: CompetitionType, copy: HubPageCopy): string {
   return copy.competitionTypes[type] ?? copy.competitionTypes.regular;
+}
+
+function getParticipantModeLabel(mode: ParticipantMode, copy: HubPageCopy): string {
+  return copy.participantLabels[mode] ?? copy.participantLabels.human;
 }
 
 function getCompetitionHref(slug: string | null | undefined): string {
@@ -351,6 +374,10 @@ function LiveCompetitionHero({
               >
                 {getCompetitionTypeLabel(competition.competitionType, copy)}
               </span>
+              {renderBadge(
+                getParticipantModeLabel(competition.participantMode, copy),
+                PARTICIPANT_MODE_STYLE[competition.participantMode],
+              )}
             </div>
 
             <div>
@@ -406,6 +433,10 @@ function LiveCompetitionHero({
               icon={<Trophy className="h-3.5 w-3.5" />}
               text={getCompetitionTypeLabel(competition.competitionType, copy)}
             />
+            <MiniInfoChip
+              icon={<Users className="h-3.5 w-3.5" />}
+              text={getParticipantModeLabel(competition.participantMode, copy)}
+            />
           </div>
 
           <Link
@@ -459,6 +490,10 @@ function RegisteredCompetitionHero({
               >
                 {getCompetitionTypeLabel(competition.competitionType, copy)}
               </span>
+              {renderBadge(
+                getParticipantModeLabel(competition.participantMode, copy),
+                PARTICIPANT_MODE_STYLE[competition.participantMode],
+              )}
             </div>
 
             <div>
@@ -514,6 +549,10 @@ function RegisteredCompetitionHero({
             <MiniInfoChip
               icon={<Clock className="h-3.5 w-3.5" />}
               text={`${copy.appliedAtLabel} ${formatTime(competition.appliedAt, locale)}`}
+            />
+            <MiniInfoChip
+              icon={<Users className="h-3.5 w-3.5" />}
+              text={getParticipantModeLabel(competition.participantMode, copy)}
             />
           </div>
 
@@ -585,6 +624,10 @@ function JoinedCompetitionListCard({
             icon={<Trophy className="h-3.5 w-3.5" />}
             text={getCompetitionTypeLabel(competition.competitionType, copy)}
           />
+          <MiniInfoChip
+            icon={<Users className="h-3.5 w-3.5" />}
+            text={getParticipantModeLabel(competition.participantMode, copy)}
+          />
           {competition.symbol && (
             <MiniInfoChip
               icon={<Coins className="h-3.5 w-3.5" />}
@@ -639,6 +682,10 @@ function RecommendationCard({
               {getCompetitionTypeLabel(competition.competitionType, copy)}
             </span>
             {renderBadge(
+              getParticipantModeLabel(competition.participantMode, copy),
+              PARTICIPANT_MODE_STYLE[competition.participantMode],
+            )}
+            {renderBadge(
               t("common.compStatus.registration_open"),
               COMPETITION_STATUS_STYLE.registration_open,
             )}
@@ -667,14 +714,24 @@ function RecommendationCard({
         </div>
 
         <div className="flex w-full flex-col gap-3 lg:w-[180px]">
-          <button
-            onClick={() => onRegister(competition.slug)}
-            disabled={registerPending}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#F0B90B] px-5 py-3 text-sm font-semibold text-[#0B0E11] transition-colors hover:bg-[#F0B90B]/90 disabled:opacity-50"
-          >
-            {registerPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            {t("hub.registerNow")}
-          </button>
+          {competition.participantMode === "agent" ? (
+            <Link
+              href="/agents"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#F0B90B] px-5 py-3 text-sm font-semibold text-[#0B0E11] transition-colors hover:bg-[#F0B90B]/90"
+            >
+              {copy.agentApiAction}
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          ) : (
+            <button
+              onClick={() => onRegister(competition.slug)}
+              disabled={registerPending}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#F0B90B] px-5 py-3 text-sm font-semibold text-[#0B0E11] transition-colors hover:bg-[#F0B90B]/90 disabled:opacity-50"
+            >
+              {registerPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              {t("hub.registerNow")}
+            </button>
+          )}
 
           <Link
             href={`/competitions/${competition.slug}`}
@@ -742,6 +799,7 @@ export default function HubPage() {
         competitionId: registration.competitionId,
         title: registration.competitionTitle,
         competitionType: registration.competitionType,
+        participantMode: registration.participantMode,
         registrationStatus: registration.status,
         competitionStatus: summary?.status ?? null,
         startTime: registration.startTime,

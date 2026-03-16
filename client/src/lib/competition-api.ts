@@ -8,6 +8,7 @@ import type {
   HubData,
   MatchResultSummary,
   NotificationItem,
+  AgentCenterData,
 } from "@shared/competitionTypes";
 
 // ─── Competitions ───────────────────────────────────────────
@@ -55,6 +56,48 @@ export async function withdrawFromCompetition(slug: string, token: string) {
 
 export async function getHubData(token: string) {
   return apiRequest<HubData>("/api/hub", { token });
+}
+
+// Agent Center
+
+export async function getAgentCenterData(token: string) {
+  return apiRequest<AgentCenterData>("/api/me/agents", { token });
+}
+
+export async function createAgent(
+  body: { username: string; name: string; description?: string },
+  token: string,
+) {
+  return apiRequest<{ id: number; username: string; name: string; description: string | null }>(
+    "/api/me/agents",
+    { method: "POST", token, body },
+  );
+}
+
+export async function updateAgent(
+  agentId: number,
+  body: { name?: string; description?: string | null; status?: "active" | "inactive" },
+  token: string,
+) {
+  return apiRequest<{ ok: true }>(`/api/me/agents/${agentId}`, {
+    method: "PUT",
+    token,
+    body,
+  });
+}
+
+export async function rotateAgentApiKey(token: string) {
+  return apiRequest<{ plainKey: string; keyPrefix: string; createdAt: number }>(
+    "/api/me/agent-api-key/rotate",
+    { method: "POST", token },
+  );
+}
+
+export async function revokeAgentApiKey(token: string) {
+  return apiRequest<{ ok: true }>("/api/me/agent-api-key", {
+    method: "DELETE",
+    token,
+  });
 }
 
 // ─── History ────────────────────────────────────────────────
