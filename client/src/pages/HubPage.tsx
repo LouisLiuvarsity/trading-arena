@@ -17,7 +17,6 @@ import {
   ArrowUpRight,
   BarChart3,
   Bell,
-  Bot,
   Calendar,
   ChevronRight,
   Clock,
@@ -28,7 +27,6 @@ import {
   Sparkles,
   TrendingUp,
   Trophy,
-  User,
   Users,
 } from "lucide-react";
 
@@ -429,34 +427,6 @@ function QuickActionLink({
       ) : (
         <ArrowUpRight className="h-4 w-4 text-[#7D8898]" />
       )}
-    </Link>
-  );
-}
-
-function JourneyShortcutCard({
-  href,
-  icon,
-  title,
-  hint,
-}: {
-  href: string;
-  icon: ReactNode;
-  title: string;
-  hint: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group rounded-[22px] border border-white/[0.08] bg-[#171B29] p-4 transition-colors hover:bg-[#1B2132]"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white/[0.05] text-[#F0B90B]">
-          {icon}
-        </span>
-        <ArrowUpRight className="h-4 w-4 text-[#7D8898] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-      </div>
-      <p className="mt-4 text-sm font-semibold text-white">{title}</p>
-      <p className="mt-2 text-xs leading-5 text-[#8E98A8]">{hint}</p>
     </Link>
   );
 }
@@ -1475,45 +1445,6 @@ export default function HubPage() {
     )
     .slice(0, 4);
 
-  const quickStartCards = [
-    {
-      href: "/profile",
-      icon: <User className="h-5 w-5" />,
-      title: lang === "zh" ? "完善个人资料" : "Update Profile",
-      hint:
-        lang === "zh"
-          ? "先补充昵称、地区和机构信息，后续成绩和身份展示会更完整。"
-          : "Complete your name, region, and institution details before you start competing.",
-    },
-    {
-      href: "/competitions",
-      icon: <Calendar className="h-5 w-5" />,
-      title: lang === "zh" ? "选择比赛" : "Choose a Competition",
-      hint:
-        lang === "zh"
-          ? "先看哪些比赛开放报名，再决定报名、观战还是进入比赛。"
-          : "See which competitions are open, then decide whether to join, watch, or enter.",
-    },
-    {
-      href: "/leaderboard",
-      icon: <BarChart3 className="h-5 w-5" />,
-      title: lang === "zh" ? "查看实时排行" : "Check Live Rankings",
-      hint:
-        lang === "zh"
-          ? "看清当前领先者和自己的位置，再决定下一步是否参与。"
-          : "Use the live standings to judge who leads and whether a match is worth opening.",
-    },
-    {
-      href: "/agents",
-      icon: <Bot className="h-5 w-5" />,
-      title: lang === "zh" ? "进入AI管理中心" : "Open Agent Center",
-      hint:
-        lang === "zh"
-          ? "绑定 Agent、管理 API key，并查看 Agent 的报名、结果和成交记录。"
-          : "Bind your agent, manage the API key, and review agent registrations, results, and trades.",
-    },
-  ];
-
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -1543,35 +1474,27 @@ export default function HubPage() {
         </div>
       </div>
 
-      <section className={`${SECTION_CLASS} p-5 md:p-6`}>
-        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.18em] text-[#F0B90B]">
-              {lang === "zh" ? "登录后常用路径" : "Post-login flow"}
-            </p>
-            <h2 className="mt-2 text-xl font-display font-bold text-white">
-              {lang === "zh" ? "先做这 4 件事会最顺手" : "These four actions cover most first steps"}
-            </h2>
-          </div>
-          <p className="max-w-xl text-sm text-[#8F98A8]">
-            {lang === "zh"
-              ? "把个人资料、比赛、排行榜和 AI 管理入口直接放在首屏，减少来回找页面。"
-              : "Keep profile, competitions, rankings, and agent management visible on the first screen."}
-          </p>
-        </div>
-
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {quickStartCards.map((card) => (
-            <JourneyShortcutCard
-              key={card.href}
-              href={card.href}
-              icon={card.icon}
-              title={card.title}
-              hint={card.hint}
-            />
-          ))}
-        </div>
-      </section>
+      <div className="flex flex-wrap gap-3">
+        <Link
+          href="/competitions"
+          className="inline-flex items-center gap-2 rounded-xl bg-[#F0B90B] px-4 py-2.5 text-sm font-semibold text-[#0B0E11] transition-colors hover:bg-[#F0B90B]/90"
+        >
+          {lang === "zh" ? "去看比赛" : "Browse competitions"}
+          <ChevronRight className="h-4 w-4" />
+        </Link>
+        <Link
+          href="/profile"
+          className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm text-[#D1D4DC] transition-colors hover:bg-white/[0.04]"
+        >
+          {lang === "zh" ? "完善资料" : "Update profile"}
+        </Link>
+        <Link
+          href="/agents"
+          className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm text-[#D1D4DC] transition-colors hover:bg-white/[0.04]"
+        >
+          {lang === "zh" ? "打开AI管理中心" : "Open Agent Center"}
+        </Link>
+      </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_360px]">
         <div className="space-y-6">
