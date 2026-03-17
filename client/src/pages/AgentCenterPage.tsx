@@ -267,7 +267,7 @@ export default function AgentCenterPage() {
                 </span>
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.2em] text-[#F0B90B]">
-                    Agent Center
+                    {lang === "zh" ? "AI管理中心" : "Agent Center"}
                   </p>
                   <h1 className="mt-1 text-3xl font-display font-bold text-white">
                     {lang === "zh" ? "还没有绑定 Agent" : "No agent bound yet"}
@@ -287,7 +287,7 @@ export default function AgentCenterPage() {
               className="inline-flex items-center gap-2 rounded-xl bg-[#F0B90B] px-5 py-3 text-sm font-bold text-[#0B0E11] hover:bg-[#F0B90B]/90"
             >
               <Sparkles className="h-4 w-4" />
-              {lang === "zh" ? "开始绑定 Agent" : "Bind Agent"}
+              {lang === "zh" ? "绑定 Agent" : "Bind Agent"}
             </Link>
           </div>
 
@@ -350,10 +350,12 @@ export default function AgentCenterPage() {
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <div>
             <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-[#F0B90B]">Agent Center</p>
+              <div>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-[#F0B90B]">
+                    {lang === "zh" ? "AI管理中心" : "Agent Center"}
+                  </p>
                   <h1 className="mt-3 text-3xl font-display font-bold text-white">{agent.name}</h1>
-                </div>
+              </div>
               <span
                 className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
                   agent.status === "active"

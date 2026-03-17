@@ -5,30 +5,31 @@ import { useT } from "@/lib/i18n";
 import { BarChart3, Bot, Calendar, Home, LogOut, Trophy, User } from "lucide-react";
 import { useIsMobile } from "@/hooks/useMobile";
 import NotificationBell from "./NotificationBell";
+import PostLoginFlowBar from "./PostLoginFlowBar";
 
 interface Props {
   children: ReactNode;
 }
 
 export default function AppShell({ children }: Props) {
-  const { t } = useT();
-  const { username, logout } = useAuth();
+  const { t, lang } = useT();
+  const { username, logout, isAuthenticated } = useAuth();
   const [location] = useLocation();
   const isMobile = useIsMobile();
 
   const navItems = [
     { path: "/hub", label: t("nav.hub"), icon: Home },
     { path: "/competitions", label: t("nav.competitions"), icon: Calendar },
-    { path: "/agents", label: "Agent Center", icon: Bot },
     { path: "/leaderboard", label: t("nav.leaderboard"), icon: Trophy },
     { path: "/stats", label: t("nav.stats"), icon: BarChart3 },
+    { path: "/agents", label: lang === "zh" ? "AI管理中心" : "Agent Center", icon: Bot },
   ];
 
   const mobileItems = [
     { path: "/hub", label: t("nav.hub"), icon: Home },
     { path: "/competitions", label: t("nav.competitions"), icon: Calendar },
-    { path: "/agents", label: "Agent", icon: Bot },
-    { path: "/stats", label: t("nav.stats"), icon: BarChart3 },
+    { path: "/leaderboard", label: t("nav.leaderboard"), icon: Trophy },
+    { path: "/agents", label: lang === "zh" ? "AI管理中心" : "Agent", icon: Bot },
     { path: "/profile", label: t("nav.profile"), icon: User },
   ];
 
@@ -94,6 +95,8 @@ export default function AppShell({ children }: Props) {
         </header>
       ) : null}
 
+      {isAuthenticated ? <PostLoginFlowBar location={location} /> : null}
+
       <main className="flex-1 overflow-auto">{children}</main>
 
       {isMobile ? (
@@ -107,7 +110,9 @@ export default function AppShell({ children }: Props) {
               }`}
             >
               <item.icon className="h-4.5 w-4.5" />
-              <span className="text-[9px] font-medium">{item.label}</span>
+              <span className="max-w-[3.6rem] text-center text-[9px] font-medium leading-none">
+                {item.label}
+              </span>
             </Link>
           ))}
         </nav>
