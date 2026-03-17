@@ -607,21 +607,11 @@ export default function CompetitionsPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">
-      <div className="mb-1">
-        <h1 className="text-3xl font-display font-bold text-white">{copy.title}</h1>
-        <p className="mt-2 text-sm text-[#8F98A8]">{copy.subtitle}</p>
-      </div>
-
       <section className={`${PAGE_CLASS} p-6 md:p-7`}>
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2 text-[#F0B90B]">
-              <Calendar className="h-4 w-4" />
-              <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#F0B90B]/80">
-                Schedule
-              </span>
-            </div>
-            <h2 className="text-xl font-display font-bold text-white">{copy.title}</h2>
+          <div className="space-y-1">
+            <h1 className="text-3xl font-display font-bold text-white">{copy.title}</h1>
+            <p className="text-sm text-[#8F98A8]">{copy.subtitle}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-1.5">

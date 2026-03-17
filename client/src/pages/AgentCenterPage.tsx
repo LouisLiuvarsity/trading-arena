@@ -277,8 +277,8 @@ export default function AgentCenterPage() {
 
               <p className="mt-5 text-sm leading-6 text-[#A5AFBE]">
                 {lang === "zh"
-                  ? "当前账号还没有绑定 Agent。完成认领后，你可以在这里查看 Agent 的状态、API key、报名记录、比赛结果和成交记录。"
-                  : "This account does not have a bound agent yet. After claim, this page will show the agent status, API key, registrations, results, and trades."}
+                  ? "当前账号还没有绑定 Agent。"
+                  : "This account does not have a bound agent yet."}
               </p>
             </div>
 
@@ -370,8 +370,8 @@ export default function AgentCenterPage() {
             <p className="mt-5 max-w-2xl text-sm leading-6 text-[#8E98A8]">
               {agent.description ||
                 (lang === "zh"
-                  ? "人类账户资料和钱包请从右上角 Profile 进入。这里完全只看 Agent：状态、结果、成交记录和 API key，不提供网页下单。"
-                  : "Profile and wallet settings live under the right-side Profile entry. This page is strictly for the agent: status, results, trade history, and API key. There is no web trading here.")}
+                  ? "这里只显示 Agent 的状态、结果、成交记录和 API key。"
+                  : "This page shows the agent status, results, trades, and API key only.")}
             </p>
 
             <div className="mt-5 flex flex-wrap gap-2">
@@ -440,14 +440,7 @@ export default function AgentCenterPage() {
             <p className="text-[11px] uppercase tracking-[0.18em] text-[#8E98A8]">
               {lang === "zh" ? "Agent 资料" : "Agent profile"}
             </p>
-            <h2 className="mt-2 text-xl font-display font-bold text-white">
-              {lang === "zh" ? "Agent 资料" : "Agent Profile"}
-            </h2>
-            <p className="mt-2 text-sm text-[#8E98A8]">
-              {lang === "zh"
-                ? "修改 Agent 名称和策略说明。"
-                : "Update the agent name and strategy notes."}
-            </p>
+            <h2 className="mt-2 text-xl font-display font-bold text-white">{lang === "zh" ? "Agent 资料" : "Agent Profile"}</h2>
           </div>
 
           <div className="mt-5 space-y-4">
@@ -490,14 +483,7 @@ export default function AgentCenterPage() {
               <p className="text-[11px] uppercase tracking-[0.18em] text-[#8E98A8]">
                 {lang === "zh" ? "唯一 API key" : "Unique API key"}
               </p>
-              <h2 className="mt-2 text-xl font-display font-bold text-white">
-                {lang === "zh" ? "API Key" : "API Key"}
-              </h2>
-              <p className="mt-2 text-sm text-[#8E98A8]">
-                {lang === "zh"
-                  ? "查看当前 key，并在需要时轮换或吊销。"
-                  : "View the current key and rotate or revoke it when needed."}
-              </p>
+              <h2 className="mt-2 text-xl font-display font-bold text-white">API Key</h2>
             </div>
             <KeyRound className="h-5 w-5 text-[#F0B90B]" />
           </div>
@@ -644,11 +630,6 @@ export default function AgentCenterPage() {
               {lang === "zh" ? "成交记录" : "Trade Records"}
             </h2>
           </div>
-          <p className="text-sm text-[#8E98A8]">
-            {lang === "zh"
-              ? "这里只显示当前绑定 Agent 的最近成交记录。"
-              : "Only recent trades from the currently bound agent are shown here."}
-          </p>
         </div>
 
         {agent.recentTrades.length === 0 ? (

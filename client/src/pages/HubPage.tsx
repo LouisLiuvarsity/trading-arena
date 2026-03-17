@@ -317,7 +317,7 @@ function SectionHeader({
 }: {
   icon: ReactNode;
   title: string;
-  description: string;
+  description?: string;
   count?: number;
   linkHref?: string;
   linkLabel?: string;
@@ -333,7 +333,7 @@ function SectionHeader({
         </div>
         <div>
           <h2 className="text-xl font-display font-bold text-white">{title}</h2>
-          <p className="text-sm text-[#8D97A8]">{description}</p>
+          {description ? <p className="text-sm text-[#8D97A8]">{description}</p> : null}
         </div>
       </div>
 
@@ -1452,7 +1452,6 @@ export default function HubPage() {
           <h1 className="text-3xl font-display font-bold text-white">
             {t("hub.welcome", { name: username })}
           </h1>
-          <p className="mt-2 text-sm text-[#8F98A8]">{t("hub.subtitle")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {joinedCount > 0 && (
@@ -1502,7 +1501,6 @@ export default function HubPage() {
             <SectionHeader
               icon={<Trophy className="h-4 w-4" />}
               title={copy.focusSection}
-              description={copy.focusSectionHint}
               count={joinedCount}
               linkHref="/competitions"
               linkLabel={t("hub.browseSchedule")}
@@ -1539,7 +1537,6 @@ export default function HubPage() {
                     <div className="space-y-4">
                       <div className="rounded-[20px] border border-white/[0.06] bg-white/[0.03] px-4 py-3">
                         <p className="text-sm font-semibold text-white">{copy.joinedSection}</p>
-                        <p className="mt-1 text-xs text-[#8D97A8]">{copy.joinedSectionHint}</p>
                       </div>
                       {additionalJoined.slice(0, 3).map((competition) => (
                         <JoinedCompetitionListCard
@@ -1580,7 +1577,6 @@ export default function HubPage() {
             <SectionHeader
               icon={<Sparkles className="h-4 w-4" />}
               title={copy.recommendedSection}
-              description={copy.recommendedSectionHint}
               count={recommendedCompetitions.length}
               linkHref="/competitions"
               linkLabel={t("hub.browseSchedule")}

@@ -58,7 +58,7 @@ function MetricCard({
   icon: typeof Users;
   label: string;
   value: string;
-  hint: string;
+  hint?: string;
   toneClass?: string;
 }) {
   return (
@@ -70,7 +70,7 @@ function MetricCard({
         </span>
       </div>
       <p className={`mt-4 text-2xl font-display font-bold ${toneClass}`}>{value}</p>
-      <p className="mt-2 text-xs text-[#8E98A8]">{hint}</p>
+      {hint ? <p className="mt-2 text-xs text-[#8E98A8]">{hint}</p> : null}
     </div>
   );
 }
@@ -117,8 +117,6 @@ export default function StatsOverviewPage() {
   const ov = overview as OverviewStats | undefined;
   const countries = countriesData as CountryRow[];
   const institutions = institutionsData as InstitutionRow[];
-  const topCountry = countries[0];
-  const topInstitution = institutions[0];
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">
@@ -129,20 +127,17 @@ export default function StatsOverviewPage() {
               {lang === "zh" ? "统计总览" : "Stats overview"}
             </p>
             <h1 className="mt-3 text-3xl font-display font-bold text-white">{t("statspage.title")}</h1>
-            <p className="mt-2 max-w-2xl text-sm text-[#8E98A8]">{t("statspage.subtitle")}</p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               <MetricCard
                 icon={Users}
                 label={t("statspage.totalPlayers")}
                 value={isLoading ? "..." : String(ov?.totalPlayers ?? 0)}
-                hint={lang === "zh" ? "参与过比赛的人类与 Agent 总数" : "Combined human and agent participants"}
               />
               <MetricCard
                 icon={Trophy}
                 label={t("statspage.totalComps")}
                 value={isLoading ? "..." : String(ov?.totalCompetitions ?? 0)}
-                hint={lang === "zh" ? "已创建并开放展示的比赛" : "Competitions created and visible in the arena"}
                 toneClass="text-[#F0B90B]"
               />
             </div>
@@ -153,40 +148,22 @@ export default function StatsOverviewPage() {
               icon={BarChart3}
               label={t("statspage.totalTrades")}
               value={isLoading ? "..." : (ov?.totalTrades ?? 0).toLocaleString()}
-              hint={lang === "zh" ? "用于衡量整体活跃度" : "A quick proxy for platform activity"}
             />
             <MetricCard
               icon={DollarSign}
               label={t("statspage.totalPrize")}
               value={isLoading ? "..." : `${ov?.totalPrize ?? 0}U`}
-              hint={lang === "zh" ? "历史累计发放奖金" : "Historical prize pool distributed"}
               toneClass="text-[#0ECB81]"
             />
             <MetricCard
               icon={Globe}
               label={t("statspage.countries")}
               value={isLoading ? "..." : String(ov?.totalCountries ?? 0)}
-              hint={
-                topCountry
-                  ? lang === "zh"
-                    ? `当前人数最多：${topCountry.country}`
-                    : `Largest participation: ${topCountry.country}`
-                  : lang === "zh"
-                    ? "暂无国家数据"
-                    : "No country data yet"
-              }
             />
             <MetricCard
               icon={Building2}
               label={t("statspage.institutions")}
               value={isLoading ? "..." : String(ov?.totalInstitutions ?? 0)}
-              hint={
-                topInstitution
-                  ? topInstitution.name
-                  : lang === "zh"
-                    ? "暂无机构数据"
-                    : "No institution data yet"
-              }
             />
           </div>
         </div>
@@ -200,11 +177,6 @@ export default function StatsOverviewPage() {
                 {lang === "zh" ? "国家分布" : "Country ranking"}
               </p>
               <h2 className="mt-2 text-xl font-display font-bold text-white">{t("statspage.countryRanking")}</h2>
-              <p className="mt-1 text-sm text-[#8E98A8]">
-                {lang === "zh"
-                  ? "人数和平均收益放在同一行，更容易看出哪些地区活跃且表现稳定。"
-                  : "Participation count and average PnL stay on the same row so active and strong regions stand out quickly."}
-              </p>
             </div>
           </div>
 
@@ -240,11 +212,6 @@ export default function StatsOverviewPage() {
                 {lang === "zh" ? "机构分布" : "Institution ranking"}
               </p>
               <h2 className="mt-2 text-xl font-display font-bold text-white">{t("statspage.instRanking")}</h2>
-              <p className="mt-1 text-sm text-[#8E98A8]">
-                {lang === "zh"
-                  ? "保留机构、人数、最好成绩和平均收益，避免把列表做成难读的表格。"
-                  : "Institution, member count, best finish, and average PnL stay visible without turning the list into a dense table."}
-              </p>
             </div>
 
             <Link

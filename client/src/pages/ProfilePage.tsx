@@ -105,7 +105,7 @@ function QuickLinkCard({
   href: string;
   icon: ReactNode;
   title: string;
-  hint: string;
+  hint?: string;
 }) {
   return (
     <Link
@@ -119,7 +119,7 @@ function QuickLinkCard({
         <ChevronRight className="h-4 w-4 text-[#677283] transition-transform group-hover:translate-x-0.5" />
       </div>
       <p className="mt-4 text-sm font-semibold text-white">{title}</p>
-      <p className="mt-1 text-xs leading-5 text-[#8E98A8]">{hint}</p>
+      {hint ? <p className="mt-1 text-xs leading-5 text-[#8E98A8]">{hint}</p> : null}
     </Link>
   );
 }
@@ -241,12 +241,9 @@ export default function ProfilePage() {
               </div>
             ) : null}
 
-            <p className="mt-5 max-w-2xl text-sm leading-6 text-[#8E98A8]">
-              {p.bio ||
-                (lang === "zh"
-                  ? "补充你的背景、交易风格和关注方向，其他参赛者会更容易理解你的定位。"
-                  : "Add your background, trading style, and focus areas so others can understand your profile quickly.")}
-            </p>
+            {p.bio ? (
+              <p className="mt-5 max-w-2xl text-sm leading-6 text-[#8E98A8]">{p.bio}</p>
+            ) : null}
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -292,14 +289,9 @@ export default function ProfilePage() {
               {lang === "zh" ? "赛季概览" : "Season snapshot"}
             </p>
             <h2 className="mt-2 text-xl font-display font-bold text-white">
-              {lang === "zh" ? "先看这 4 个关键指标" : "Four numbers that matter first"}
+              {lang === "zh" ? "关键指标" : "Key numbers"}
             </h2>
           </div>
-          <p className="max-w-md text-sm text-[#8E98A8]">
-            {lang === "zh"
-              ? "把胜率、收益、持仓时长和最好名次放到同一行，判断状态时不需要来回翻。"
-              : "Win rate, PnL, holding time, and best finish are grouped so the current state is obvious immediately."}
-          </p>
         </div>
 
         <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -336,7 +328,7 @@ export default function ProfilePage() {
               {lang === "zh" ? "快捷入口" : "Quick actions"}
             </p>
             <h2 className="mt-2 text-xl font-display font-bold text-white">
-              {lang === "zh" ? "按任务进入，不用先想菜单在哪" : "Go straight to the task you want"}
+              {lang === "zh" ? "常用入口" : "Common actions"}
             </h2>
           </div>
         </div>
@@ -346,19 +338,16 @@ export default function ProfilePage() {
             href="/history"
             icon={<Trophy className="h-4 w-4" />}
             title={t("profile.matchHistory")}
-            hint={lang === "zh" ? "查看比赛结果和积分变化" : "Review results and point changes"}
           />
           <QuickLinkCard
             href="/profile/analytics"
             icon={<BarChart3 className="h-4 w-4" />}
             title={t("profile.analytics")}
-            hint={lang === "zh" ? "查看收益、命中率和操作习惯" : "Inspect PnL, hit rate, and behavior"}
           />
           <QuickLinkCard
             href="/profile/achievements"
             icon={<Award className="h-4 w-4" />}
             title={t("profile.achievements")}
-            hint={lang === "zh" ? "查看徽章、阶段成就和解锁进度" : "See badges, milestones, and unlock progress"}
           />
         </div>
       </section>

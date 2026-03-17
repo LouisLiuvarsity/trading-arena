@@ -153,7 +153,6 @@ export default function LeaderboardPage() {
   const leaderboard = leaderboardData as LeaderboardEntry[];
   const loading = tab === "current" && (compsLoading || lbLoading);
   const error = compsError ? (compsError as Error).message ?? t("common.loadFailed") : null;
-  const topThree = leaderboard.slice(0, 3);
   const myEntry = leaderboard.find((entry) => entry.username === username || !!entry.isYou);
 
   return (
@@ -165,11 +164,6 @@ export default function LeaderboardPage() {
               {lang === "zh" ? "排行榜" : "Leaderboard"}
             </p>
             <h1 className="mt-3 text-3xl font-display font-bold text-white">{t("lbpage.title")}</h1>
-            <p className="mt-2 max-w-2xl text-sm text-[#8E98A8]">
-              {lang === "zh"
-                ? "把当前直播榜和赛季榜分开，先看正在打的比赛，再看长期成绩。"
-                : "Current live standings and season standings stay separate, so the active match is always the first thing you see."}
-            </p>
           </div>
 
           <div className="flex items-center gap-1 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-1.5">
@@ -219,15 +213,6 @@ export default function LeaderboardPage() {
                     LIVE
                   </div>
                   <h2 className="mt-4 text-2xl font-display font-bold text-white">{liveComp.title}</h2>
-                  <p className="mt-2 text-sm text-[#8E98A8]">
-                    {liveComp.participantMode === "agent"
-                      ? lang === "zh"
-                        ? "Agent vs Agent 只读观战榜单"
-                        : "Read-only Agent vs Agent spectator standings"
-                      : lang === "zh"
-                        ? "Human vs Human 实时比赛榜单"
-                        : "Live Human vs Human competition standings"}
-                  </p>
                 </div>
 
                 <div className="flex flex-wrap gap-3">
@@ -263,60 +248,6 @@ export default function LeaderboardPage() {
               </div>
             </section>
 
-            {topThree.length > 0 ? (
-              <section className={`${PAGE_CLASS} p-6`}>
-                <div className="flex items-end justify-between gap-4">
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-[#8E98A8]">
-                      {lang === "zh" ? "领先选手" : "Top performers"}
-                    </p>
-                    <h2 className="mt-2 text-xl font-display font-bold text-white">
-                      {lang === "zh" ? "先看前三名" : "Start with the podium"}
-                    </h2>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid gap-3 md:grid-cols-3">
-                  {topThree.map((entry) => {
-                    const tierInfo = RANK_TIERS.find((item) => item.tier === entry.rankTier);
-                    const tierColor = TIER_COLORS[entry.rankTier] ?? "#5E6673";
-                    return (
-                      <div
-                        key={entry.rank}
-                        className="rounded-2xl border border-white/[0.08] bg-black/20 p-4"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="inline-flex items-center gap-2 rounded-full bg-white/[0.04] px-3 py-1 text-xs font-semibold text-[#D1D4DC]">
-                            {getRankIcon(entry.rank) ?? `#${entry.rank}`}
-                          </span>
-                          <span
-                            className="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
-                            style={{ color: tierColor, backgroundColor: `${tierColor}1a` }}
-                          >
-                            {tierInfo?.icon ?? ""} {tierInfo?.label ?? entry.rankTier}
-                          </span>
-                        </div>
-                        <p className="mt-4 truncate text-lg font-display font-bold text-white">{entry.username}</p>
-                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                          <div>
-                            <p className="text-[11px] uppercase tracking-[0.16em] text-[#7E899B]">PnL%</p>
-                            <p className={`mt-2 font-mono font-semibold ${entry.pnlPct >= 0 ? "text-[#0ECB81]" : "text-[#F6465D]"}`}>
-                              {entry.pnlPct >= 0 ? "+" : ""}
-                              {entry.pnlPct.toFixed(2)}%
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-[11px] uppercase tracking-[0.16em] text-[#7E899B]">Points</p>
-                            <p className="mt-2 font-mono font-semibold text-[#F0B90B]">{entry.matchPoints}</p>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            ) : null}
-
             <section className={`${PAGE_CLASS} p-6`}>
               <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                 <div>
@@ -324,14 +255,9 @@ export default function LeaderboardPage() {
                     {lang === "zh" ? "完整榜单" : "Full standings"}
                   </p>
                   <h2 className="mt-2 text-xl font-display font-bold text-white">
-                    {lang === "zh" ? "按人查看，不用读表格" : "A ranking list instead of a dense table"}
+                    {lang === "zh" ? "实时排名" : "Live standings"}
                   </h2>
                 </div>
-                <p className="text-sm text-[#8E98A8]">
-                  {lang === "zh"
-                    ? "每行只保留用户名、收益、积分和奖金，方便快速扫榜。"
-                    : "Each row keeps only the name, PnL, points, and prize for faster scanning."}
-                </p>
               </div>
 
               {leaderboard.length === 0 ? (
