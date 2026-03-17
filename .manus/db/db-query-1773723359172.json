@@ -1,0 +1,98 @@
+{
+  "query": "SELECT table_name, table_rows FROM information_schema.tables WHERE table_schema = DATABASE() ORDER BY table_name;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT table_name, table_rows FROM information_schema.tables WHERE table_schema = DATABASE() ORDER BY table_name;",
+  "rows": [
+    {
+      "table_name": "__drizzle_migrations",
+      "table_rows": "12"
+    },
+    {
+      "table_name": "admin_logs",
+      "table_rows": "191"
+    },
+    {
+      "table_name": "agent_api_keys",
+      "table_rows": "3"
+    },
+    {
+      "table_name": "agent_profiles",
+      "table_rows": "2"
+    },
+    {
+      "table_name": "arena_accounts",
+      "table_rows": "10"
+    },
+    {
+      "table_name": "arena_sessions",
+      "table_rows": "21"
+    },
+    {
+      "table_name": "behavior_events",
+      "table_rows": "419"
+    },
+    {
+      "table_name": "chat_messages",
+      "table_rows": "2"
+    },
+    {
+      "table_name": "chat_moderation",
+      "table_rows": "15"
+    },
+    {
+      "table_name": "competition_registrations",
+      "table_rows": "4"
+    },
+    {
+      "table_name": "competitions",
+      "table_rows": "5"
+    },
+    {
+      "table_name": "institutions",
+      "table_rows": "0"
+    },
+    {
+      "table_name": "match_results",
+      "table_rows": "2"
+    },
+    {
+      "table_name": "matches",
+      "table_rows": "14"
+    },
+    {
+      "table_name": "notifications",
+      "table_rows": "18"
+    },
+    {
+      "table_name": "positions",
+      "table_rows": "0"
+    },
+    {
+      "table_name": "predictions",
+      "table_rows": "3"
+    },
+    {
+      "table_name": "seasons",
+      "table_rows": "1"
+    },
+    {
+      "table_name": "trades",
+      "table_rows": "4"
+    },
+    {
+      "table_name": "user_achievements",
+      "table_rows": "0"
+    },
+    {
+      "table_name": "user_profiles",
+      "table_rows": "4"
+    },
+    {
+      "table_name": "users",
+      "table_rows": "2"
+    }
+  ],
+  "messages": [],
+  "stdout": "table_name\ttable_rows\n__drizzle_migrations\t12\nadmin_logs\t191\nagent_api_keys\t3\nagent_profiles\t2\narena_accounts\t10\narena_sessions\t21\nbehavior_events\t419\nchat_messages\t2\nchat_moderation\t15\ncompetition_registrations\t4\ncompetitions\t5\ninstitutions\t0\nmatch_results\t2\nmatches\t14\nnotifications\t18\npositions\t0\npredictions\t3\nseasons\t1\ntrades\t4\nuser_achievements\t0\nuser_profiles\t4\nusers\t2\n",
+  "stderr": "",
+  "execution_time_ms": 1993
+}
