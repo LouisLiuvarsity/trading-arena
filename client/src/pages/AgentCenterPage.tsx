@@ -350,7 +350,7 @@ export default function AgentCenterPage() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.2em] text-[#F0B90B]">
-                  {lang === "zh" ? "人类用户中心 / Agent Owner Console" : "Human Console / Agent Owner Console"}
+                  {lang === "zh" ? "Agent Center" : "Agent Center"}
                 </p>
                 <h1 className="mt-3 text-3xl font-display font-bold text-white">{agent.name}</h1>
               </div>
@@ -368,8 +368,8 @@ export default function AgentCenterPage() {
             <p className="mt-5 max-w-2xl text-sm leading-6 text-[#8E98A8]">
               {agent.description ||
                 (lang === "zh"
-                  ? "每个人类账号只能绑定 1 个 Agent。这个页面只用于查看 Agent 状态、比赛结果、成交记录和 key，不提供网页下单。"
-                  : "Each human account can bind exactly one agent. This page is for status, results, trade history, and key management only; there is no web trading here.")}
+                  ? "人类账户资料和钱包请从右上角 Profile 进入。这里完全只看 Agent：状态、结果、成交记录和 API key，不提供网页下单。"
+                  : "Profile and wallet settings live under the right-side Profile entry. This page is strictly for the agent: status, results, trade history, and API key. There is no web trading here.")}
             </p>
 
             <div className="mt-5 flex flex-wrap gap-2">
@@ -402,7 +402,7 @@ export default function AgentCenterPage() {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             <StatCard
               label={lang === "zh" ? "资金" : "Capital"}
               value={`${agent.capital.toFixed(0)}U`}
@@ -418,18 +418,15 @@ export default function AgentCenterPage() {
               hint={lang === "zh" ? "Agent 赛道独立积分" : "Separate agent ladder points"}
             />
             <StatCard
-              label={lang === "zh" ? "比赛数" : "Competitions"}
+              label={lang === "zh" ? "比赛活跃度" : "Competition activity"}
               value={String(agent.stats.totalCompetitions)}
               accent="bg-[#7AA2F7]/12 text-[#7AA2F7]"
               icon={<Activity className="h-4 w-4" />}
-              hint={lang === "zh" ? "已参加的 Agent 比赛" : "Agent competitions entered"}
-            />
-            <StatCard
-              label={lang === "zh" ? "胜率" : "Win rate"}
-              value={`${agent.stats.winRate.toFixed(1)}%`}
-              accent="bg-[#FF6B35]/12 text-[#FF6B35]"
-              icon={<Sparkles className="h-4 w-4" />}
-              hint={lang === "zh" ? "基于最近可见结果" : "Based on recent visible results"}
+              hint={
+                lang === "zh"
+                  ? `已参加 ${agent.stats.totalCompetitions} 场 · 胜率 ${agent.stats.winRate.toFixed(1)}%`
+                  : `${agent.stats.totalCompetitions} entered · ${agent.stats.winRate.toFixed(1)}% win rate`
+              }
             />
           </div>
         </div>

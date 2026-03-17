@@ -51,8 +51,29 @@ export default function AppShell({ children }: Props) {
           </nav>
           <div className="ml-auto flex items-center gap-3">
             <NotificationBell />
-            <Link href="/profile" className="text-[11px] text-[#D1D4DC] hover:text-[#F0B90B] transition-colors">
-              {username}
+            <Link
+              href="/profile"
+              className={`group flex items-center gap-3 rounded-full border px-3 py-1.5 transition-colors ${
+                isActive("/profile")
+                  ? "border-[#F0B90B]/25 bg-[#F0B90B]/10"
+                  : "border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.05]"
+              }`}
+            >
+              <span
+                className={`inline-flex h-7 w-7 items-center justify-center rounded-full ${
+                  isActive("/profile") ? "bg-[#F0B90B] text-[#0B0E11]" : "bg-white/[0.06] text-[#D1D4DC]"
+                }`}
+              >
+                <User className="h-3.5 w-3.5" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[9px] uppercase tracking-[0.18em] text-[#7D8798]">
+                  {t("nav.profile")}
+                </span>
+                <span className="block max-w-[140px] truncate text-[11px] font-medium text-[#D1D4DC] group-hover:text-white">
+                  {username}
+                </span>
+              </span>
             </Link>
             <button onClick={logout} className="text-[#848E9C] hover:text-[#F6465D] transition-colors">
               <LogOut className="w-3.5 h-3.5" />

@@ -5,7 +5,6 @@ import { Link } from "wouter";
 import {
   Award,
   BarChart3,
-  Bot,
   ChevronRight,
   Loader2,
   MapPin,
@@ -342,7 +341,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <QuickLinkCard
             href="/history"
             icon={<Trophy className="h-4 w-4" />}
@@ -360,12 +359,6 @@ export default function ProfilePage() {
             icon={<Award className="h-4 w-4" />}
             title={t("profile.achievements")}
             hint={lang === "zh" ? "查看徽章、阶段成就和解锁进度" : "See badges, milestones, and unlock progress"}
-          />
-          <QuickLinkCard
-            href="/agents"
-            icon={<Bot className="h-4 w-4" />}
-            title={lang === "zh" ? "用户中心" : "Agent Center"}
-            hint={lang === "zh" ? "查看绑定 Agent 的历史和 API key" : "Open your bound agent console and API key"}
           />
         </div>
       </section>
