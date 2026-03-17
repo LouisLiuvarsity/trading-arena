@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { z } from "zod";
 import * as compDb from "./competition-db";
+import { invokeLLM } from "./_core/llm";
 
 const COINDESK_NEWS_API_BASE = "https://data-api.coindesk.com";
 const COINDESK_NEWS_API_KEY =
@@ -24,6 +25,19 @@ type CoinDeskArticle = {
     NAME?: string;
   };
 };
+
+type LocalNewsItem = {
+  id: string;
+  title: string;
+  source: string;
+  timestamp: number;
+  url?: string;
+  sentiment: "bullish" | "bearish" | "neutral";
+  impact: "high" | "medium" | "low";
+  isBreaking: boolean;
+};
+
+const translatedTitleCache = new Map<string, string>();
 
 function resolveCompetition(identifier: string) {
   if (/^\d+$/.test(identifier)) {
@@ -52,7 +66,127 @@ function toImpact(publishedOn?: number) {
   return { impact: "low" as const, isBreaking: false };
 }
 
-async function fetchCoinDeskArticles(providerLang: string, limit: number, sinceTs?: number) {
+function getTextContent(content: string | Array<{ type: string; text?: string }>) {
+  if (typeof content === "string") return content;
+  return content
+    .filter((part) => part.type === "text" && typeof part.text === "string")
+    .map((part) => part.text)
+    .join("\n");
+}
+
+async function translateTitleWithPublicFallback(title: string) {
+  try {
+    const params = new URLSearchParams({
+      client: "gtx",
+      sl: "en",
+      tl: "zh-CN",
+      dt: "t",
+      q: title,
+    });
+
+    const response = await fetch(`https://translate.googleapis.com/translate_a/single?${params.toString()}`);
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as unknown;
+    if (!Array.isArray(payload) || !Array.isArray(payload[0])) {
+      return null;
+    }
+
+    const translated = payload[0]
+      .map((part) => (Array.isArray(part) && typeof part[0] === "string" ? part[0] : ""))
+      .join("")
+      .trim();
+
+    return translated || null;
+  } catch {
+    return null;
+  }
+}
+
+async function translateTitlesToChinese(items: LocalNewsItem[]) {
+  const missing = items.filter((item) => !translatedTitleCache.has(item.id));
+  if (missing.length === 0) {
+    return;
+  }
+
+  try {
+    const result = await invokeLLM({
+      messages: [
+        {
+          role: "system",
+          content:
+            "Translate crypto news headlines into concise Simplified Chinese. Keep tickers, company names, numbers, and market terms accurate. Return JSON only.",
+        },
+        {
+          role: "user",
+          content: JSON.stringify({
+            items: missing.map((item) => ({
+              id: item.id,
+              title: item.title,
+            })),
+          }),
+        },
+      ],
+      outputSchema: {
+        name: "translated_news_titles",
+        schema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            items: {
+              type: "array",
+              items: {
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                  id: { type: "string" },
+                  titleZh: { type: "string" },
+                },
+                required: ["id", "titleZh"],
+              },
+            },
+          },
+          required: ["items"],
+        },
+      },
+    });
+
+    const payload = JSON.parse(getTextContent(result.choices[0]?.message?.content ?? "{}")) as {
+      items?: Array<{ id: string; titleZh: string }>;
+    };
+
+    for (const item of payload.items ?? []) {
+      if (item.id && item.titleZh) {
+        translatedTitleCache.set(item.id, item.titleZh.trim());
+      }
+    }
+  } catch {
+    // If translation is unavailable, keep the original English title.
+  }
+
+  const stillMissing = missing.filter((item) => !translatedTitleCache.has(item.id));
+  if (stillMissing.length === 0) {
+    return;
+  }
+
+  await Promise.all(
+    stillMissing.map(async (item) => {
+      const translated = await translateTitleWithPublicFallback(item.title);
+      if (translated) {
+        translatedTitleCache.set(item.id, translated);
+      }
+    }),
+  );
+}
+
+async function fetchCoinDeskArticles(
+  providerLang: string,
+  requestedLang: "zh" | "en",
+  limit: number,
+  sinceTs?: number,
+) {
   const params = new URLSearchParams({
     api_key: COINDESK_NEWS_API_KEY,
     lang: providerLang,
@@ -80,7 +214,7 @@ async function fetchCoinDeskArticles(providerLang: string, limit: number, sinceT
     throw new Error(message);
   }
 
-  return (payload.Data ?? [])
+  const items: LocalNewsItem[] = (payload.Data ?? [])
     .filter((article) => article.TITLE && article.PUBLISHED_ON)
     .filter((article) => (sinceTs ? (article.PUBLISHED_ON ?? 0) > sinceTs : true))
     .sort((a, b) => (b.PUBLISHED_ON ?? 0) - (a.PUBLISHED_ON ?? 0))
@@ -98,6 +232,16 @@ async function fetchCoinDeskArticles(providerLang: string, limit: number, sinceT
         isBreaking,
       };
     });
+
+  if (requestedLang === "zh") {
+    await translateTitlesToChinese(items);
+    return items.map((item) => ({
+      ...item,
+      title: translatedTitleCache.get(item.id) ?? item.title,
+    }));
+  }
+
+  return items;
 }
 
 export function registerNewsRoutes(app: Express) {
@@ -134,7 +278,12 @@ export function registerNewsRoutes(app: Express) {
     }
 
     try {
-      const items = await fetchCoinDeskArticles(providerLang, parsed.data.limit, parsed.data.sinceTs);
+      const items = await fetchCoinDeskArticles(
+        providerLang,
+        parsed.data.lang,
+        parsed.data.limit,
+        parsed.data.sinceTs,
+      );
       res.json({
         items,
         isLive: true,
