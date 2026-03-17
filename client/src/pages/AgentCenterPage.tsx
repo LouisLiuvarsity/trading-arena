@@ -267,18 +267,18 @@ export default function AgentCenterPage() {
                 </span>
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.2em] text-[#F0B90B]">
-                    {lang === "zh" ? "用户中心" : "Agent Center"}
+                    Agent Center
                   </p>
                   <h1 className="mt-1 text-3xl font-display font-bold text-white">
-                    {lang === "zh" ? "还没有绑定 Agent" : "No agent is bound yet"}
+                    {lang === "zh" ? "还没有绑定 Agent" : "No agent bound yet"}
                   </h1>
                 </div>
               </div>
 
               <p className="mt-5 text-sm leading-6 text-[#A5AFBE]">
                 {lang === "zh"
-                  ? "这里是人类用户查看和管理唯一 Agent 的地方。比赛报名、查询和下单都由 Agent 通过 API 完成，这个页面只负责认领、查看和管理 key。"
-                  : "This is the human owner's console for the single bound agent. Registration, inspection, and trading all happen through the API; this page is only for claim, visibility, and key management."}
+                  ? "当前账号还没有绑定 Agent。完成认领后，你可以在这里查看 Agent 的状态、API key、报名记录、比赛结果和成交记录。"
+                  : "This account does not have a bound agent yet. After claim, this page will show the agent status, API key, registrations, results, and trades."}
               </p>
             </div>
 
@@ -287,17 +287,19 @@ export default function AgentCenterPage() {
               className="inline-flex items-center gap-2 rounded-xl bg-[#F0B90B] px-5 py-3 text-sm font-bold text-[#0B0E11] hover:bg-[#F0B90B]/90"
             >
               <Sparkles className="h-4 w-4" />
-              {lang === "zh" ? "开始 Agent 接入" : "Start Agent onboarding"}
+              {lang === "zh" ? "开始绑定 Agent" : "Bind Agent"}
             </Link>
           </div>
 
           <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[#8E98A8]">prompt</p>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-[#8E98A8]">
+                {lang === "zh" ? "Agent Prompt" : "Agent Prompt"}
+              </p>
               <button
                 onClick={async () => {
                   await navigator.clipboard.writeText(prompt);
-                  toast.success(lang === "zh" ? "Prompt 已复制" : "Prompt copied");
+                  toast.success(lang === "zh" ? "Agent Prompt 已复制" : "Agent prompt copied");
                 }}
                 className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2.5 py-1 text-[11px] text-[#D1D4DC] hover:bg-white/[0.04]"
               >
@@ -348,12 +350,10 @@ export default function AgentCenterPage() {
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <div>
             <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.2em] text-[#F0B90B]">
-                  {lang === "zh" ? "Agent Center" : "Agent Center"}
-                </p>
-                <h1 className="mt-3 text-3xl font-display font-bold text-white">{agent.name}</h1>
-              </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-[#F0B90B]">Agent Center</p>
+                  <h1 className="mt-3 text-3xl font-display font-bold text-white">{agent.name}</h1>
+                </div>
               <span
                 className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
                   agent.status === "active"
@@ -377,10 +377,10 @@ export default function AgentCenterPage() {
                 @{agent.username}
               </span>
               <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-[#D1D4DC]">
-                Agent vs Agent only
+                {lang === "zh" ? "仅限 Agent vs Agent" : "Agent vs Agent only"}
               </span>
               <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-[#D1D4DC]">
-                API only
+                {lang === "zh" ? "仅限 API 操作" : "API only"}
               </span>
             </div>
 
@@ -389,7 +389,7 @@ export default function AgentCenterPage() {
                 href="/agent-join"
                 className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-[#D1D4DC] hover:bg-white/[0.04]"
               >
-                {lang === "zh" ? "重新生成认领包" : "New claim package"}
+                {lang === "zh" ? "生成新的认领链接" : "Generate new claim link"}
               </Link>
               <button
                 onClick={handleDelete}
@@ -439,12 +439,12 @@ export default function AgentCenterPage() {
               {lang === "zh" ? "Agent 资料" : "Agent profile"}
             </p>
             <h2 className="mt-2 text-xl font-display font-bold text-white">
-              {lang === "zh" ? "只保留身份和策略说明" : "Keep identity and strategy notes together"}
+              {lang === "zh" ? "Agent 资料" : "Agent Profile"}
             </h2>
             <p className="mt-2 text-sm text-[#8E98A8]">
               {lang === "zh"
-                ? "避免把资料页做成后台表单，常用信息在这里一次完成。"
-                : "The profile editor stays focused on the fields owners actually change most."}
+                ? "修改 Agent 名称和策略说明。"
+                : "Update the agent name and strategy notes."}
             </p>
           </div>
 
@@ -489,12 +489,12 @@ export default function AgentCenterPage() {
                 {lang === "zh" ? "唯一 API key" : "Unique API key"}
               </p>
               <h2 className="mt-2 text-xl font-display font-bold text-white">
-                {lang === "zh" ? "把 key 状态放在一个面板里" : "All key status in one panel"}
+                {lang === "zh" ? "API Key" : "API Key"}
               </h2>
               <p className="mt-2 text-sm text-[#8E98A8]">
                 {lang === "zh"
-                  ? "认领成功后才激活权限。轮换或吊销会立刻影响 Agent 通过 API 的访问能力。"
-                  : "Permissions activate only after claim. Rotating or revoking affects the agent's API access immediately."}
+                  ? "查看当前 key，并在需要时轮换或吊销。"
+                  : "View the current key and rotate or revoke it when needed."}
               </p>
             </div>
             <KeyRound className="h-5 w-5 text-[#F0B90B]" />
@@ -579,7 +579,7 @@ export default function AgentCenterPage() {
               {lang === "zh" ? "最近报名" : "Recent registrations"}
             </p>
             <h2 className="mt-2 text-xl font-display font-bold text-white">
-              {lang === "zh" ? "先看报名和比赛状态" : "Registration status first"}
+              {lang === "zh" ? "报名记录" : "Registration Records"}
             </h2>
           </div>
 
@@ -608,7 +608,7 @@ export default function AgentCenterPage() {
               {lang === "zh" ? "最近成绩" : "Recent results"}
             </p>
             <h2 className="mt-2 text-xl font-display font-bold text-white">
-              {lang === "zh" ? "只看最关键的结果字段" : "Only the result fields people actually check"}
+              {lang === "zh" ? "比赛结果" : "Competition Results"}
             </h2>
           </div>
 
@@ -639,13 +639,13 @@ export default function AgentCenterPage() {
               {lang === "zh" ? "最近成交" : "Recent trades"}
             </p>
             <h2 className="mt-2 text-xl font-display font-bold text-white">
-              {lang === "zh" ? "把宽表格改成结果卡片" : "Trade records as cards instead of a wide table"}
+              {lang === "zh" ? "成交记录" : "Trade Records"}
             </h2>
           </div>
           <p className="text-sm text-[#8E98A8]">
             {lang === "zh"
-              ? "这里仅展示当前绑定 Agent 的成交。删除 Agent 后，这些记录不会继续显示在当前用户中心。"
-              : "Only trades from the currently bound agent are shown here. After deletion, this console no longer displays them."}
+              ? "这里只显示当前绑定 Agent 的最近成交记录。"
+              : "Only recent trades from the currently bound agent are shown here."}
           </p>
         </div>
 

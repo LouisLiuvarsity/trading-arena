@@ -1,8 +1,8 @@
 import { type ReactNode } from "react";
-import { useLocation, Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/lib/i18n";
-import { Home, Calendar, Trophy, BarChart3, User, LogOut, Bot } from "lucide-react";
+import { BarChart3, Bot, Calendar, Home, LogOut, Trophy, User } from "lucide-react";
 import { useIsMobile } from "@/hooks/useMobile";
 import NotificationBell from "./NotificationBell";
 
@@ -11,7 +11,7 @@ interface Props {
 }
 
 export default function AppShell({ children }: Props) {
-  const { t, lang } = useT();
+  const { t } = useT();
   const { username, logout } = useAuth();
   const [location] = useLocation();
   const isMobile = useIsMobile();
@@ -19,36 +19,46 @@ export default function AppShell({ children }: Props) {
   const navItems = [
     { path: "/hub", label: t("nav.hub"), icon: Home },
     { path: "/competitions", label: t("nav.competitions"), icon: Calendar },
-    { path: "/agents", label: lang === "zh" ? "用户中心" : "Agent Center", icon: Bot },
+    { path: "/agents", label: "Agent Center", icon: Bot },
     { path: "/leaderboard", label: t("nav.leaderboard"), icon: Trophy },
     { path: "/stats", label: t("nav.stats"), icon: BarChart3 },
+  ];
+
+  const mobileItems = [
+    { path: "/hub", label: t("nav.hub"), icon: Home },
+    { path: "/competitions", label: t("nav.competitions"), icon: Calendar },
+    { path: "/agents", label: "Agent", icon: Bot },
+    { path: "/stats", label: t("nav.stats"), icon: BarChart3 },
+    { path: "/profile", label: t("nav.profile"), icon: User },
   ];
 
   const isActive = (path: string) => location === path || location.startsWith(path + "/");
 
   return (
-    <div className="min-h-screen bg-[#0B0E11] flex flex-col">
-      {!isMobile && (
-        <header className="h-12 border-b border-[rgba(255,255,255,0.08)] bg-[#0D1017] flex items-center px-4 shrink-0">
-          <Link href="/hub" className="text-[#F0B90B] font-display font-bold text-sm mr-6">
+    <div className="flex min-h-screen flex-col bg-[#0B0E11]">
+      {!isMobile ? (
+        <header className="flex h-12 shrink-0 items-center border-b border-[rgba(255,255,255,0.08)] bg-[#0D1017] px-4">
+          <Link href="/hub" className="mr-6 text-sm font-bold text-[#F0B90B] font-display">
             {t("nav.brand")}
           </Link>
+
           <nav className="flex items-center gap-1">
             {navItems.map((item) => (
               <Link
                 key={item.path}
                 href={item.path}
-                className={`px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+                className={`rounded-md px-3 py-1.5 text-[11px] font-medium transition-colors ${
                   isActive(item.path)
                     ? "bg-[#F0B90B]/10 text-[#F0B90B]"
-                    : "text-[#848E9C] hover:text-[#D1D4DC] hover:bg-white/[0.03]"
+                    : "text-[#848E9C] hover:bg-white/[0.03] hover:text-[#D1D4DC]"
                 }`}
               >
-                <item.icon className="w-3.5 h-3.5 inline mr-1" />
+                <item.icon className="mr-1 inline h-3.5 w-3.5" />
                 {item.label}
               </Link>
             ))}
           </nav>
+
           <div className="ml-auto flex items-center gap-3">
             <NotificationBell />
             <Link
@@ -61,7 +71,9 @@ export default function AppShell({ children }: Props) {
             >
               <span
                 className={`inline-flex h-7 w-7 items-center justify-center rounded-full ${
-                  isActive("/profile") ? "bg-[#F0B90B] text-[#0B0E11]" : "bg-white/[0.06] text-[#D1D4DC]"
+                  isActive("/profile")
+                    ? "bg-[#F0B90B] text-[#0B0E11]"
+                    : "bg-white/[0.06] text-[#D1D4DC]"
                 }`}
               >
                 <User className="h-3.5 w-3.5" />
@@ -75,37 +87,31 @@ export default function AppShell({ children }: Props) {
                 </span>
               </span>
             </Link>
-            <button onClick={logout} className="text-[#848E9C] hover:text-[#F6465D] transition-colors">
-              <LogOut className="w-3.5 h-3.5" />
+            <button onClick={logout} className="text-[#848E9C] transition-colors hover:text-[#F6465D]">
+              <LogOut className="h-3.5 w-3.5" />
             </button>
           </div>
         </header>
-      )}
+      ) : null}
 
       <main className="flex-1 overflow-auto">{children}</main>
 
-      {isMobile && (
-        <nav className="h-14 border-t border-[rgba(255,255,255,0.08)] bg-[#0D1017] flex items-center justify-around shrink-0 px-2">
-          {[
-            { path: "/hub", label: t("nav.hub"), icon: Home },
-            { path: "/competitions", label: t("nav.competitions"), icon: Calendar },
-            { path: "/agents", label: lang === "zh" ? "中心" : "Agent", icon: Bot },
-            { path: "/stats", label: t("nav.stats"), icon: BarChart3 },
-            { path: "/profile", label: t("nav.profile"), icon: User },
-          ].map((item) => (
+      {isMobile ? (
+        <nav className="flex h-14 shrink-0 items-center justify-around border-t border-[rgba(255,255,255,0.08)] bg-[#0D1017] px-2">
+          {mobileItems.map((item) => (
             <Link
               key={item.path}
               href={item.path}
-              className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-md transition-colors ${
+              className={`flex flex-col items-center gap-0.5 rounded-md px-2 py-1 transition-colors ${
                 isActive(item.path) ? "text-[#F0B90B]" : "text-[#5E6673]"
               }`}
             >
-              <item.icon className="w-4.5 h-4.5" />
+              <item.icon className="h-4.5 w-4.5" />
               <span className="text-[9px] font-medium">{item.label}</span>
             </Link>
           ))}
         </nav>
-      )}
+      ) : null}
     </div>
   );
 }
