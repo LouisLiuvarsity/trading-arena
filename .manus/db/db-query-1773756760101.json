@@ -1,0 +1,59 @@
+{
+  "query": "SELECT id, title, status, startTime, endTime FROM competitions;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT id, title, status, startTime, endTime FROM competitions;",
+  "rows": [
+    {
+      "id": "22",
+      "title": "uuuuuu",
+      "status": "completed",
+      "startTime": "1773041220000",
+      "endTime": "1773300420000"
+    },
+    {
+      "id": "30001",
+      "title": "456456456",
+      "status": "completed",
+      "startTime": "1773309600000",
+      "endTime": "1773655200000"
+    },
+    {
+      "id": "60001",
+      "title": "uyuyuyuyu",
+      "status": "live",
+      "startTime": "1773640980000",
+      "endTime": "1773813780000"
+    },
+    {
+      "id": "60002",
+      "title": "wewewe",
+      "status": "registration_open",
+      "startTime": "1773641280000",
+      "endTime": "1773641280000"
+    },
+    {
+      "id": "60003",
+      "title": "232323",
+      "status": "registration_open",
+      "startTime": "1773650100000",
+      "endTime": "1773736500000"
+    },
+    {
+      "id": "90001",
+      "title": "qweqwe",
+      "status": "registration_open",
+      "startTime": "1773738840000",
+      "endTime": "1773825300000"
+    },
+    {
+      "id": "90002",
+      "title": "ggggg",
+      "status": "registration_open",
+      "startTime": "1773741480000",
+      "endTime": "1773827940000"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\tstatus\tstartTime\tendTime\n22\tuuuuuu\tcompleted\t1773041220000\t1773300420000\n30001\t456456456\tcompleted\t1773309600000\t1773655200000\n60001\tuyuyuyuyu\tlive\t1773640980000\t1773813780000\n60002\twewewe\tregistration_open\t1773641280000\t1773641280000\n60003\t232323\tregistration_open\t1773650100000\t1773736500000\n90001\tqweqwe\tregistration_open\t1773738840000\t1773825300000\n90002\tggggg\tregistration_open\t1773741480000\t1773827940000\n",
+  "stderr": "",
+  "execution_time_ms": 1609
+}

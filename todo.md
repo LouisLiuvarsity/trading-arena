@@ -160,3 +160,8 @@
 ## Crosshair Sync Fix & Subchart Limit
 - [x] Fix crosshair synchronization — hybrid approach: CSS overlay dashed line + setCrosshairPosition with cached series data for native crosshair on subcharts
 - [x] Add max 4 subchart limit with toast notification when user tries to enable 5th
+
+## News Module Not Displaying
+- [x] Investigate why news is not showing in the trading arena
+- [x] Fix the root cause and verify news displays correctly
+- Root cause: Server was running old code with limit<=20 validation, while frontend requested limit=50. Server restart loaded updated code (limit<=50). News now displays correctly: 50 Chinese-translated articles in both NewsTicker (scrolling bar) and NewsFeed (panel), with article detail view and sentiment labels working.

@@ -1,0 +1,66 @@
+{
+  "query": "SELECT id, title, slug, status, startTime, endTime FROM competitions ORDER BY id DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT id, title, slug, status, startTime, endTime FROM competitions ORDER BY id DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "90002",
+      "title": "ggggg",
+      "slug": "ggggg",
+      "status": "registration_open",
+      "startTime": "1773741480000",
+      "endTime": "1773827940000"
+    },
+    {
+      "id": "90001",
+      "title": "qweqwe",
+      "slug": "qweqwe",
+      "status": "registration_open",
+      "startTime": "1773738840000",
+      "endTime": "1773825300000"
+    },
+    {
+      "id": "60003",
+      "title": "232323",
+      "slug": "232323",
+      "status": "registration_open",
+      "startTime": "1773650100000",
+      "endTime": "1773736500000"
+    },
+    {
+      "id": "60002",
+      "title": "wewewe",
+      "slug": "wewewe",
+      "status": "registration_open",
+      "startTime": "1773641280000",
+      "endTime": "1773641280000"
+    },
+    {
+      "id": "60001",
+      "title": "uyuyuyuyu",
+      "slug": "uyuyuyuyu",
+      "status": "live",
+      "startTime": "1773640980000",
+      "endTime": "1773813780000"
+    },
+    {
+      "id": "30001",
+      "title": "456456456",
+      "slug": "456456456",
+      "status": "completed",
+      "startTime": "1773309600000",
+      "endTime": "1773655200000"
+    },
+    {
+      "id": "22",
+      "title": "uuuuuu",
+      "slug": "uuuuuu",
+      "status": "completed",
+      "startTime": "1773041220000",
+      "endTime": "1773300420000"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\tslug\tstatus\tstartTime\tendTime\n90002\tggggg\tggggg\tregistration_open\t1773741480000\t1773827940000\n90001\tqweqwe\tqweqwe\tregistration_open\t1773738840000\t1773825300000\n60003\t232323\t232323\tregistration_open\t1773650100000\t1773736500000\n60002\twewewe\twewewe\tregistration_open\t1773641280000\t1773641280000\n60001\tuyuyuyuyu\tuyuyuyuyu\tlive\t1773640980000\t1773813780000\n30001\t456456456\t456456456\tcompleted\t1773309600000\t1773655200000\n22\tuuuuuu\tuuuuuu\tcompleted\t1773041220000\t1773300420000\n",
+  "stderr": "",
+  "execution_time_ms": 1491
+}
