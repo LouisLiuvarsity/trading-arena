@@ -90,7 +90,7 @@ const translations: Record<Lang, Record<string, string>> = {
 
     // ── NewsFeed ──
     'news.title': '新闻动态',
-    'news.source': '币安新闻',
+    'news.source': 'CoinDesk 新闻 API',
     'news.highImpact': '🔴 高影响',
     'news.medium': '🟡 中等',
     'news.bullish': '↑ 看涨',
@@ -945,7 +945,7 @@ const translations: Record<Lang, Record<string, string>> = {
 
     // ── NewsFeed ──
     'news.title': 'News Feed',
-    'news.source': 'Binance News',
+    'news.source': 'CoinDesk News API',
     'news.highImpact': '🔴 HIGH IMPACT',
     'news.medium': '🟡 MEDIUM',
     'news.bullish': '↑ Bullish',

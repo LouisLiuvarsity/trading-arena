@@ -14,6 +14,7 @@ import { registerAgentRoutes } from "./agent-routes";
 import { registerProfileRoutes } from "./profile-routes";
 import { registerAnalyticsRoutes } from "./analytics-routes";
 import { registerStatsRoutes } from "./stats-routes";
+import { registerNewsRoutes } from "./news-routes";
 import { initBinanceSymbols, startSymbolRefresh, getAllBinanceSymbols } from "./binance-symbols";
 import * as compDb from "./competition-db";
 
@@ -223,6 +224,9 @@ export async function registerArenaRoutes(app: Express) {
   });
 
   // Arena auth middleware — checks Bearer token for arena-specific endpoints
+  registerNewsRoutes(app);
+
+  // Arena auth middleware â€” checks Bearer token for arena-specific endpoints
   const arenaAuth = async (req: Request, res: Response, next: NextFunction) => {
     if (req.path.startsWith("/api/auth/") || req.path.startsWith("/api/public/") || req.path === "/api/health") {
       next();

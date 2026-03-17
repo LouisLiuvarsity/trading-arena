@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useRef, useEffect } from "react";
+import { useCallback, useState, useRef, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import CandlestickChart from "@/components/CandlestickChart";
@@ -15,7 +15,7 @@ import TickerBar from "@/components/TickerBar";
 import TradeHistory from "@/components/TradeHistory";
 import { useBinanceKline, useBinanceTicker, useBinanceDepth } from "@/hooks/useBinanceWS";
 import { useArena } from "@/hooks/useArena";
-import { generateNewsItems } from "@/lib/mockData";
+import { useCompetitionNews } from "@/hooks/useCompetitionNews";
 import { useIsMobile } from "@/hooks/useMobile";
 import { useAchievements } from "@/hooks/useAchievements";
 import AchievementOverlay from "@/components/AchievementOverlay";
@@ -91,7 +91,7 @@ export default function TradingPage({ authToken: authTokenProp, onLogout: onLogo
   const [, navigate] = useLocation();
   const authToken = authTokenProp ?? auth.token;
   const onLogout = onLogoutProp ?? auth.logout;
-  const { t } = useT();
+  const { t, lang } = useT();
   const isMobile = useIsMobile();
   const tradingPair = useTradingPair();
   const [timeframe, setTimeframe] = useState<TimeframeKey>("1m");
@@ -177,7 +177,12 @@ export default function TradingPage({ authToken: authTokenProp, onLogout: onLogo
     }
   }, [achievements]);
 
-  const news = useMemo(() => generateNewsItems(), []);
+  const isCompetitionLive = Boolean(competitionId && match.matchId && match.remainingSeconds > 0);
+  const { news } = useCompetitionNews({
+    competitionId,
+    lang,
+    enabled: isCompetitionLive,
+  });
   const ticker = wsTicker ?? serverTicker;
   const orderBook = wsOrderBook;
   const currentPrice = ticker?.lastPrice ?? 0;

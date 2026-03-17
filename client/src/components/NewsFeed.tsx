@@ -13,14 +13,6 @@ interface Props {
   news: NewsItem[];
 }
 
-function timeAgo(ts: number): string {
-  const diff = (Date.now() - ts) / 1000;
-  if (diff < 60) return 'just now';
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
-}
-
 const IMPACT_CONFIG = {
   high: {
     bg: 'bg-[#F6465D]/[0.06]',
@@ -43,8 +35,16 @@ const IMPACT_CONFIG = {
 };
 
 function NewsFeed({ news }: Props) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const [flashIndex, setFlashIndex] = useState<number | null>(null);
+
+  const timeAgoLabel = (ts: number) => {
+    const diff = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+    if (diff < 60) return lang === 'zh' ? '刚刚' : 'just now';
+    if (diff < 3600) return lang === 'zh' ? `${Math.floor(diff / 60)} 分钟前` : `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return lang === 'zh' ? `${Math.floor(diff / 3600)} 小时前` : `${Math.floor(diff / 3600)}h ago`;
+    return lang === 'zh' ? `${Math.floor(diff / 86400)} 天前` : `${Math.floor(diff / 86400)}d ago`;
+  };
 
   // Simulate a "breaking news" flash effect periodically
   const flashTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -83,6 +83,12 @@ function NewsFeed({ news }: Props) {
           {news.map((item, index) => {
             const impact = IMPACT_CONFIG[item.impact || 'low'];
             const isFlashing = flashIndex === index;
+            const impactLabel =
+              item.impact === 'high'
+                ? (lang === 'zh' ? '高影响' : impact.label)
+                : item.impact === 'medium'
+                ? (lang === 'zh' ? '中影响' : impact.label)
+                : '';
 
             return (
               <div
@@ -103,10 +109,10 @@ function NewsFeed({ news }: Props) {
 
                   <div className="flex-1">
                     {/* Impact badge */}
-                    {impact.label && (
+                    {impactLabel && (
                       <div className="mb-0.5">
                         <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-sm ${impact.badge} uppercase tracking-wider`}>
-                          {impact.label}
+                          {impactLabel}
                         </span>
                       </div>
                     )}
@@ -122,7 +128,7 @@ function NewsFeed({ news }: Props) {
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[9px] text-[#848E9C]">{item.source}</span>
                       <span className="text-[9px] text-[#848E9C]">•</span>
-                      <span className="text-[9px] text-[#848E9C]">{timeAgo(item.timestamp)}</span>
+                      <span className="text-[9px] text-[#848E9C]">{timeAgoLabel(item.timestamp)}</span>
                       {item.sentiment && (
                         <>
                           <span className="text-[9px] text-[#848E9C]">•</span>
@@ -141,6 +147,11 @@ function NewsFeed({ news }: Props) {
               </div>
             );
           })}
+          {news.length === 0 && (
+            <div className="px-2 py-6 text-center text-[11px] text-[#848E9C]">
+              {lang === 'zh' ? '比赛进行中时会显示最近 20 条新闻。' : 'The latest 20 articles appear while the competition is live.'}
+            </div>
+          )}
         </div>
       </ScrollArea>
     </div>
