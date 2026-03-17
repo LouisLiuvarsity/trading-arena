@@ -3,6 +3,10 @@ import type { Lang } from "@/lib/i18n";
 import { apiRequest } from "@/lib/api";
 import type { NewsItem } from "@/lib/types";
 
+const INITIAL_NEWS_LIMIT = 50;
+const INCREMENTAL_NEWS_LIMIT = 20;
+const MAX_NEWS_ITEMS = 50;
+
 type CompetitionNewsResponse = {
   items: NewsItem[];
   isLive: boolean;
@@ -26,7 +30,7 @@ function mergeNewsItems(current: NewsItem[], incoming: NewsItem[]) {
 
   return Array.from(merged.values())
     .sort((a, b) => b.timestamp - a.timestamp)
-    .slice(0, 20);
+    .slice(0, MAX_NEWS_ITEMS);
 }
 
 function getLatestTimestamp(items: NewsItem[]) {
@@ -51,7 +55,7 @@ export function useCompetitionNews({ competitionId, lang, enabled }: UseCompetit
       const requestVersion = ++requestVersionRef.current;
       const params = new URLSearchParams({
         lang,
-        limit: "20",
+        limit: String(incremental ? INCREMENTAL_NEWS_LIMIT : INITIAL_NEWS_LIMIT),
       });
 
       if (incremental && latestTimestampRef.current > 0) {

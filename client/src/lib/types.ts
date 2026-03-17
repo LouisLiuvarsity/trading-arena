@@ -325,6 +325,10 @@ export interface NewsItem {
   source: string;
   timestamp: number;
   url?: string;
+  guid?: string;
+  sourceKey?: string;
+  body?: string;
+  authors?: string;
   sentiment?: 'bullish' | 'bearish' | 'neutral';
   impact?: 'high' | 'medium' | 'low';
   isBreaking?: boolean;

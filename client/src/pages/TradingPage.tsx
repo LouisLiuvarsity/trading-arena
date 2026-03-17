@@ -450,7 +450,7 @@ export default function TradingPage({ authToken: authTokenProp, onLogout: onLogo
             <MarketStats social={social} account={account} match={match} prediction={prediction} pollData={pollData} ticker={ticker} />
           )}
           {mobilePanel === 'news' && (
-            <NewsFeed news={news} />
+            <NewsFeed news={news} competitionId={competitionId} />
           )}
         </MobileToolbarOverlay>
       </div>
@@ -565,7 +565,7 @@ export default function TradingPage({ authToken: authTokenProp, onLogout: onLogo
               <MarketStats social={social} account={account} match={match} prediction={prediction} pollData={pollData} ticker={ticker} />
             </TabsContent>
             <TabsContent value="news" className="flex-1 overflow-hidden mt-0">
-              <NewsFeed news={news} />
+              <NewsFeed news={news} competitionId={competitionId} />
             </TabsContent>
           </Tabs>
         </div>
