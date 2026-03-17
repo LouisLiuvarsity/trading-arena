@@ -399,6 +399,16 @@ function CompetitionCard({
   const isWithdrawing = withdrawingSlug === comp.slug;
   const countdown = formatCountdown(comp.startTime, comp.endTime, now, t);
   const primaryActionLabel = getPrimaryActionLabel(comp, t, copy);
+  const participantsValue = `${comp.registeredCount}/${comp.maxParticipants}`;
+  const participationHint =
+    comp.acceptedCount > 0
+      ? `${comp.acceptedCount} ${copy.acceptedLabel}`
+      : `${comp.registeredCount} ${copy.registeredLabel}`;
+  const accessHint = isAgentCompetition
+    ? copy.agentApiAction
+    : comp.status === "live" && comp.myRegistrationStatus === "accepted"
+      ? t("comp.enterArena")
+      : t("comp.details");
 
   return (
     <div className="relative overflow-hidden rounded-[24px] border border-white/[0.08] bg-[#161B29]">
@@ -411,7 +421,7 @@ function CompetitionCard({
       )}
       <div className={`absolute inset-0 bg-gradient-to-r ${typeCfg.gradient}`} />
 
-      <div className="relative flex flex-col gap-6 p-6 xl:flex-row xl:items-end xl:justify-between">
+      <div className="relative flex flex-col gap-5 p-6 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0 flex-1">
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <span
@@ -440,18 +450,14 @@ function CompetitionCard({
 
           <h3 className="text-2xl font-display font-bold text-white">{comp.title}</h3>
           <p className="mt-2 text-sm text-[#94A0B1]">
-            {copy.startTimeLabel}: {formatTime(comp.startTime, locale)}
+            {formatTime(comp.startTime, locale)} · {copy.symbolLabel}: {comp.symbol}
           </p>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <InfoTile
-              label={copy.startTimeLabel}
-              value={formatTime(comp.startTime, locale)}
-            />
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
             <InfoTile label={copy.countdownLabel} value={countdown} />
             <InfoTile
               label={copy.participantsLabel}
-              value={`${comp.registeredCount}/${comp.maxParticipants}`}
+              value={participantsValue}
             />
             <InfoTile
               label={copy.prizePoolLabel}
@@ -462,23 +468,25 @@ function CompetitionCard({
 
           <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-[#AEB7C6]">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.04] px-3 py-1.5">
+              <Calendar className="h-3.5 w-3.5" />
+              {formatTime(comp.startTime, locale)}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.04] px-3 py-1.5">
               <Clock className="h-3.5 w-3.5" />
-              {countdown}
+              {accessHint}
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.04] px-3 py-1.5">
               <Users className="h-3.5 w-3.5" />
-              {comp.acceptedCount > 0
-                ? `${comp.acceptedCount} ${copy.acceptedLabel}`
-                : `${comp.registeredCount} ${copy.registeredLabel}`}
+              {participationHint}
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.04] px-3 py-1.5">
               <Trophy className="h-3.5 w-3.5" />
-              {copy.symbolLabel}: {comp.symbol}
+              {getParticipantLabel(comp.participantMode, copy)}
             </span>
           </div>
         </div>
 
-        <div className="flex w-full flex-col gap-3 xl:w-[220px]">
+        <div className="flex w-full flex-col gap-3 xl:w-[220px] xl:pt-1">
           {comp.status === "registration_open" && !comp.myRegistrationStatus && !isAgentCompetition ? (
             <button
               onClick={() => onRegister(comp.slug)}
@@ -527,6 +535,16 @@ function CompetitionCard({
               <ArrowUpRight className="h-4 w-4" />
             </Link>
           )}
+
+          <p className="px-1 text-xs leading-5 text-[#8E98A8]">
+            {isAgentCompetition
+              ? locale === "zh-CN"
+                ? "Agent 赛只支持 API 报名与操作，网页端仅提供查看和围观。"
+                : "Agent competitions are API-only; the web app is view and spectator mode."
+              : locale === "zh-CN"
+                ? "人类用户可以在网页端完成查看、报名和进入比赛。"
+                : "Human users can review, register, and enter the match from the web app."}
+          </p>
         </div>
       </div>
     </div>

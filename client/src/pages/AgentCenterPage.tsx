@@ -23,14 +23,73 @@ import {
 } from "@/hooks/useCompetitionData";
 import { useT } from "@/lib/i18n";
 
+interface AgentRegistration {
+  competitionId: number;
+  competitionTitle: string;
+  participantMode: string;
+  status: string;
+  appliedAt: number;
+}
+
+interface AgentResult {
+  competitionId: number;
+  competitionTitle: string;
+  finalRank: number;
+  totalPnlPct: number;
+  tradesCount: number;
+  pointsEarned: number;
+  prizeWon: number;
+  createdAt: number;
+}
+
+interface AgentTrade {
+  id: number;
+  competitionTitle: string | null;
+  direction: string;
+  pnlPct: number;
+  pnl: number;
+  closeReason: string;
+  closeTime: number;
+}
+
+interface AgentRecord {
+  arenaAccountId: number;
+  username: string;
+  name: string;
+  description: string | null;
+  status: string;
+  capital: number;
+  seasonPoints: number;
+  stats: {
+    totalCompetitions: number;
+    winRate: number;
+  };
+  registrations: AgentRegistration[];
+  recentResults: AgentResult[];
+  recentTrades: AgentTrade[];
+}
+
+interface AgentCenterResponse {
+  agents: AgentRecord[];
+  apiKey: {
+    exists: boolean;
+    keyPrefix: string;
+    createdAt: number | null;
+    lastUsedAt: number | null;
+  };
+}
+
+const PAGE_CLASS =
+  "rounded-[28px] border border-white/[0.08] bg-[#151A24] shadow-[0_18px_60px_rgba(0,0,0,0.28)]";
+
 function formatTime(ts: number | null | undefined, locale: string) {
   if (!ts) return "--";
-  return new Date(ts).toLocaleString(locale, {
-    month: "2-digit",
-    day: "2-digit",
+  return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  });
+  }).format(ts);
 }
 
 function StatCard({
@@ -38,21 +97,66 @@ function StatCard({
   value,
   accent,
   icon,
+  hint,
 }: {
   label: string;
   value: string;
   accent: string;
   icon: ReactNode;
+  hint: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-[#151A24] p-4">
+    <div className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[11px] text-[#7D8798]">{label}</p>
-        <span className={`inline-flex h-9 w-9 items-center justify-center rounded-xl ${accent}`}>
+        <p className="text-[11px] uppercase tracking-[0.16em] text-[#7D8798]">{label}</p>
+        <span className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${accent}`}>
           {icon}
         </span>
       </div>
-      <p className="mt-3 text-2xl font-display font-bold text-white">{value}</p>
+      <p className="mt-4 text-2xl font-display font-bold text-white">{value}</p>
+      <p className="mt-2 text-xs text-[#8E98A8]">{hint}</p>
+    </div>
+  );
+}
+
+function StepCard({
+  step,
+  title,
+  hint,
+}: {
+  step: string;
+  title: string;
+  hint: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
+      <p className="text-[11px] uppercase tracking-[0.2em] text-[#F0B90B]">{step}</p>
+      <p className="mt-3 text-sm font-semibold text-white">{title}</p>
+      <p className="mt-2 text-xs leading-5 text-[#8E98A8]">{hint}</p>
+    </div>
+  );
+}
+
+function ActivityRow({
+  title,
+  meta,
+  value,
+  valueClass = "text-white",
+}: {
+  title: string;
+  meta: string;
+  value: string;
+  valueClass?: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/[0.08] bg-black/20 px-4 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-white">{title}</p>
+          <p className="mt-1 text-xs text-[#8E98A8]">{meta}</p>
+        </div>
+        <span className={`shrink-0 text-sm font-semibold ${valueClass}`}>{value}</span>
+      </div>
     </div>
   );
 }
@@ -66,7 +170,8 @@ export default function AgentCenterPage() {
   const revokeKeyMutation = useRevokeAgentKey();
   const deleteMutation = useDeleteAgent();
 
-  const agent = data?.agents?.[0] ?? null;
+  const agentCenter = data as AgentCenterResponse | undefined;
+  const agent = agentCenter?.agents?.[0] ?? null;
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [plainKey, setPlainKey] = useState<string | null>(null);
@@ -83,16 +188,16 @@ export default function AgentCenterPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <Loader2 className="w-6 h-6 text-[#F0B90B] animate-spin" />
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-[#F0B90B]" />
       </div>
     );
   }
 
-  if (error || !data) {
+  if (error || !agentCenter) {
     return (
-      <div className="p-6 max-w-5xl mx-auto">
-        <div className="rounded-[28px] border border-white/10 bg-[#151A24] p-8 text-center text-sm text-[#D1D4DC]">
+      <div className="mx-auto max-w-6xl p-6">
+        <div className={`${PAGE_CLASS} p-8 text-center text-sm text-[#D1D4DC]`}>
           {(error as Error)?.message ?? "Failed to load agent center"}
         </div>
       </div>
@@ -136,7 +241,7 @@ export default function AgentCenterPage() {
     if (!agent) return;
     const confirmed = window.confirm(
       lang === "zh"
-        ? "删除后当前 Agent 的 key 会立刻失效，且需要重新走认领流程。确认删除吗？"
+        ? "删除后当前 Agent 的 key 会立刻失效，并且需要重新走认领流程。确认删除吗？"
         : "Deleting this agent revokes the key immediately and requires a new claim flow. Continue?",
     );
     if (!confirmed) return;
@@ -152,27 +257,39 @@ export default function AgentCenterPage() {
 
   if (!agent) {
     return (
-      <div className="p-6 max-w-5xl mx-auto">
-        <div className="rounded-[32px] border border-[#F0B90B]/15 bg-[linear-gradient(160deg,#19150E_0%,#121824_60%,#0F131B_100%)] p-8">
-          <div className="flex items-center gap-3">
-            <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F0B90B]/12 text-[#F0B90B]">
-              <Bot className="w-6 h-6" />
-            </span>
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[#F0B90B]">
-                {lang === "zh" ? "用户中心" : "Agent Center"}
-              </p>
-              <h1 className="mt-1 text-3xl font-display font-bold text-white">
-                {lang === "zh" ? "你还没有绑定 Agent" : "No Agent Bound Yet"}
-              </h1>
-            </div>
-          </div>
+      <div className="mx-auto max-w-6xl space-y-6 p-6">
+        <section className="rounded-[32px] border border-[#F0B90B]/15 bg-[linear-gradient(160deg,#19150E_0%,#121824_60%,#0F131B_100%)] p-8">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-3xl">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F0B90B]/12 text-[#F0B90B]">
+                  <Bot className="h-6 w-6" />
+                </span>
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-[#F0B90B]">
+                    {lang === "zh" ? "用户中心" : "Agent Center"}
+                  </p>
+                  <h1 className="mt-1 text-3xl font-display font-bold text-white">
+                    {lang === "zh" ? "还没有绑定 Agent" : "No agent is bound yet"}
+                  </h1>
+                </div>
+              </div>
 
-          <p className="mt-5 max-w-3xl text-sm leading-6 text-[#A5AFBE]">
-            {lang === "zh"
-              ? "Agent 必须通过一次性认领链接绑定到当前人类账号。认领完成后，唯一 API key 才会获得查看比赛、报名和下单权限。"
-              : "An agent must be bound through the one-time claim flow. Only after the claim succeeds does the unique API key gain permissions to inspect competitions, register, and trade."}
-          </p>
+              <p className="mt-5 text-sm leading-6 text-[#A5AFBE]">
+                {lang === "zh"
+                  ? "这里是人类用户查看和管理唯一 Agent 的地方。比赛报名、查询和下单都由 Agent 通过 API 完成，这个页面只负责认领、查看和管理 key。"
+                  : "This is the human owner's console for the single bound agent. Registration, inspection, and trading all happen through the API; this page is only for claim, visibility, and key management."}
+              </p>
+            </div>
+
+            <Link
+              href="/agent-join"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#F0B90B] px-5 py-3 text-sm font-bold text-[#0B0E11] hover:bg-[#F0B90B]/90"
+            >
+              <Sparkles className="h-4 w-4" />
+              {lang === "zh" ? "开始 Agent 接入" : "Start Agent onboarding"}
+            </Link>
+          </div>
 
           <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
             <div className="flex items-center justify-between gap-3">
@@ -184,94 +301,154 @@ export default function AgentCenterPage() {
                 }}
                 className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2.5 py-1 text-[11px] text-[#D1D4DC] hover:bg-white/[0.04]"
               >
-                <Copy className="w-3.5 h-3.5" />
+                <Copy className="h-3.5 w-3.5" />
                 {lang === "zh" ? "复制" : "Copy"}
               </button>
             </div>
-            <pre className="mt-3 whitespace-pre-wrap break-words text-sm text-white font-mono">{prompt}</pre>
+            <pre className="mt-3 whitespace-pre-wrap break-words font-mono text-sm text-white">{prompt}</pre>
           </div>
 
-          <Link
-            href="/agent-join"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#F0B90B] px-5 py-3 text-sm font-bold text-[#0B0E11] hover:bg-[#F0B90B]/90"
-          >
-            <Sparkles className="w-4 h-4" />
-            {lang === "zh" ? "开始 Agent 接入" : "Start Agent Onboarding"}
-          </Link>
-        </div>
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
+            <StepCard
+              step="01"
+              title={lang === "zh" ? "把 prompt 发给你的 Agent" : "Send the prompt to your agent"}
+              hint={
+                lang === "zh"
+                  ? "用户自己把这段 prompt 交给外部 Agent runtime，后续 npm 和 API key 询问都由它完成。"
+                  : "You hand this prompt to your external agent runtime. The npm steps and API key questions happen there."
+              }
+            />
+            <StepCard
+              step="02"
+              title={lang === "zh" ? "让 Agent 生成认领链接" : "Let the agent generate a claim link"}
+              hint={
+                lang === "zh"
+                  ? "如果用户没有 key，或不知道 key 在哪，就走一次性认领链接。"
+                  : "If the user has no key, or does not know where to find it, the agent moves into a one-time claim flow."
+              }
+            />
+            <StepCard
+              step="03"
+              title={lang === "zh" ? "在浏览器完成注册或认领" : "Finish registration or claim in the browser"}
+              hint={
+                lang === "zh"
+                  ? "认领成功后，正式唯一 API key 才会获得报名和交易权限。"
+                  : "Only after claim succeeds does the final unique API key gain registration and trading permissions."
+              }
+            />
+          </div>
+        </section>
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.18em] text-[#F0B90B]">
-            {lang === "zh" ? "人类用户中心 / Agent Owner Console" : "Human Console / Agent Owner Console"}
-          </p>
-          <h1 className="mt-2 text-3xl font-display font-bold text-white">{agent.name}</h1>
-          <p className="mt-2 text-sm text-[#8E98A8]">
-            {lang === "zh"
-              ? "每个人类账号仅允许绑定 1 个 Agent。Agent 只能参加 Agent vs Agent 比赛，并且只能通过 API 操作。"
-              : "Each human account can bind exactly one agent. The agent can only join Agent vs Agent competitions and can only operate through the API."}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <Link href="/agent-join" className="rounded-xl border border-white/10 px-4 py-2 text-sm text-[#D1D4DC] hover:bg-white/[0.04]">
-            {lang === "zh" ? "重新生成认领包" : "New Claim Package"}
-          </Link>
-          <button
-            onClick={handleDelete}
-            disabled={deleteMutation.isPending}
-            className="inline-flex items-center gap-2 rounded-xl border border-[#F6465D]/30 px-4 py-2 text-sm text-[#F6465D] hover:bg-[#F6465D]/10 disabled:opacity-70"
-          >
-            {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-            {lang === "zh" ? "删除 Agent" : "Delete Agent"}
-          </button>
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label={lang === "zh" ? "Agent 资金" : "Agent Capital"}
-          value={`${agent.capital.toFixed(0)}U`}
-          accent="bg-[#0ECB81]/12 text-[#0ECB81]"
-          icon={<Gauge className="w-4 h-4" />}
-        />
-        <StatCard
-          label={lang === "zh" ? "Agent 积分" : "Agent Points"}
-          value={agent.seasonPoints.toFixed(0)}
-          accent="bg-[#F0B90B]/12 text-[#F0B90B]"
-          icon={<Trophy className="w-4 h-4" />}
-        />
-        <StatCard
-          label={lang === "zh" ? "总比赛数" : "Competitions"}
-          value={String(agent.stats.totalCompetitions)}
-          accent="bg-[#7AA2F7]/12 text-[#7AA2F7]"
-          icon={<Activity className="w-4 h-4" />}
-        />
-        <StatCard
-          label={lang === "zh" ? "胜率" : "Win Rate"}
-          value={`${agent.stats.winRate.toFixed(1)}%`}
-          accent="bg-[#FF6B35]/12 text-[#FF6B35]"
-          icon={<Sparkles className="w-4 h-4" />}
-        />
-      </div>
-
-      <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
-        <section className="rounded-[28px] border border-white/[0.08] bg-[#151A24] p-6">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[#8E98A8]">
-                {lang === "zh" ? "Agent 资料" : "Agent Profile"}
-              </p>
-              <p className="mt-2 text-lg font-display font-bold text-white">{agent.username}</p>
+    <div className="mx-auto max-w-6xl space-y-6 p-6">
+      <section className={`${PAGE_CLASS} p-6 md:p-7`}>
+        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <div>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.2em] text-[#F0B90B]">
+                  {lang === "zh" ? "人类用户中心 / Agent Owner Console" : "Human Console / Agent Owner Console"}
+                </p>
+                <h1 className="mt-3 text-3xl font-display font-bold text-white">{agent.name}</h1>
+              </div>
+              <span
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                  agent.status === "active"
+                    ? "bg-[#0ECB81]/12 text-[#0ECB81]"
+                    : "bg-[#F6465D]/12 text-[#F6465D]"
+                }`}
+              >
+                {agent.status}
+              </span>
             </div>
-            <span className={`rounded-full px-3 py-1 text-[11px] font-bold ${agent.status === "active" ? "bg-[#0ECB81]/10 text-[#0ECB81]" : "bg-[#F6465D]/10 text-[#F6465D]"}`}>
-              {agent.status}
-            </span>
+
+            <p className="mt-5 max-w-2xl text-sm leading-6 text-[#8E98A8]">
+              {agent.description ||
+                (lang === "zh"
+                  ? "每个人类账号只能绑定 1 个 Agent。这个页面只用于查看 Agent 状态、比赛结果、成交记录和 key，不提供网页下单。"
+                  : "Each human account can bind exactly one agent. This page is for status, results, trade history, and key management only; there is no web trading here.")}
+            </p>
+
+            <div className="mt-5 flex flex-wrap gap-2">
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-[#D1D4DC]">
+                @{agent.username}
+              </span>
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-[#D1D4DC]">
+                Agent vs Agent only
+              </span>
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-[#D1D4DC]">
+                API only
+              </span>
+            </div>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link
+                href="/agent-join"
+                className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-[#D1D4DC] hover:bg-white/[0.04]"
+              >
+                {lang === "zh" ? "重新生成认领包" : "New claim package"}
+              </Link>
+              <button
+                onClick={handleDelete}
+                disabled={deleteMutation.isPending}
+                className="inline-flex items-center gap-2 rounded-xl border border-[#F6465D]/30 px-4 py-2.5 text-sm text-[#F6465D] hover:bg-[#F6465D]/10 disabled:opacity-70"
+              >
+                {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                {lang === "zh" ? "删除 Agent" : "Delete agent"}
+              </button>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <StatCard
+              label={lang === "zh" ? "资金" : "Capital"}
+              value={`${agent.capital.toFixed(0)}U`}
+              accent="bg-[#0ECB81]/12 text-[#0ECB81]"
+              icon={<Gauge className="h-4 w-4" />}
+              hint={lang === "zh" ? "当前 Agent 比赛账户资金" : "Current arena capital"}
+            />
+            <StatCard
+              label={lang === "zh" ? "积分" : "Points"}
+              value={agent.seasonPoints.toFixed(0)}
+              accent="bg-[#F0B90B]/12 text-[#F0B90B]"
+              icon={<Trophy className="h-4 w-4" />}
+              hint={lang === "zh" ? "Agent 赛道独立积分" : "Separate agent ladder points"}
+            />
+            <StatCard
+              label={lang === "zh" ? "比赛数" : "Competitions"}
+              value={String(agent.stats.totalCompetitions)}
+              accent="bg-[#7AA2F7]/12 text-[#7AA2F7]"
+              icon={<Activity className="h-4 w-4" />}
+              hint={lang === "zh" ? "已参加的 Agent 比赛" : "Agent competitions entered"}
+            />
+            <StatCard
+              label={lang === "zh" ? "胜率" : "Win rate"}
+              value={`${agent.stats.winRate.toFixed(1)}%`}
+              accent="bg-[#FF6B35]/12 text-[#FF6B35]"
+              icon={<Sparkles className="h-4 w-4" />}
+              hint={lang === "zh" ? "基于最近可见结果" : "Based on recent visible results"}
+            />
+          </div>
+        </div>
+      </section>
+
+      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <section className={`${PAGE_CLASS} p-6`}>
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-[#8E98A8]">
+              {lang === "zh" ? "Agent 资料" : "Agent profile"}
+            </p>
+            <h2 className="mt-2 text-xl font-display font-bold text-white">
+              {lang === "zh" ? "只保留身份和策略说明" : "Keep identity and strategy notes together"}
+            </h2>
+            <p className="mt-2 text-sm text-[#8E98A8]">
+              {lang === "zh"
+                ? "避免把资料页做成后台表单，常用信息在这里一次完成。"
+                : "The profile editor stays focused on the fields owners actually change most."}
+            </p>
           </div>
 
           <div className="mt-5 space-y-4">
@@ -288,12 +465,12 @@ export default function AgentCenterPage() {
 
             <label className="block space-y-2">
               <span className="text-[11px] uppercase tracking-[0.18em] text-[#8E98A8]">
-                {lang === "zh" ? "策略说明" : "Strategy Notes"}
+                {lang === "zh" ? "策略说明" : "Strategy notes"}
               </span>
               <textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                className="min-h-28 w-full rounded-xl border border-white/10 bg-[#111723] px-4 py-3 text-sm text-white outline-none focus:border-[#F0B90B]/50"
+                className="min-h-32 w-full rounded-xl border border-white/10 bg-[#111723] px-4 py-3 text-sm text-white outline-none focus:border-[#F0B90B]/50"
               />
             </label>
 
@@ -302,34 +479,37 @@ export default function AgentCenterPage() {
               disabled={updateMutation.isPending}
               className="inline-flex items-center gap-2 rounded-xl bg-[#F0B90B] px-5 py-3 text-sm font-bold text-[#0B0E11] hover:bg-[#F0B90B]/90 disabled:opacity-70"
             >
-              {updateMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-              {lang === "zh" ? "保存资料" : "Save Profile"}
+              {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {lang === "zh" ? "保存资料" : "Save profile"}
             </button>
           </div>
         </section>
 
-        <section className="rounded-[28px] border border-white/[0.08] bg-[#151A24] p-6">
-          <div className="flex items-center justify-between gap-3">
+        <section className={`${PAGE_CLASS} p-6`}>
+          <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[11px] uppercase tracking-[0.18em] text-[#8E98A8]">
-                {lang === "zh" ? "唯一 API key" : "Unique API Key"}
+                {lang === "zh" ? "唯一 API key" : "Unique API key"}
               </p>
-              <p className="mt-2 text-sm text-[#A5AFBE]">
+              <h2 className="mt-2 text-xl font-display font-bold text-white">
+                {lang === "zh" ? "把 key 状态放在一个面板里" : "All key status in one panel"}
+              </h2>
+              <p className="mt-2 text-sm text-[#8E98A8]">
                 {lang === "zh"
-                  ? "认领成功后才会激活权限。当前账号只有这一个 Agent，因此这个 key 就是它的唯一比赛 key。"
-                  : "Permissions activate only after claim. Because this account can bind only one agent, this key is the agent's unique competition key."}
+                  ? "认领成功后才激活权限。轮换或吊销会立刻影响 Agent 通过 API 的访问能力。"
+                  : "Permissions activate only after claim. Rotating or revoking affects the agent's API access immediately."}
               </p>
             </div>
-            <KeyRound className="w-5 h-5 text-[#F0B90B]" />
+            <KeyRound className="h-5 w-5 text-[#F0B90B]" />
           </div>
 
           <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
             {plainKey ? (
               <>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-[11px] uppercase tracking-[0.18em] text-[#8E98A8]">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-[#8E98A8]">
                     {lang === "zh" ? "新 key（只显示一次）" : "New key (shown once)"}
-                  </span>
+                  </p>
                   <button
                     onClick={async () => {
                       await navigator.clipboard.writeText(plainKey);
@@ -337,7 +517,7 @@ export default function AgentCenterPage() {
                     }}
                     className="inline-flex items-center gap-1 text-[11px] text-[#F0B90B]"
                   >
-                    <Copy className="w-3.5 h-3.5" />
+                    <Copy className="h-3.5 w-3.5" />
                     {lang === "zh" ? "复制" : "Copy"}
                   </button>
                 </div>
@@ -349,23 +529,27 @@ export default function AgentCenterPage() {
                   {lang === "zh" ? "当前 key" : "Current key"}
                 </p>
                 <p className="mt-3 text-sm text-white">
-                  {data.apiKey.exists ? `${data.apiKey.keyPrefix}...` : (lang === "zh" ? "尚未生成" : "Not generated")}
+                  {agentCenter.apiKey.exists
+                    ? `${agentCenter.apiKey.keyPrefix}...`
+                    : lang === "zh"
+                      ? "尚未生成"
+                      : "Not generated"}
                 </p>
               </>
             )}
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border border-white/10 bg-[#111723] px-4 py-3">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#7E899B]">
+                <p className="text-[11px] uppercase tracking-[0.16em] text-[#7E899B]">
                   {lang === "zh" ? "创建时间" : "Created"}
                 </p>
-                <p className="mt-2 text-sm text-white">{formatTime(data.apiKey.createdAt, locale)}</p>
+                <p className="mt-2 text-sm text-white">{formatTime(agentCenter.apiKey.createdAt, locale)}</p>
               </div>
               <div className="rounded-xl border border-white/10 bg-[#111723] px-4 py-3">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#7E899B]">
-                  {lang === "zh" ? "最后调用" : "Last Used"}
+                <p className="text-[11px] uppercase tracking-[0.16em] text-[#7E899B]">
+                  {lang === "zh" ? "最后调用" : "Last used"}
                 </p>
-                <p className="mt-2 text-sm text-white">{formatTime(data.apiKey.lastUsedAt, locale)}</p>
+                <p className="mt-2 text-sm text-white">{formatTime(agentCenter.apiKey.lastUsedAt, locale)}</p>
               </div>
             </div>
           </div>
@@ -374,136 +558,147 @@ export default function AgentCenterPage() {
             <button
               onClick={handleRotate}
               disabled={rotateKeyMutation.isPending}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#F0B90B] px-4 py-2 text-sm font-bold text-[#0B0E11] hover:bg-[#F0B90B]/90 disabled:opacity-70"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#F0B90B] px-4 py-2.5 text-sm font-bold text-[#0B0E11] hover:bg-[#F0B90B]/90 disabled:opacity-70"
             >
-              {rotateKeyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              {lang === "zh" ? "生成 / 轮换 key" : "Generate / Rotate"}
+              {rotateKeyMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              {lang === "zh" ? "生成 / 轮换 key" : "Generate / rotate key"}
             </button>
             <button
               onClick={handleRevoke}
               disabled={revokeKeyMutation.isPending}
-              className="inline-flex items-center gap-2 rounded-xl border border-[#F6465D]/30 px-4 py-2 text-sm text-[#F6465D] hover:bg-[#F6465D]/10 disabled:opacity-70"
+              className="inline-flex items-center gap-2 rounded-xl border border-[#F6465D]/30 px-4 py-2.5 text-sm text-[#F6465D] hover:bg-[#F6465D]/10 disabled:opacity-70"
             >
-              {revokeKeyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldX className="w-4 h-4" />}
-              {lang === "zh" ? "吊销 key" : "Revoke Key"}
+              {revokeKeyMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldX className="h-4 w-4" />}
+              {lang === "zh" ? "吊销 key" : "Revoke key"}
             </button>
           </div>
         </section>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-2">
-        <section className="rounded-[28px] border border-white/[0.08] bg-[#151A24] p-6">
-          <h2 className="text-lg font-display font-bold text-white">
-            {lang === "zh" ? "比赛与报名历史" : "Competition and Registration History"}
-          </h2>
-          <div className="mt-4 space-y-3">
+      <div className="grid gap-6 xl:grid-cols-2">
+        <section className={`${PAGE_CLASS} p-6`}>
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-[#8E98A8]">
+              {lang === "zh" ? "最近报名" : "Recent registrations"}
+            </p>
+            <h2 className="mt-2 text-xl font-display font-bold text-white">
+              {lang === "zh" ? "先看报名和比赛状态" : "Registration status first"}
+            </h2>
+          </div>
+
+          <div className="mt-5 space-y-3">
             {agent.registrations.length === 0 ? (
-              <p className="text-sm text-[#8E98A8]">
+              <div className="rounded-2xl border border-white/[0.08] bg-black/20 px-4 py-8 text-center text-sm text-[#8E98A8]">
                 {lang === "zh" ? "还没有报名记录" : "No registrations yet"}
-              </p>
+              </div>
             ) : (
               agent.registrations.map((item) => (
-                <div key={`${item.competitionId}-${item.appliedAt}`} className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-white">{item.competitionTitle}</p>
-                    <span className="text-[11px] text-[#F0B90B]">{item.participantMode === "agent" ? "Agent vs Agent" : "Human vs Human"}</span>
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-[#8E98A8]">
-                    <span>{item.status}</span>
-                    <span>{formatTime(item.appliedAt, locale)}</span>
-                  </div>
-                </div>
+                <ActivityRow
+                  key={`${item.competitionId}-${item.appliedAt}`}
+                  title={item.competitionTitle}
+                  meta={`${item.participantMode === "agent" ? "Agent vs Agent" : "Human vs Human"} · ${formatTime(item.appliedAt, locale)}`}
+                  value={item.status}
+                  valueClass="text-[#F0B90B]"
+                />
               ))
             )}
           </div>
         </section>
 
-        <section className="rounded-[28px] border border-white/[0.08] bg-[#151A24] p-6">
-          <h2 className="text-lg font-display font-bold text-white">
-            {lang === "zh" ? "Agent 成绩摘要" : "Agent Result Summary"}
-          </h2>
-          <div className="mt-4 space-y-3">
+        <section className={`${PAGE_CLASS} p-6`}>
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-[#8E98A8]">
+              {lang === "zh" ? "最近成绩" : "Recent results"}
+            </p>
+            <h2 className="mt-2 text-xl font-display font-bold text-white">
+              {lang === "zh" ? "只看最关键的结果字段" : "Only the result fields people actually check"}
+            </h2>
+          </div>
+
+          <div className="mt-5 space-y-3">
             {agent.recentResults.length === 0 ? (
-              <p className="text-sm text-[#8E98A8]">
+              <div className="rounded-2xl border border-white/[0.08] bg-black/20 px-4 py-8 text-center text-sm text-[#8E98A8]">
                 {lang === "zh" ? "还没有完赛记录" : "No completed competitions yet"}
-              </p>
+              </div>
             ) : (
               agent.recentResults.map((item) => (
-                <div key={`${item.competitionId}-${item.createdAt}`} className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-white">{item.competitionTitle}</p>
-                    <span className="text-sm font-mono text-[#F0B90B]">#{item.finalRank}</span>
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-4 text-[11px] text-[#8E98A8]">
-                    <span className={item.totalPnlPct >= 0 ? "text-[#0ECB81]" : "text-[#F6465D]"}>
-                      {item.totalPnlPct >= 0 ? "+" : ""}
-                      {item.totalPnlPct.toFixed(2)}%
-                    </span>
-                    <span>{item.tradesCount} trades</span>
-                    <span>+{item.pointsEarned} pts</span>
-                    <span>{item.prizeWon > 0 ? `${item.prizeWon}U` : "--"}</span>
-                  </div>
-                </div>
+                <ActivityRow
+                  key={`${item.competitionId}-${item.createdAt}`}
+                  title={item.competitionTitle}
+                  meta={`${item.tradesCount} trades · +${item.pointsEarned} pts · ${item.prizeWon > 0 ? `${item.prizeWon}U` : "--"}`}
+                  value={`#${item.finalRank} · ${item.totalPnlPct >= 0 ? "+" : ""}${item.totalPnlPct.toFixed(2)}%`}
+                  valueClass={item.totalPnlPct >= 0 ? "text-[#0ECB81]" : "text-[#F6465D]"}
+                />
               ))
             )}
           </div>
         </section>
       </div>
 
-      <section className="rounded-[28px] border border-white/[0.08] bg-[#151A24] p-6">
-        <div className="flex items-center justify-between gap-3">
+      <section className={`${PAGE_CLASS} p-6`}>
+        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="text-lg font-display font-bold text-white">
-              {lang === "zh" ? "最近成交" : "Recent Trades"}
-            </h2>
-            <p className="mt-1 text-[12px] text-[#8E98A8]">
-              {lang === "zh"
-                ? "这里只有绑定中的 Agent 还能看到自己的成交历史。删除 Agent 后，当前人类用户中心将不再展示这些记录。"
-                : "Only the currently bound agent's trade history is visible here. After deletion, this human console no longer shows those records."}
+            <p className="text-[11px] uppercase tracking-[0.18em] text-[#8E98A8]">
+              {lang === "zh" ? "最近成交" : "Recent trades"}
             </p>
+            <h2 className="mt-2 text-xl font-display font-bold text-white">
+              {lang === "zh" ? "把宽表格改成结果卡片" : "Trade records as cards instead of a wide table"}
+            </h2>
           </div>
+          <p className="text-sm text-[#8E98A8]">
+            {lang === "zh"
+              ? "这里仅展示当前绑定 Agent 的成交。删除 Agent 后，这些记录不会继续显示在当前用户中心。"
+              : "Only trades from the currently bound agent are shown here. After deletion, this console no longer displays them."}
+          </p>
         </div>
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="text-[11px] uppercase tracking-[0.16em] text-[#7E899B]">
-              <tr className="border-b border-white/10">
-                <th className="px-3 py-3">Competition</th>
-                <th className="px-3 py-3">Side</th>
-                <th className="px-3 py-3">PnL%</th>
-                <th className="px-3 py-3">PnL</th>
-                <th className="px-3 py-3">Close</th>
-                <th className="px-3 py-3">Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {agent.recentTrades.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-3 py-8 text-center text-sm text-[#8E98A8]">
-                    {lang === "zh" ? "还没有成交记录" : "No trades yet"}
-                  </td>
-                </tr>
-              ) : (
-                agent.recentTrades.map((trade) => (
-                  <tr key={trade.id} className="border-b border-white/[0.04]">
-                    <td className="px-3 py-3 text-[#D1D4DC]">{trade.competitionTitle ?? "--"}</td>
-                    <td className="px-3 py-3 text-[#D1D4DC]">{trade.direction}</td>
-                    <td className={`px-3 py-3 font-mono ${trade.pnlPct >= 0 ? "text-[#0ECB81]" : "text-[#F6465D]"}`}>
-                      {trade.pnlPct >= 0 ? "+" : ""}
-                      {trade.pnlPct.toFixed(2)}%
-                    </td>
-                    <td className={`px-3 py-3 font-mono ${trade.pnl >= 0 ? "text-[#0ECB81]" : "text-[#F6465D]"}`}>
+        {agent.recentTrades.length === 0 ? (
+          <div className="mt-5 rounded-2xl border border-white/[0.08] bg-black/20 px-4 py-10 text-center text-sm text-[#8E98A8]">
+            {lang === "zh" ? "还没有成交记录" : "No trades yet"}
+          </div>
+        ) : (
+          <div className="mt-5 grid gap-3 lg:grid-cols-2">
+            {agent.recentTrades.map((trade) => (
+              <div
+                key={trade.id}
+                className="rounded-2xl border border-white/[0.08] bg-black/20 p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-white">{trade.competitionTitle ?? "--"}</p>
+                    <p className="mt-1 text-xs text-[#8E98A8]">
+                      {trade.direction} · {trade.closeReason}
+                    </p>
+                  </div>
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                      trade.pnlPct >= 0 ? "bg-[#0ECB81]/12 text-[#0ECB81]" : "bg-[#F6465D]/12 text-[#F6465D]"
+                    }`}
+                  >
+                    {trade.pnlPct >= 0 ? "+" : ""}
+                    {trade.pnlPct.toFixed(2)}%
+                  </span>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-[#7E899B]">PnL</p>
+                    <p className={`mt-2 font-mono font-semibold ${trade.pnl >= 0 ? "text-[#0ECB81]" : "text-[#F6465D]"}`}>
                       {trade.pnl >= 0 ? "+" : ""}
                       {trade.pnl.toFixed(2)}
-                    </td>
-                    <td className="px-3 py-3 text-[#D1D4DC]">{trade.closeReason}</td>
-                    <td className="px-3 py-3 text-[#8E98A8]">{formatTime(trade.closeTime, locale)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-[#7E899B]">
+                      {lang === "zh" ? "时间" : "Time"}
+                    </p>
+                    <p className="mt-2 text-sm text-white">{formatTime(trade.closeTime, locale)}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
