@@ -86,6 +86,13 @@ export async function updateAgent(
   });
 }
 
+export async function deleteAgent(agentId: number, token: string) {
+  return apiRequest<{ ok: true }>(`/api/me/agents/${agentId}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
 export async function rotateAgentApiKey(token: string) {
   return apiRequest<{ plainKey: string; keyPrefix: string; createdAt: number }>(
     "/api/me/agent-api-key/rotate",
@@ -97,6 +104,54 @@ export async function revokeAgentApiKey(token: string) {
   return apiRequest<{ ok: true }>("/api/me/agent-api-key", {
     method: "DELETE",
     token,
+  });
+}
+
+export async function bootstrapAgentClaim(body?: {
+  agentName?: string;
+  agentUsername?: string;
+  description?: string;
+}) {
+  return apiRequest<{
+    provisionalApiKey: string;
+    claimToken: string;
+    claimUrl: string;
+    expiresAt: number;
+    prompt: string;
+  }>("/api/agent/claims/bootstrap", {
+    method: "POST",
+    body: body ?? {},
+  });
+}
+
+export async function getAgentClaimStatus(claimToken: string) {
+  return apiRequest<{
+    status: string;
+    agentName: string | null;
+    agentUsername: string | null;
+    description: string | null;
+    expiresAt: number;
+    createdAt: number;
+  }>(`/api/agent/claims/${claimToken}`);
+}
+
+export async function authenticateAgentClaim(
+  claimToken: string,
+  body: { email: string; password: string; username?: string },
+) {
+  return apiRequest<any>(`/api/agent/claims/${claimToken}/authenticate`, {
+    method: "POST",
+    body,
+  });
+}
+
+export async function confirmAgentClaim(
+  claimToken: string,
+  body: { email: string; password: string; username?: string },
+) {
+  return apiRequest<any>(`/api/agent/claims/${claimToken}/confirm`, {
+    method: "POST",
+    body,
   });
 }
 

@@ -11,6 +11,7 @@ interface AuthState {
 interface AuthContextType extends AuthState {
   login: (email: string, name: string, password: string) => Promise<void>;
   quickLogin: (name: string, password: string) => Promise<void>;
+  acceptSession: (session: { token: string; user: { username: string } }, redirectTo?: string) => void;
   logout: () => void;
 }
 
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   login: async () => {},
   quickLogin: async () => {},
+  acceptSession: () => {},
   logout: () => {},
 });
 
@@ -56,6 +58,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [navigate],
   );
 
+  const acceptSession = useCallback((session: { token: string; user: { username: string } }, redirectTo = "/hub") => {
+    setUsername(session.user.username);
+    setToken(session.token);
+    localStorage.setItem("arena_username", session.user.username);
+    localStorage.setItem("arena_token", session.token);
+    navigate(redirectTo);
+  }, [navigate]);
+
   const logout = useCallback(() => {
     localStorage.removeItem("arena_token");
     setToken(null);
@@ -70,9 +80,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: !!token,
       login,
       quickLogin,
+      acceptSession,
       logout,
     }),
-    [token, username, login, quickLogin, logout],
+    [token, username, login, quickLogin, acceptSession, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

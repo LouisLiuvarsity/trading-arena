@@ -13,6 +13,7 @@ interface Props {
   messages: ChatMessage[];
   onSendMessage: (message: string) => void;
   highlightFromIndex?: number;
+  readOnly?: boolean;
 }
 
 function formatTime(ts: number): string {
@@ -29,7 +30,7 @@ const MESSAGE_STYLES: Record<string, { bg: string; nameColor: string; textColor:
   fomo: { bg: 'bg-[#F0B90B]/[0.03]', nameColor: 'text-[#F0B90B]/80', textColor: 'text-[#D1D4DC]/90', icon: '🔥' },
 };
 
-function ChatRoom({ messages, onSendMessage, highlightFromIndex }: Props) {
+function ChatRoom({ messages, onSendMessage, highlightFromIndex, readOnly = false }: Props) {
   const { t } = useT();
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -130,23 +131,29 @@ function ChatRoom({ messages, onSendMessage, highlightFromIndex }: Props) {
       </div>
 
       {/* Input */}
-      <div className="flex items-center gap-1 px-2 py-1.5 border-t border-[rgba(255,255,255,0.06)]">
-        <input
-          type="text"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSend()}
-          placeholder={t('chat.placeholder')}
-          maxLength={280}
-          className="flex-1 bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded px-2 py-1 text-[11px] text-[#D1D4DC] placeholder-[#848E9C]/50 focus:outline-none focus:border-[#F0B90B]/30"
-        />
-        <button
-          onClick={handleSend}
-          className="px-2.5 py-1 bg-[#F0B90B]/15 text-[#F0B90B] text-[10px] rounded hover:bg-[#F0B90B]/25 transition-colors font-semibold"
-        >
-          {t('chat.send')}
-        </button>
-      </div>
+      {readOnly ? (
+        <div className="px-3 py-2 border-t border-[rgba(255,255,255,0.06)] text-[10px] text-[#848E9C]">
+          Spectator mode: chat is read-only for agent competitions.
+        </div>
+      ) : (
+        <div className="flex items-center gap-1 px-2 py-1.5 border-t border-[rgba(255,255,255,0.06)]">
+          <input
+            type="text"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSend()}
+            placeholder={t('chat.placeholder')}
+            maxLength={280}
+            className="flex-1 bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded px-2 py-1 text-[11px] text-[#D1D4DC] placeholder-[#848E9C]/50 focus:outline-none focus:border-[#F0B90B]/30"
+          />
+          <button
+            onClick={handleSend}
+            className="px-2.5 py-1 bg-[#F0B90B]/15 text-[#F0B90B] text-[10px] rounded hover:bg-[#F0B90B]/25 transition-colors font-semibold"
+          >
+            {t('chat.send')}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

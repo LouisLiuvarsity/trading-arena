@@ -17,22 +17,21 @@ export default function AppShell({ children }: Props) {
   const isMobile = useIsMobile();
 
   const navItems = [
-    { path: "/hub", label: t('nav.hub'), icon: Home },
-    { path: "/competitions", label: t('nav.competitions'), icon: Calendar },
-    { path: "/agents", label: lang === "zh" ? "Agent中心" : "Agents", icon: Bot },
-    { path: "/leaderboard", label: t('nav.leaderboard'), icon: Trophy },
-    { path: "/stats", label: t('nav.stats'), icon: BarChart3 },
+    { path: "/hub", label: t("nav.hub"), icon: Home },
+    { path: "/competitions", label: t("nav.competitions"), icon: Calendar },
+    { path: "/agents", label: lang === "zh" ? "用户中心" : "Agent Center", icon: Bot },
+    { path: "/leaderboard", label: t("nav.leaderboard"), icon: Trophy },
+    { path: "/stats", label: t("nav.stats"), icon: BarChart3 },
   ];
 
   const isActive = (path: string) => location === path || location.startsWith(path + "/");
 
   return (
     <div className="min-h-screen bg-[#0B0E11] flex flex-col">
-      {/* Desktop Top Nav */}
       {!isMobile && (
         <header className="h-12 border-b border-[rgba(255,255,255,0.08)] bg-[#0D1017] flex items-center px-4 shrink-0">
           <Link href="/hub" className="text-[#F0B90B] font-display font-bold text-sm mr-6">
-            {t('nav.brand')}
+            {t("nav.brand")}
           </Link>
           <nav className="flex items-center gap-1">
             {navItems.map((item) => (
@@ -62,28 +61,22 @@ export default function AppShell({ children }: Props) {
         </header>
       )}
 
-      {/* Main content */}
-      <main className="flex-1 overflow-auto">
-        {children}
-      </main>
+      <main className="flex-1 overflow-auto">{children}</main>
 
-      {/* Mobile Bottom Tab Bar */}
       {isMobile && (
         <nav className="h-14 border-t border-[rgba(255,255,255,0.08)] bg-[#0D1017] flex items-center justify-around shrink-0 px-2">
           {[
-            { path: "/hub", label: t('nav.hub'), icon: Home },
-            { path: "/competitions", label: t('nav.competitions'), icon: Calendar },
-            { path: "/agents", label: lang === "zh" ? "Agent" : "Agents", icon: Bot },
-            { path: "/stats", label: t('nav.stats'), icon: BarChart3 },
-            { path: "/profile", label: t('nav.profile'), icon: User },
+            { path: "/hub", label: t("nav.hub"), icon: Home },
+            { path: "/competitions", label: t("nav.competitions"), icon: Calendar },
+            { path: "/agents", label: lang === "zh" ? "中心" : "Agent", icon: Bot },
+            { path: "/stats", label: t("nav.stats"), icon: BarChart3 },
+            { path: "/profile", label: t("nav.profile"), icon: User },
           ].map((item) => (
             <Link
               key={item.path}
               href={item.path}
               className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-md transition-colors ${
-                isActive(item.path)
-                  ? "text-[#F0B90B]"
-                  : "text-[#5E6673]"
+                isActive(item.path) ? "text-[#F0B90B]" : "text-[#5E6673]"
               }`}
             >
               <item.icon className="w-4.5 h-4.5" />

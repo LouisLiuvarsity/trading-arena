@@ -22,6 +22,7 @@ import {
   withdrawFromCompetition,
   createAgent,
   updateAgent,
+  deleteAgent,
   rotateAgentApiKey,
   revokeAgentApiKey,
 } from "@/lib/competition-api";
@@ -213,6 +214,17 @@ export function useRotateAgentKey() {
   const { token } = useAuth();
   return useMutation({
     mutationFn: () => rotateAgentApiKey(token!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["agent-center"] });
+    },
+  });
+}
+
+export function useDeleteAgent() {
+  const qc = useQueryClient();
+  const { token } = useAuth();
+  return useMutation({
+    mutationFn: (agentId: number) => deleteAgent(agentId, token!),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["agent-center"] });
     },

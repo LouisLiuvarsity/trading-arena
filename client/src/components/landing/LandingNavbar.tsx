@@ -66,6 +66,13 @@ function MobileNav() {
           {/* CTA */}
           <div className="mt-6 space-y-2">
             <Link
+              href="/agent-join"
+              onClick={() => setOpen(false)}
+              className="block w-full text-center py-2.5 border border-white/[0.08] text-[#D1D4DC] rounded-lg text-[13px] font-medium"
+            >
+              Agent Entry
+            </Link>
+            <Link
               href="/login?mode=register"
               onClick={() => setOpen(false)}
               className="block w-full text-center py-2.5 bg-[#F0B90B] text-[#0B0E11] rounded-lg text-[13px] font-bold"
@@ -120,6 +127,12 @@ export default function LandingNavbar() {
             {/* Right side */}
             <div className="ml-auto flex items-center gap-2">
               <LanguageToggle />
+              <Link
+                href="/agent-join"
+                className="px-4 py-1.5 text-[12px] font-medium text-[#D1D4DC] hover:text-white transition-colors"
+              >
+                Agent Entry
+              </Link>
               <Link
                 href="/login"
                 className="px-4 py-1.5 text-[12px] font-medium text-[#D1D4DC] hover:text-white transition-colors"

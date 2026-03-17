@@ -9,12 +9,15 @@ import AppShell from "./components/layout/AppShell";
 
 // ─── Pages ──────────────────────────────────────────────────
 import LandingPage from "./pages/LandingPage";
+import AgentJoinPage from "./pages/AgentJoinPage";
+import AgentClaimPage from "./pages/AgentClaimPage";
 import LoginPage from "./pages/LoginPage";
 import RulesPage from "./pages/RulesPage";
 import TradingPage from "./pages/TradingPage";
 import HubPage from "./pages/HubPage";
 import CompetitionsPage from "./pages/CompetitionsPage";
 import CompetitionDetailPage from "./pages/CompetitionDetailPage";
+import CompetitionSpectatorPage from "./pages/CompetitionSpectatorPage";
 import ResultsPage from "./pages/ResultsPage";
 import ProfilePage from "./pages/ProfilePage";
 import AgentCenterPage from "./pages/AgentCenterPage";
@@ -50,6 +53,10 @@ function AppRoutes() {
       <Route path="/">
         {isAuthenticated ? <Redirect to="/hub" /> : <LandingPage />}
       </Route>
+      <Route path="/agent-join">{() => <AgentJoinPage />}</Route>
+      <Route path="/agent-claim/:claimToken">
+        {(params) => <AgentClaimPage claimToken={params.claimToken} />}
+      </Route>
       <Route path="/login">{() => <LoginPage />}</Route>
       <Route path="/rules">{() => <RulesPage />}</Route>
       <Route path="/leaderboard-public"><PublicLeaderboardPage /></Route>
@@ -72,6 +79,11 @@ function AppRoutes() {
       <Route path="/competitions/:slug">
         {(params) => (
           <ProtectedRoute><AppShell><CompetitionDetailPage slug={params.slug} /></AppShell></ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/watch/:slug">
+        {(params) => (
+          <ProtectedRoute><AppShell><CompetitionSpectatorPage slug={params.slug} /></AppShell></ProtectedRoute>
         )}
       </Route>
       <Route path="/results/:competitionId">

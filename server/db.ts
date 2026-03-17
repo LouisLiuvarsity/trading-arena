@@ -15,6 +15,7 @@ import {
   arenaSessions,
   agentProfiles,
   agentApiKeys,
+  agentClaimSessions,
   matches,
   positions,
   trades,
@@ -236,6 +237,39 @@ export async function getArenaAccountByUsernameForLogin(
   };
 }
 
+export async function getArenaAccountByEmailForLogin(
+  email: string,
+): Promise<{
+  id: number;
+  username: string;
+  email: string | null;
+  capital: number;
+  seasonPoints: number;
+  passwordHash: string | null;
+  role: string;
+  accountType: string;
+  ownerArenaAccountId: number | null;
+} | null> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const rows = await db
+    .select()
+    .from(arenaAccounts)
+    .where(eq(arenaAccounts.email, normalizedEmail))
+    .limit(1);
+  if (!rows[0]) return null;
+  return {
+    id: rows[0].id,
+    username: rows[0].username,
+    email: rows[0].email ?? null,
+    capital: rows[0].capital,
+    seasonPoints: rows[0].seasonPoints,
+    passwordHash: rows[0].passwordHash,
+    role: rows[0].role,
+    accountType: rows[0].accountType ?? "human",
+    ownerArenaAccountId: rows[0].ownerArenaAccountId ?? null,
+  };
+}
+
 export async function getArenaAccountById(
   arenaAccountId: number,
   dbOrTx: DbOrTx = db,
@@ -368,6 +402,112 @@ function hashAgentApiKey(rawKey: string): string {
   return crypto.createHash("sha256").update(rawKey).digest("hex");
 }
 
+export async function createAgentClaimSession(input: {
+  claimToken: string;
+  rawProvisioningKey: string;
+  agentName?: string | null;
+  agentUsername?: string | null;
+  description?: string | null;
+  expiresAt: number;
+}): Promise<{
+  id: number;
+  claimToken: string;
+  provisionalKeyPrefix: string;
+  expiresAt: number;
+  agentName: string | null;
+  agentUsername: string | null;
+  description: string | null;
+}> {
+  const now = Date.now();
+  const provisionalKeyPrefix = input.rawProvisioningKey.slice(0, 8);
+  const provisionalKeyHash = hashAgentApiKey(input.rawProvisioningKey);
+  const result = await db.insert(agentClaimSessions).values({
+    claimToken: input.claimToken,
+    provisionalKeyPrefix,
+    provisionalKeyHash,
+    agentName: input.agentName?.trim() || null,
+    agentUsername: input.agentUsername?.trim() || null,
+    description: input.description?.trim() || null,
+    status: "pending",
+    expiresAt: input.expiresAt,
+    createdAt: now,
+  });
+
+  return {
+    id: Number(result[0].insertId),
+    claimToken: input.claimToken,
+    provisionalKeyPrefix,
+    expiresAt: input.expiresAt,
+    agentName: input.agentName?.trim() || null,
+    agentUsername: input.agentUsername?.trim() || null,
+    description: input.description?.trim() || null,
+  };
+}
+
+export async function getAgentClaimSessionByToken(
+  claimToken: string,
+  dbOrTx: DbOrTx = db,
+): Promise<{
+  id: number;
+  claimToken: string;
+  provisionalKeyPrefix: string;
+  provisionalKeyHash: string;
+  agentName: string | null;
+  agentUsername: string | null;
+  description: string | null;
+  status: string;
+  claimedOwnerArenaAccountId: number | null;
+  claimedAgentArenaAccountId: number | null;
+  expiresAt: number;
+  claimedAt: number | null;
+  createdAt: number;
+} | null> {
+  const rows = await dbOrTx
+    .select({
+      id: agentClaimSessions.id,
+      claimToken: agentClaimSessions.claimToken,
+      provisionalKeyPrefix: agentClaimSessions.provisionalKeyPrefix,
+      provisionalKeyHash: agentClaimSessions.provisionalKeyHash,
+      agentName: agentClaimSessions.agentName,
+      agentUsername: agentClaimSessions.agentUsername,
+      description: agentClaimSessions.description,
+      status: agentClaimSessions.status,
+      claimedOwnerArenaAccountId: agentClaimSessions.claimedOwnerArenaAccountId,
+      claimedAgentArenaAccountId: agentClaimSessions.claimedAgentArenaAccountId,
+      expiresAt: agentClaimSessions.expiresAt,
+      claimedAt: agentClaimSessions.claimedAt,
+      createdAt: agentClaimSessions.createdAt,
+    })
+    .from(agentClaimSessions)
+    .where(eq(agentClaimSessions.claimToken, claimToken))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function expireAgentClaimSession(id: number, dbOrTx: DbOrTx = db): Promise<void> {
+  await dbOrTx
+    .update(agentClaimSessions)
+    .set({ status: "expired" })
+    .where(eq(agentClaimSessions.id, id));
+}
+
+export async function markAgentClaimSessionClaimed(
+  id: number,
+  ownerArenaAccountId: number,
+  agentArenaAccountId: number,
+  dbOrTx: DbOrTx = db,
+): Promise<void> {
+  await dbOrTx
+    .update(agentClaimSessions)
+    .set({
+      status: "claimed",
+      claimedOwnerArenaAccountId: ownerArenaAccountId,
+      claimedAgentArenaAccountId: agentArenaAccountId,
+      claimedAt: Date.now(),
+    })
+    .where(eq(agentClaimSessions.id, id));
+}
+
 export async function countAgentsForOwner(
   ownerArenaAccountId: number,
   dbOrTx: DbOrTx = db,
@@ -492,6 +632,45 @@ export async function listAgentsForOwner(
     .orderBy(desc(agentProfiles.createdAt));
 }
 
+export async function getCurrentAgentForOwner(
+  ownerArenaAccountId: number,
+  dbOrTx: DbOrTx = db,
+): Promise<{
+  arenaAccountId: number;
+  username: string;
+  name: string;
+  description: string | null;
+  status: string;
+  capital: number;
+  seasonPoints: number;
+  createdAt: number;
+  updatedAt: number;
+} | null> {
+  const rows = await dbOrTx
+    .select({
+      arenaAccountId: arenaAccounts.id,
+      username: arenaAccounts.username,
+      name: agentProfiles.name,
+      description: agentProfiles.description,
+      status: agentProfiles.status,
+      capital: arenaAccounts.capital,
+      seasonPoints: arenaAccounts.seasonPoints,
+      createdAt: agentProfiles.createdAt,
+      updatedAt: agentProfiles.updatedAt,
+    })
+    .from(arenaAccounts)
+    .innerJoin(agentProfiles, eq(agentProfiles.arenaAccountId, arenaAccounts.id))
+    .where(
+      and(
+        eq(arenaAccounts.ownerArenaAccountId, ownerArenaAccountId),
+        eq(arenaAccounts.accountType, "agent"),
+      ),
+    )
+    .orderBy(desc(agentProfiles.createdAt))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 export async function createAgentForOwner(
   ownerArenaAccountId: number,
   input: { username: string; name: string; description?: string | null },
@@ -507,6 +686,9 @@ export async function createAgentForOwner(
   if (!owner) throw new Error("Owner account not found");
   if ((owner.accountType ?? "human") !== "human") {
     throw new Error("Only human accounts can own agents");
+  }
+  if (await countAgentsForOwner(ownerArenaAccountId)) {
+    throw new Error("Each human account can bind only one agent");
   }
 
   const usernameCheck = await db
@@ -557,6 +739,99 @@ export async function createAgentForOwner(
   });
 }
 
+export async function createClaimedAgentForOwner(
+  ownerArenaAccountId: number,
+  input: {
+    username: string;
+    name: string;
+    description?: string | null;
+    claimSessionId: number;
+    keyPrefix: string;
+    keyHash: string;
+  },
+): Promise<{
+  id: number;
+  username: string;
+  name: string;
+  description: string | null;
+  capital: number;
+  seasonPoints: number;
+  apiKeyCreatedAt: number;
+}> {
+  const owner = await getArenaAccountById(ownerArenaAccountId);
+  if (!owner) throw new Error("Owner account not found");
+  if ((owner.accountType ?? "human") !== "human") {
+    throw new Error("Only human accounts can own agents");
+  }
+
+  const usernameCheck = await db
+    .select({ id: arenaAccounts.id })
+    .from(arenaAccounts)
+    .where(eq(arenaAccounts.username, input.username))
+    .limit(1);
+  if (usernameCheck[0]) {
+    throw new Error("Agent username already taken");
+  }
+
+  const now = Date.now();
+  const inviteCode = `agent_${crypto.randomBytes(12).toString("hex")}`;
+  return db.transaction(async (tx) => {
+    if (await countAgentsForOwner(ownerArenaAccountId, tx)) {
+      throw new Error("Each human account can bind only one agent");
+    }
+
+    const result = await tx.insert(arenaAccounts).values({
+      userId: owner.userId,
+      username: input.username,
+      email: null,
+      accountType: "agent",
+      ownerArenaAccountId,
+      inviteCode,
+      passwordHash: null,
+      inviteConsumed: 1,
+      role: "user",
+      capital: STARTING_CAPITAL,
+      seasonPoints: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const agentId = Number(result[0].insertId);
+
+    await tx.insert(agentProfiles).values({
+      arenaAccountId: agentId,
+      ownerArenaAccountId,
+      name: input.name,
+      description: input.description ?? null,
+      status: "active",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await revokeAgentApiKeysForOwner(ownerArenaAccountId, tx);
+    await tx.insert(agentApiKeys).values({
+      ownerArenaAccountId,
+      keyPrefix: input.keyPrefix,
+      keyHash: input.keyHash,
+      status: "active",
+      createdAt: now,
+      lastUsedAt: null,
+      revokedAt: null,
+    });
+
+    await markAgentClaimSessionClaimed(input.claimSessionId, ownerArenaAccountId, agentId, tx);
+
+    return {
+      id: agentId,
+      username: input.username,
+      name: input.name,
+      description: input.description ?? null,
+      capital: STARTING_CAPITAL,
+      seasonPoints: 0,
+      apiKeyCreatedAt: now,
+    };
+  });
+}
+
 export async function updateOwnedAgentProfile(
   ownerArenaAccountId: number,
   arenaAccountId: number,
@@ -575,6 +850,32 @@ export async function updateOwnedAgentProfile(
       updatedAt: Date.now(),
     })
     .where(eq(agentProfiles.arenaAccountId, arenaAccountId));
+}
+
+export async function deleteAgentForOwner(
+  ownerArenaAccountId: number,
+  arenaAccountId: number,
+): Promise<void> {
+  const agent = await getOwnedAgentById(ownerArenaAccountId, arenaAccountId);
+  if (!agent) throw new Error("Agent not found");
+
+  await db.transaction(async (tx) => {
+    await revokeAgentApiKeysForOwner(ownerArenaAccountId, tx);
+    await tx
+      .update(agentProfiles)
+      .set({
+        status: "deleted",
+        updatedAt: Date.now(),
+      })
+      .where(eq(agentProfiles.arenaAccountId, arenaAccountId));
+    await tx
+      .update(arenaAccounts)
+      .set({
+        ownerArenaAccountId: null,
+        updatedAt: Date.now(),
+      })
+      .where(eq(arenaAccounts.id, arenaAccountId));
+  });
 }
 
 export async function getActiveAgentApiKeyForOwner(
@@ -651,6 +952,49 @@ export async function rotateAgentApiKeyForOwner(
       createdAt: now,
     };
   });
+}
+
+export async function activateAgentApiKeyForOwner(
+  ownerArenaAccountId: number,
+  input: { keyPrefix: string; keyHash: string },
+  dbOrTx: DbOrTx = db,
+): Promise<{ id: number; keyPrefix: string; createdAt: number }> {
+  const now = Date.now();
+  return dbOrTx.transaction
+    ? dbOrTx.transaction(async (tx: DbOrTx) => {
+        await revokeAgentApiKeysForOwner(ownerArenaAccountId, tx);
+        const result = await tx.insert(agentApiKeys).values({
+          ownerArenaAccountId,
+          keyPrefix: input.keyPrefix,
+          keyHash: input.keyHash,
+          status: "active",
+          createdAt: now,
+          lastUsedAt: null,
+          revokedAt: null,
+        });
+        return {
+          id: Number(result[0].insertId),
+          keyPrefix: input.keyPrefix,
+          createdAt: now,
+        };
+      })
+    : (async () => {
+        await revokeAgentApiKeysForOwner(ownerArenaAccountId, dbOrTx);
+        const result = await dbOrTx.insert(agentApiKeys).values({
+          ownerArenaAccountId,
+          keyPrefix: input.keyPrefix,
+          keyHash: input.keyHash,
+          status: "active",
+          createdAt: now,
+          lastUsedAt: null,
+          revokedAt: null,
+        });
+        return {
+          id: Number(result[0].insertId),
+          keyPrefix: input.keyPrefix,
+          createdAt: now,
+        };
+      })();
 }
 
 export async function getOwnerByAgentApiKey(
@@ -921,6 +1265,54 @@ export async function getTradesForUserMatch(
     .limit(200);
 }
 
+export async function getRecentTradesForAccount(
+  arenaAccountId: number,
+  limit: number = 50,
+): Promise<
+  Array<{
+    id: string;
+    matchId: number;
+    competitionId: number | null;
+    competitionTitle: string | null;
+    direction: string;
+    size: number;
+    entryPrice: number;
+    exitPrice: number;
+    pnl: number;
+    pnlPct: number;
+    fee: number;
+    weightedPnl: number;
+    closeReason: string;
+    openTime: number;
+    closeTime: number;
+  }>
+> {
+  const rows = await db
+    .select({
+      id: trades.id,
+      matchId: trades.matchId,
+      competitionId: competitions.id,
+      competitionTitle: competitions.title,
+      direction: trades.direction,
+      size: trades.size,
+      entryPrice: trades.entryPrice,
+      exitPrice: trades.exitPrice,
+      pnl: trades.pnl,
+      pnlPct: trades.pnlPct,
+      fee: trades.fee,
+      weightedPnl: trades.weightedPnl,
+      closeReason: trades.closeReason,
+      openTime: trades.openTime,
+      closeTime: trades.closeTime,
+    })
+    .from(trades)
+    .leftJoin(competitions, eq(trades.matchId, competitions.matchId))
+    .where(eq(trades.arenaAccountId, arenaAccountId))
+    .orderBy(desc(trades.closeTime))
+    .limit(limit);
+  return rows;
+}
+
 export async function getTradeCountForUserMatch(
   arenaAccountId: number,
   matchId: number,
@@ -999,6 +1391,7 @@ export async function updateSeasonPoints(
 export async function getSeasonLeaderboard(
   seasonId?: number,
   limit: number = 500,
+  accountType: "human" | "agent" = "human",
 ): Promise<Array<{
   arenaAccountId: number;
   username: string;
@@ -1015,7 +1408,10 @@ export async function getSeasonLeaderboard(
       seasonPoints: arenaAccounts.seasonPoints,
     })
     .from(arenaAccounts)
-    .where(sql`${arenaAccounts.seasonPoints} > 0`);
+    .where(and(
+      sql`${arenaAccounts.seasonPoints} > 0`,
+      eq(arenaAccounts.accountType, accountType),
+    ));
 
   // Compute average hold weight per account (optionally scoped to season)
   let avgWeightQuery;
@@ -1074,8 +1470,9 @@ export async function getSeasonLeaderboard(
 export async function getGrandFinalLine(
   qualifyCount: number = 500,
   seasonId?: number,
+  accountType: "human" | "agent" = "human",
 ): Promise<number> {
-  const leaderboard = await getSeasonLeaderboard(seasonId, qualifyCount);
+  const leaderboard = await getSeasonLeaderboard(seasonId, qualifyCount, accountType);
   if (leaderboard.length < qualifyCount) return 0;
   return leaderboard[qualifyCount - 1].seasonRankScore;
 }

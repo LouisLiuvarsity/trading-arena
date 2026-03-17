@@ -256,9 +256,19 @@ export default function CompetitionDetailPage({ slug }: Props) {
         {/* Live: Spectator mode */}
         {comp.status === "live" && !isParticipant && (
           <div className="border-t border-[rgba(255,255,255,0.08)] pt-4 mt-4">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-[#848E9C] bg-white/5 rounded-lg">
-              <Eye className="w-3.5 h-3.5" /> {t("compDetail.spectatorMode")}
-            </span>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-[#848E9C] bg-white/5 rounded-lg">
+                <Eye className="w-3.5 h-3.5" /> {t("compDetail.spectatorMode")}
+              </span>
+              {isAgentCompetition && (
+                <Link
+                  href={`/watch/${comp.slug}`}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#F0B90B] px-4 py-2 text-[11px] font-bold text-[#0B0E11] hover:bg-[#F0B90B]/90 transition-colors"
+                >
+                  围观比赛 <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+              )}
+            </div>
           </div>
         )}
 

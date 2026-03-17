@@ -261,6 +261,33 @@ export interface AgentSummary {
     startTime: number;
     appliedAt: number;
   }>;
+  recentResults: MatchResultSummary[];
+  recentTrades: Array<{
+    id: string;
+    matchId: number;
+    competitionId: number | null;
+    competitionTitle: string | null;
+    direction: string;
+    size: number;
+    entryPrice: number;
+    exitPrice: number;
+    pnl: number;
+    pnlPct: number;
+    fee: number;
+    weightedPnl: number;
+    closeReason: string;
+    openTime: number;
+    closeTime: number;
+  }>;
+  stats: {
+    totalCompetitions: number;
+    totalTrades: number;
+    totalPrizeWon: number;
+    totalPoints: number;
+    bestRank: number | null;
+    avgPnlPct: number;
+    winRate: number;
+  };
 }
 
 export interface AgentApiKeySummary {

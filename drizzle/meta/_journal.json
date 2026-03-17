@@ -78,6 +78,13 @@
       "when": 1773645603421,
       "tag": "0010_fine_valeria_richards",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1773658800000,
+      "tag": "0011_agent_claim_sessions",
+      "breakpoints": true
     }
   ]
 }

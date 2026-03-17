@@ -353,6 +353,58 @@ export function registerCompetitionRoutes(
     }
   });
 
+  /** Read-only spectator payload for live competitions */
+  app.get("/api/competitions/:identifier/spectator-feed", async (req: Request, res: Response) => {
+    try {
+      const comp = await getCompetitionByIdentifier(req.params.identifier);
+      if (!comp) {
+        res.status(404).json({ error: "Competition not found" });
+        return;
+      }
+
+      const accountId = await getCurrentAccountId(req);
+      let leaderboard: ReturnType<typeof toLeaderboardRows> = [];
+      if ((comp.status === "live" || comp.status === "settling") && comp.matchId) {
+        const acceptedIds = new Set(await compDb.getAcceptedAccountIds(comp.id));
+        const rows = await arenaEngine.buildLeaderboard(comp.matchId, acceptedIds, comp.id);
+        leaderboard = toLeaderboardRows(rows.slice(0, 100), accountId);
+      } else if (comp.status === "completed" || comp.status === "ended_early") {
+        const results = await compDb.getMatchResultsForCompetition(comp.id);
+        leaderboard = toLeaderboardRows(
+          results.map((r) => ({
+            arenaAccountId: r.arenaAccountId,
+            rank: r.finalRank,
+            username: r.username ?? `#${r.arenaAccountId}`,
+            pnl: r.totalPnl,
+            pnlPct: r.totalPnlPct,
+            weightedPnl: r.totalWeightedPnl,
+            matchPoints: r.pointsEarned,
+            prizeEligible: !!r.prizeEligible,
+            prizeAmount: r.prizeWon,
+            rankTier: r.rankTierAtTime ?? undefined,
+          })),
+          accountId,
+        );
+      }
+
+      res.json({
+        competitionId: comp.id,
+        title: comp.title,
+        status: comp.status,
+        participantMode: comp.participantMode ?? "human",
+        symbol: comp.symbol,
+        startingCapital: comp.startingCapital,
+        startTime: comp.startTime,
+        endTime: comp.endTime,
+        prizePool: comp.prizePool,
+        leaderboard,
+        chatMessages: await dbHelpers.getRecentChatMessages(120, comp.id),
+      });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
   /** List seasons */
   app.get("/api/seasons", async (_req: Request, res: Response) => {
     try {

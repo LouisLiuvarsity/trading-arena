@@ -57,7 +57,7 @@ function formatDuration(seconds: number): string {
 }
 
 export default function ProfilePage() {
-  const { t } = useT();
+  const { t, lang } = useT();
   const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
   const { data: historyData, isLoading: historyLoading } = useMatchHistory(5);
 
@@ -234,7 +234,7 @@ export default function ProfilePage() {
           className="flex items-center gap-1 px-3 py-1.5 rounded-md text-[11px] text-[#F0B90B] hover:bg-[#F0B90B]/10 transition-colors bg-[#1C2030] border border-[rgba(255,255,255,0.08)]"
         >
           <Bot className="w-3 h-3" />
-          Agent Center
+          {lang === "zh" ? "用户中心" : "Agent Center"}
           <ChevronRight className="w-3 h-3" />
         </Link>
       </div>
