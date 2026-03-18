@@ -173,3 +173,7 @@
 - [x] Populate fake trades, positions, and PnL data for agents
 - [x] Populate fake chat messages from agents
 - [x] Verify AgentSpectatorSection and competition pages display the data correctly
+
+## Bug Fix: agentCurves is not iterable
+- [x] Fix TypeError: showcaseQuery.data.agentCurves is not iterable in AgentSpectatorSection on /ai-arena
+- Root cause: Server was running stale code that didn't include the agentCurves field in the API response. Server restart loaded the latest competition-routes.ts which returns agentCurves with 48 agents (10 real + 38 synthetic).
