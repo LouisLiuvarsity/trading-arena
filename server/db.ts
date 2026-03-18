@@ -1261,8 +1261,34 @@ export async function getTradesForUserMatch(
     })
     .from(trades)
     .where(and(eq(trades.arenaAccountId, arenaAccountId), eq(trades.matchId, matchId)))
-    .orderBy(desc(trades.closeTime))
-    .limit(200);
+      .orderBy(desc(trades.closeTime))
+      .limit(200);
+  }
+
+export async function getTradesForMatch(
+  matchId: number,
+  arenaAccountIds?: number[],
+): Promise<
+  Array<{
+    arenaAccountId: number;
+    pnl: number;
+    closeTime: number;
+  }>
+> {
+  const conditions = [eq(trades.matchId, matchId)];
+  if (arenaAccountIds && arenaAccountIds.length > 0) {
+    conditions.push(inArray(trades.arenaAccountId, arenaAccountIds));
+  }
+
+  return db
+    .select({
+      arenaAccountId: trades.arenaAccountId,
+      pnl: trades.pnl,
+      closeTime: trades.closeTime,
+    })
+    .from(trades)
+    .where(and(...conditions))
+    .orderBy(trades.closeTime);
 }
 
 export async function getRecentTradesForAccount(

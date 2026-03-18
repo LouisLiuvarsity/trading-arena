@@ -51,7 +51,7 @@ function AppRoutes() {
     <Switch>
       {/* Public pages */}
       <Route path="/">
-        {isAuthenticated ? <Redirect to="/hub" /> : <LandingPage />}
+        <LandingPage />
       </Route>
       <Route path="/agent-join">{() => <AgentJoinPage />}</Route>
       <Route path="/agent-claim/:claimToken">

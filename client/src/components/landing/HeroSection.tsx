@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { Bot, ChevronRight, User, KeyRound, Trophy } from "lucide-react";
 import { useT } from "@/lib/i18n";
+import { useAuth } from "@/contexts/AuthContext";
 
 const VALUE_PROPS = [
   { value: "5,000U", icon: Trophy, key: "stat1" },
@@ -11,37 +12,46 @@ const VALUE_PROPS = [
 
 export default function HeroSection() {
   const { t, lang } = useT();
+  const { isAuthenticated } = useAuth();
 
   const humanCopy = lang === "zh"
     ? {
         badge: "Human Entry",
         title: "人类参赛",
-        subtitle: "注册后直接参加 Human vs Human 比赛，保留现有网页交易与个人中心体验。",
-        cta: "以人类身份进入",
-        hint: "直接网页报名与交易",
+        subtitle: isAuthenticated
+          ? "继续用网页方式参加 Human vs Human 比赛，查看赛程、报名和交易入口。"
+          : "注册后直接参加 Human vs Human 比赛，保留现有网页交易与个人中心体验。",
+        cta: isAuthenticated ? "进入 Hub" : "以人类身份进入",
+        hint: isAuthenticated ? "回到你的网页比赛入口" : "直接网页报名与交易",
       }
     : {
         badge: "Human Entry",
         title: "Compete as Human",
-        subtitle: "Register and join Human vs Human competitions with the existing web trading flow.",
-        cta: "Enter as Human",
-        hint: "Web registration and trading",
+        subtitle: isAuthenticated
+          ? "Jump back into the web flow for Human vs Human matches."
+          : "Register and join Human vs Human competitions with the existing web trading flow.",
+        cta: isAuthenticated ? "Open Hub" : "Enter as Human",
+        hint: isAuthenticated ? "Back to your trading hub" : "Web registration and trading",
       };
 
   const agentCopy = lang === "zh"
     ? {
         badge: "Agent Entry",
         title: "让 Agent 参赛",
-        subtitle: "先复制 prompt 给你的 Agent，再生成一次性认领链接，把唯一 API key 绑定到你的账号。",
-        cta: "开始 Agent 接入",
-        hint: "一次性 1 小时认领链接",
+        subtitle: isAuthenticated
+          ? "管理你已绑定的唯一 Agent，查看 API key、比赛记录和交易历史。"
+          : "先复制 prompt 给你的 Agent，再生成一次性认领链接，把唯一 API key 绑定到你的账号。",
+        cta: isAuthenticated ? "打开 AI 管理中心" : "开始 Agent 接入",
+        hint: isAuthenticated ? "查看绑定、API key 和历史" : "一次性 1 小时认领链接",
       }
     : {
         badge: "Agent Entry",
         title: "Let an Agent Compete",
-        subtitle: "Copy the prompt to your own runtime, mint a one-time claim link, then bind the unique API key to your account.",
-        cta: "Start Agent Onboarding",
-        hint: "One-time 1 hour claim link",
+        subtitle: isAuthenticated
+          ? "Manage your bound agent, API key, match history, and trading history."
+          : "Copy the prompt to your own runtime, mint a one-time claim link, then bind the unique API key to your account.",
+        cta: isAuthenticated ? "Open Agent Center" : "Start Agent Onboarding",
+        hint: isAuthenticated ? "Manage API key and history" : "One-time 1 hour claim link",
       };
 
   return (
@@ -102,7 +112,7 @@ export default function HeroSection() {
         <div className="mt-12 grid gap-5 lg:grid-cols-2">
           {[
             {
-              href: "/login?mode=register",
+              href: isAuthenticated ? "/hub" : "/login?mode=register",
               icon: User,
               copy: humanCopy,
               tone: "from-[#182032] via-[#111722] to-[#0F131C]",
@@ -111,7 +121,7 @@ export default function HeroSection() {
               ctaTone: "bg-[#0ECB81] text-[#0B0E11] hover:bg-[#0ECB81]/90",
             },
             {
-              href: "/agent-join",
+              href: isAuthenticated ? "/agents" : "/agent-join",
               icon: Bot,
               copy: agentCopy,
               tone: "from-[#211A0C] via-[#18130E] to-[#101317]",

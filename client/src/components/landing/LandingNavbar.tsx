@@ -3,6 +3,7 @@ import { useT } from '@/lib/i18n';
 import { Link } from 'wouter';
 import { Trophy, Menu } from 'lucide-react';
 import { useIsMobile } from '@/hooks/useMobile';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Sheet,
   SheetTrigger,
@@ -28,7 +29,8 @@ function scrollTo(href: string) {
 
 // ─── Mobile Nav ──────────────────────────────────────────────
 function MobileNav() {
-  const { t } = useT();
+  const { t, lang } = useT();
+  const { isAuthenticated, logout } = useAuth();
   const [open, setOpen] = useState(false);
 
   return (
@@ -65,27 +67,65 @@ function MobileNav() {
 
           {/* CTA */}
           <div className="mt-6 space-y-2">
-            <Link
-              href="/agent-join"
-              onClick={() => setOpen(false)}
-              className="block w-full text-center py-2.5 border border-white/[0.08] text-[#D1D4DC] rounded-lg text-[13px] font-medium"
-            >
-              Agent Entry
-            </Link>
-            <Link
-              href="/login?mode=register"
-              onClick={() => setOpen(false)}
-              className="block w-full text-center py-2.5 bg-[#F0B90B] text-[#0B0E11] rounded-lg text-[13px] font-bold"
-            >
-              {t('land.nav.register')}
-            </Link>
-            <Link
-              href="/login"
-              onClick={() => setOpen(false)}
-              className="block w-full text-center py-2.5 border border-[#F0B90B]/40 text-[#F0B90B] rounded-lg text-[13px] font-medium"
-            >
-              {t('land.nav.login')}
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link
+                  href="/hub"
+                  onClick={() => setOpen(false)}
+                  className="block w-full text-center py-2.5 bg-[#F0B90B] text-[#0B0E11] rounded-lg text-[13px] font-bold"
+                >
+                  {lang === 'zh' ? '进入 Hub' : 'Open Hub'}
+                </Link>
+                <Link
+                  href="/agents"
+                  onClick={() => setOpen(false)}
+                  className="block w-full text-center py-2.5 border border-white/[0.08] text-[#D1D4DC] rounded-lg text-[13px] font-medium"
+                >
+                  {lang === 'zh' ? 'AI管理中心' : 'Agent Center'}
+                </Link>
+                <Link
+                  href="/profile"
+                  onClick={() => setOpen(false)}
+                  className="block w-full text-center py-2.5 border border-white/[0.08] text-[#D1D4DC] rounded-lg text-[13px] font-medium"
+                >
+                  {lang === 'zh' ? '个人资料' : 'Profile'}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    logout();
+                  }}
+                  className="block w-full rounded-lg border border-[#F6465D]/30 py-2.5 text-[13px] font-medium text-[#F6465D]"
+                >
+                  {lang === 'zh' ? '退出登录' : 'Log Out'}
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/agent-join"
+                  onClick={() => setOpen(false)}
+                  className="block w-full text-center py-2.5 border border-white/[0.08] text-[#D1D4DC] rounded-lg text-[13px] font-medium"
+                >
+                  Agent Entry
+                </Link>
+                <Link
+                  href="/login?mode=register"
+                  onClick={() => setOpen(false)}
+                  className="block w-full text-center py-2.5 bg-[#F0B90B] text-[#0B0E11] rounded-lg text-[13px] font-bold"
+                >
+                  {t('land.nav.register')}
+                </Link>
+                <Link
+                  href="/login"
+                  onClick={() => setOpen(false)}
+                  className="block w-full text-center py-2.5 border border-[#F0B90B]/40 text-[#F0B90B] rounded-lg text-[13px] font-medium"
+                >
+                  {t('land.nav.login')}
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </SheetContent>
@@ -95,7 +135,8 @@ function MobileNav() {
 
 // ─── Main Navbar ─────────────────────────────────────────────
 export default function LandingNavbar() {
-  const { t } = useT();
+  const { t, lang } = useT();
+  const { isAuthenticated, logout } = useAuth();
   const isMobile = useIsMobile();
 
   return (
@@ -127,24 +168,56 @@ export default function LandingNavbar() {
             {/* Right side */}
             <div className="ml-auto flex items-center gap-2">
               <LanguageToggle />
-              <Link
-                href="/agent-join"
-                className="px-4 py-1.5 text-[12px] font-medium text-[#D1D4DC] hover:text-white transition-colors"
-              >
-                Agent Entry
-              </Link>
-              <Link
-                href="/login"
-                className="px-4 py-1.5 text-[12px] font-medium text-[#D1D4DC] hover:text-white transition-colors"
-              >
-                {t('land.nav.login')}
-              </Link>
-              <Link
-                href="/login?mode=register"
-                className="px-4 py-1.5 bg-[#F0B90B] hover:bg-[#F0B90B]/90 text-[#0B0E11] rounded-lg text-[12px] font-bold transition-colors"
-              >
-                {t('land.nav.register')}
-              </Link>
+              {isAuthenticated ? (
+                <>
+                  <Link
+                    href="/hub"
+                    className="px-4 py-1.5 text-[12px] font-medium text-[#D1D4DC] hover:text-white transition-colors"
+                  >
+                    {lang === 'zh' ? '进入 Hub' : 'Open Hub'}
+                  </Link>
+                  <Link
+                    href="/agents"
+                    className="px-4 py-1.5 text-[12px] font-medium text-[#D1D4DC] hover:text-white transition-colors"
+                  >
+                    {lang === 'zh' ? 'AI管理中心' : 'Agent Center'}
+                  </Link>
+                  <Link
+                    href="/profile"
+                    className="px-4 py-1.5 text-[12px] font-medium text-[#D1D4DC] hover:text-white transition-colors"
+                  >
+                    {lang === 'zh' ? '个人资料' : 'Profile'}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={logout}
+                    className="px-4 py-1.5 rounded-lg border border-[#F6465D]/30 text-[12px] font-medium text-[#F6465D] transition-colors hover:bg-[#F6465D]/10"
+                  >
+                    {lang === 'zh' ? '退出' : 'Log Out'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/agent-join"
+                    className="px-4 py-1.5 text-[12px] font-medium text-[#D1D4DC] hover:text-white transition-colors"
+                  >
+                    Agent Entry
+                  </Link>
+                  <Link
+                    href="/login"
+                    className="px-4 py-1.5 text-[12px] font-medium text-[#D1D4DC] hover:text-white transition-colors"
+                  >
+                    {t('land.nav.login')}
+                  </Link>
+                  <Link
+                    href="/login?mode=register"
+                    className="px-4 py-1.5 bg-[#F0B90B] hover:bg-[#F0B90B]/90 text-[#0B0E11] rounded-lg text-[12px] font-bold transition-colors"
+                  >
+                    {t('land.nav.register')}
+                  </Link>
+                </>
+              )}
             </div>
           </>
         )}

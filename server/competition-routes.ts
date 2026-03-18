@@ -72,6 +72,100 @@ const batchReviewSchema = z.object({
   ids: z.array(z.number().positive()),
 });
 
+type RawLeaderboardRow = {
+  arenaAccountId: number;
+  rank: number;
+  username: string;
+  pnlPct: number;
+  pnl: number;
+  weightedPnl: number;
+  matchPoints: number;
+  prizeEligible: boolean;
+  prizeAmount: number;
+  rankTier?: string;
+};
+
+type MatchTradePoint = {
+  arenaAccountId: number;
+  pnl: number;
+  closeTime: number;
+};
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function isAgentCompetition(participantMode?: string | null): boolean {
+  return (participantMode ?? "human") === "agent";
+}
+
+function formatCurveLabel(timestamp: number): string {
+  return new Date(timestamp).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function buildSampleTimes(startTime: number, endTime: number, points = 24): number[] {
+  if (endTime <= startTime) {
+    return [endTime];
+  }
+
+  const count = Math.max(2, points);
+  return Array.from({ length: count }, (_, index) => {
+    if (index === count - 1) return endTime;
+    return Math.round(startTime + ((endTime - startTime) * index) / (count - 1));
+  });
+}
+
+function buildEquitySeriesForAccounts(input: {
+  accountIds: number[];
+  sampleTimes: number[];
+  startingCapital: number;
+  trades: MatchTradePoint[];
+  currentEquityMap: Map<number, number>;
+}): Map<number, number[]> {
+  const grouped = new Map<number, MatchTradePoint[]>();
+  for (const accountId of input.accountIds) {
+    grouped.set(accountId, []);
+  }
+
+  for (const trade of input.trades) {
+    if (!grouped.has(trade.arenaAccountId)) continue;
+    grouped.get(trade.arenaAccountId)!.push(trade);
+  }
+
+  const output = new Map<number, number[]>();
+  for (const accountId of input.accountIds) {
+    const seriesTrades = grouped.get(accountId) ?? [];
+    let tradeIndex = 0;
+    let realizedPnl = 0;
+    const series: number[] = [];
+
+    for (const sampleTime of input.sampleTimes) {
+      while (
+        tradeIndex < seriesTrades.length &&
+        seriesTrades[tradeIndex].closeTime <= sampleTime
+      ) {
+        realizedPnl += seriesTrades[tradeIndex].pnl;
+        tradeIndex += 1;
+      }
+      series.push(round2(input.startingCapital + realizedPnl));
+    }
+
+    if (series.length > 0) {
+      const currentEquity = input.currentEquityMap.get(accountId);
+      if (typeof currentEquity === "number") {
+        series[series.length - 1] = round2(currentEquity);
+      }
+    }
+
+    output.set(accountId, series);
+  }
+
+  return output;
+}
+
 // ─── Route Registration ─────────────────────────────────────
 
 export function registerCompetitionRoutes(
@@ -94,19 +188,9 @@ export function registerCompetitionRoutes(
   };
 
   const toLeaderboardRows = (
-    rows: Array<{
-      arenaAccountId: number;
-      rank: number;
-      username: string;
-      pnlPct: number;
-      pnl: number;
-      weightedPnl: number;
-      matchPoints: number;
-      prizeEligible: boolean;
-      prizeAmount: number;
-      rankTier?: string;
-    }>,
+    rows: RawLeaderboardRow[],
     accountId: number | null,
+    isBot = false,
   ) => rows.map((row) => ({
     rank: row.rank,
     username: row.username,
@@ -118,8 +202,37 @@ export function registerCompetitionRoutes(
     prizeAmount: row.prizeAmount,
     rankTier: row.rankTier,
     isYou: accountId !== null && row.arenaAccountId === accountId,
-    isBot: false,
+    isBot,
   }));
+
+  const buildLiveLeaderboardRows = async (
+    comp: NonNullable<Awaited<ReturnType<typeof compDb.getCompetitionById>>>,
+  ): Promise<RawLeaderboardRow[]> => {
+    if ((comp.status !== "live" && comp.status !== "settling") || !comp.matchId) {
+      return [];
+    }
+
+    const acceptedIds = new Set(await compDb.getAcceptedAccountIds(comp.id));
+    return arenaEngine.buildLeaderboard(comp.matchId, acceptedIds, comp.id);
+  };
+
+  const pickLandingAgentCompetition = async () => {
+    const liveCompetitions = await compDb.listCompetitions({ status: "live" });
+    const liveAgentCompetitions = liveCompetitions
+      .filter((comp) => isAgentCompetition(comp.participantMode))
+      .sort((a, b) => b.startTime - a.startTime);
+
+    return liveAgentCompetitions[0] ?? null;
+  };
+
+  const getCurrentOwnedAgentAccountId = async (req: Request) => {
+    const token = getAuthToken(req);
+    if (!token) return null;
+    const account = await arenaEngine.getAccountByToken(token);
+    if (!account || account.accountType !== "human") return null;
+    const agent = await dbHelpers.getCurrentAgentForOwner(account.id);
+    return agent?.arenaAccountId ?? null;
+  };
   // ─── Public Endpoints ───────────────────────────────────────
 
   /** Public: Competition showcase for landing page (no auth required) */
@@ -170,6 +283,159 @@ export function registerCompetitionRoutes(
         live: await Promise.all(live.map(mapComp)),
         upcoming: await Promise.all(upcoming.map(mapComp)),
         completed: await Promise.all(completed.map(mapComp)),
+      });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.get("/api/public/agent-showcase", async (req: Request, res: Response) => {
+    try {
+      const comp = await pickLandingAgentCompetition();
+      if (!comp) {
+        res.json({
+          competition: null,
+          topAgents: [],
+          curvePoints: [],
+          chatMessages: [],
+          myAgent: null,
+          myAgentStatus: getAuthToken(req) ? "no_live_match" : "viewer",
+          refreshedAt: Date.now(),
+        });
+        return;
+      }
+
+      const [leaderboardRows, myAgentAccountId, chatMessages] = await Promise.all([
+        buildLiveLeaderboardRows(comp),
+        getCurrentOwnedAgentAccountId(req),
+        dbHelpers.getRecentChatMessages(80, comp.id),
+      ]);
+
+      const participantIds = leaderboardRows.map((row) => row.arenaAccountId);
+      const currentEquityMap = new Map(
+        leaderboardRows.map((row) => [row.arenaAccountId, round2(comp.startingCapital + row.pnl)]),
+      );
+      const trades = comp.matchId && participantIds.length > 0
+        ? await dbHelpers.getTradesForMatch(comp.matchId, participantIds)
+        : [];
+      const sampleTimes = buildSampleTimes(comp.startTime, Date.now(), 24);
+      const allSeriesMap = buildEquitySeriesForAccounts({
+        accountIds: participantIds,
+        sampleTimes,
+        startingCapital: comp.startingCapital,
+        trades,
+        currentEquityMap,
+      });
+
+      const topRows = leaderboardRows.slice(0, 10);
+      const myAgentRow = myAgentAccountId
+        ? leaderboardRows.find((row) => row.arenaAccountId === myAgentAccountId) ?? null
+        : null;
+      const averageSeries = sampleTimes.map((_, index) => {
+        if (participantIds.length === 0) return comp.startingCapital;
+        const total = participantIds.reduce(
+          (sum, accountId) => sum + (allSeriesMap.get(accountId)?.[index] ?? comp.startingCapital),
+          0,
+        );
+        return round2(total / participantIds.length);
+      });
+
+      res.json({
+        competition: {
+          id: comp.id,
+          slug: comp.slug,
+          title: comp.title,
+          symbol: comp.symbol,
+          prizePool: comp.prizePool,
+          startTime: comp.startTime,
+          endTime: comp.endTime,
+          participantCount: leaderboardRows.length,
+        },
+        topAgents: topRows.map((row) => ({
+          rank: row.rank,
+          username: row.username,
+          pnlPct: row.pnlPct,
+          latestEquity: round2(comp.startingCapital + row.pnl),
+          isMyAgent: row.arenaAccountId === myAgentAccountId,
+        })),
+        curvePoints: sampleTimes.map((timestamp, index) => ({
+          timestamp,
+          label: formatCurveLabel(timestamp),
+          topAgents: topRows.map((row) => ({
+            username: row.username,
+            equity: allSeriesMap.get(row.arenaAccountId)?.[index] ?? comp.startingCapital,
+          })),
+          myAgent: myAgentRow
+            ? allSeriesMap.get(myAgentRow.arenaAccountId)?.[index] ?? comp.startingCapital
+            : null,
+          average: averageSeries[index] ?? comp.startingCapital,
+        })),
+        chatMessages,
+        myAgent: myAgentRow
+          ? {
+              rank: myAgentRow.rank,
+              username: myAgentRow.username,
+              pnlPct: myAgentRow.pnlPct,
+              latestEquity: round2(comp.startingCapital + myAgentRow.pnl),
+            }
+          : null,
+        myAgentStatus: !getAuthToken(req)
+          ? "viewer"
+          : !myAgentAccountId
+            ? "no_agent"
+            : myAgentRow
+              ? "in_match"
+              : "not_in_match",
+        refreshedAt: Date.now(),
+      });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.get("/api/public/agent-showcase/leaderboard", async (req: Request, res: Response) => {
+    try {
+      const identifier = typeof req.query.competitionId === "string"
+        ? req.query.competitionId
+        : typeof req.query.slug === "string"
+          ? req.query.slug
+          : null;
+      if (!identifier) {
+        res.status(400).json({ error: "competitionId or slug is required" });
+        return;
+      }
+
+      const comp = await getCompetitionByIdentifier(identifier);
+      if (!comp || !isAgentCompetition(comp.participantMode)) {
+        res.status(404).json({ error: "Agent competition not found" });
+        return;
+      }
+
+      const leaderboardRows = await buildLiveLeaderboardRows(comp);
+      const myAgentAccountId = await getCurrentOwnedAgentAccountId(req);
+      const offset = Math.max(0, Number(req.query.offset ?? 0));
+      const limit = Math.min(100, Math.max(1, Number(req.query.limit ?? 100)));
+      const pageRows = leaderboardRows.slice(offset, offset + limit);
+      const myAgentRow = myAgentAccountId
+        ? leaderboardRows.find((row) => row.arenaAccountId === myAgentAccountId) ?? null
+        : null;
+
+      res.json({
+        competitionId: comp.id,
+        items: toLeaderboardRows(pageRows, myAgentAccountId, true),
+        offset,
+        limit,
+        total: leaderboardRows.length,
+        hasMore: offset + limit < leaderboardRows.length,
+        myAgent: myAgentRow
+          ? {
+              rank: myAgentRow.rank,
+              username: myAgentRow.username,
+              pnlPct: myAgentRow.pnlPct,
+              latestEquity: round2(comp.startingCapital + myAgentRow.pnl),
+              inPage: myAgentRow.rank > offset && myAgentRow.rank <= offset + limit,
+            }
+          : null,
       });
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
@@ -289,11 +555,12 @@ export function registerCompetitionRoutes(
             rankTier: r.rankTierAtTime ?? undefined,
           })),
           accountId,
+          isAgentCompetition(comp.participantMode),
         ));
       } else if (comp.status === "live" && comp.matchId) {
         const acceptedIds = new Set(await compDb.getAcceptedAccountIds(comp.id));
         const lb = await arenaEngine.buildLeaderboard(comp.matchId, acceptedIds, comp.id);
-        res.json(toLeaderboardRows(lb.slice(0, 100), accountId));
+        res.json(toLeaderboardRows(lb.slice(0, 100), accountId, isAgentCompetition(comp.participantMode)));
       } else {
         res.json([]);
       }
@@ -332,12 +599,13 @@ export function registerCompetitionRoutes(
             rankTier: r.rankTierAtTime ?? undefined,
           })),
           accountId,
+          isAgentCompetition(comp.participantMode),
         );
       } else if ((comp.status === "live" || comp.status === "settling") && comp.matchId) {
         const acceptedIds = new Set(await compDb.getAcceptedAccountIds(comp.id));
         const rows = await arenaEngine.buildLeaderboard(comp.matchId, acceptedIds, comp.id);
         participantCount = rows.length;
-        leaderboard = toLeaderboardRows(rows.slice(0, 100), accountId);
+        leaderboard = toLeaderboardRows(rows.slice(0, 100), accountId, isAgentCompetition(comp.participantMode));
       }
 
       res.json({
@@ -367,7 +635,7 @@ export function registerCompetitionRoutes(
       if ((comp.status === "live" || comp.status === "settling") && comp.matchId) {
         const acceptedIds = new Set(await compDb.getAcceptedAccountIds(comp.id));
         const rows = await arenaEngine.buildLeaderboard(comp.matchId, acceptedIds, comp.id);
-        leaderboard = toLeaderboardRows(rows.slice(0, 100), accountId);
+        leaderboard = toLeaderboardRows(rows.slice(0, 100), accountId, isAgentCompetition(comp.participantMode));
       } else if (comp.status === "completed" || comp.status === "ended_early") {
         const results = await compDb.getMatchResultsForCompetition(comp.id);
         leaderboard = toLeaderboardRows(
@@ -384,6 +652,7 @@ export function registerCompetitionRoutes(
             rankTier: r.rankTierAtTime ?? undefined,
           })),
           accountId,
+          isAgentCompetition(comp.participantMode),
         );
       }
 
