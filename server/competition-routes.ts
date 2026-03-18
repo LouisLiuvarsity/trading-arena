@@ -91,6 +91,55 @@ type MatchTradePoint = {
   closeTime: number;
 };
 
+type ShowcaseCurveValue = number | null;
+
+const CURVE_INTERVAL_MS = 5 * 60 * 1000;
+const MIN_SHOWCASE_PARTICIPANTS = 48;
+const SHOWCASE_DEMO_NAMES = [
+  "AxiomPulse_X",
+  "NeuralTide_Q",
+  "QuantForge_M1",
+  "SignalHarbor",
+  "MeanSlope_AI",
+  "VectorDrift_7",
+  "AtlasGamma",
+  "OrbitalDelta",
+  "SpectraEdge",
+  "BlueHorizon",
+  "CruxSignal",
+  "CinderAlpha",
+  "NovaSpline",
+  "MacroPilot",
+  "EchoFactor",
+  "RidgeSignal",
+  "LatticeFlow",
+  "KernelWave",
+  "DeepCrest",
+  "CipherQuant",
+  "VoltHarbor",
+  "Meridian_AI",
+  "AnchorDelta",
+  "SierraPulse",
+  "HorizonLoop",
+  "VertexQuill",
+  "ScarletBeta",
+  "CloudSigma",
+  "TidalForge",
+  "DriftLedger",
+  "PeakTensor",
+  "SilverKernel",
+];
+const SHOWCASE_CHAT_TEMPLATES = [
+  { message: "Holding here. Current slope still supports the long bias.", type: "user" },
+  { message: "Reducing risk. Waiting for the next clean impulse before adding.", type: "user" },
+  { message: "Volatility expanded, but breadth still looks constructive.", type: "fomo" },
+  { message: "Maintaining exposure. I do not want to overtrade this range.", type: "user" },
+  { message: "Momentum is fading a bit. Rotating from aggression to patience.", type: "panic" },
+  { message: "Price is respecting the intraday channel. Staying with the plan.", type: "brag" },
+  { message: "No chase here. Better entry may appear after the next retrace.", type: "user" },
+  { message: "Keeping size disciplined. Edge is still there, just not oversized.", type: "user" },
+];
+
 function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }
@@ -106,16 +155,38 @@ function formatCurveLabel(timestamp: number): string {
   });
 }
 
-function buildSampleTimes(startTime: number, endTime: number, points = 24): number[] {
+function getLastVisibleCurveValue(
+  series: ShowcaseCurveValue[] | undefined,
+  fallback: number,
+): number {
+  if (!series) return round2(fallback);
+  for (let index = series.length - 1; index >= 0; index -= 1) {
+    const value = series[index];
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return round2(value);
+    }
+  }
+  return round2(fallback);
+}
+
+function seededUnit(seed: number): number {
+  const value = Math.sin(seed * 12.9898 + 78.233) * 43758.5453123;
+  return value - Math.floor(value);
+}
+
+function buildSampleTimes(startTime: number, endTime: number): number[] {
   if (endTime <= startTime) {
-    return [endTime];
+    return [startTime, endTime];
   }
 
-  const count = Math.max(2, points);
-  return Array.from({ length: count }, (_, index) => {
-    if (index === count - 1) return endTime;
-    return Math.round(startTime + ((endTime - startTime) * index) / (count - 1));
-  });
+  const sampleTimes = [startTime];
+  for (let next = startTime + CURVE_INTERVAL_MS; next < endTime; next += CURVE_INTERVAL_MS) {
+    sampleTimes.push(next);
+  }
+  if (sampleTimes[sampleTimes.length - 1] !== endTime) {
+    sampleTimes.push(endTime);
+  }
+  return sampleTimes;
 }
 
 function buildEquitySeriesForAccounts(input: {
@@ -124,7 +195,8 @@ function buildEquitySeriesForAccounts(input: {
   startingCapital: number;
   trades: MatchTradePoint[];
   currentEquityMap: Map<number, number>;
-}): Map<number, number[]> {
+  currentTime: number;
+}): Map<number, ShowcaseCurveValue[]> {
   const grouped = new Map<number, MatchTradePoint[]>();
   for (const accountId of input.accountIds) {
     grouped.set(accountId, []);
@@ -135,14 +207,20 @@ function buildEquitySeriesForAccounts(input: {
     grouped.get(trade.arenaAccountId)!.push(trade);
   }
 
-  const output = new Map<number, number[]>();
+  const output = new Map<number, ShowcaseCurveValue[]>();
   for (const accountId of input.accountIds) {
     const seriesTrades = grouped.get(accountId) ?? [];
     let tradeIndex = 0;
     let realizedPnl = 0;
-    const series: number[] = [];
+    const series: ShowcaseCurveValue[] = [];
+    let latestVisibleIndex = -1;
 
     for (const sampleTime of input.sampleTimes) {
+      if (sampleTime > input.currentTime) {
+        series.push(null);
+        continue;
+      }
+
       while (
         tradeIndex < seriesTrades.length &&
         seriesTrades[tradeIndex].closeTime <= sampleTime
@@ -151,12 +229,13 @@ function buildEquitySeriesForAccounts(input: {
         tradeIndex += 1;
       }
       series.push(round2(input.startingCapital + realizedPnl));
+      latestVisibleIndex = series.length - 1;
     }
 
-    if (series.length > 0) {
+    if (latestVisibleIndex >= 0) {
       const currentEquity = input.currentEquityMap.get(accountId);
       if (typeof currentEquity === "number") {
-        series[series.length - 1] = round2(currentEquity);
+        series[latestVisibleIndex] = round2(currentEquity);
       }
     }
 
@@ -164,6 +243,153 @@ function buildEquitySeriesForAccounts(input: {
   }
 
   return output;
+}
+
+function normalizeShowcaseRows(rows: RawLeaderboardRow[]): RawLeaderboardRow[] {
+  const sorted = [...rows].sort((a, b) => {
+    if (b.pnlPct !== a.pnlPct) return b.pnlPct - a.pnlPct;
+    if (b.pnl !== a.pnl) return b.pnl - a.pnl;
+    return a.username.localeCompare(b.username);
+  });
+
+  return sorted.map((row, index) => ({
+    ...row,
+    rank: index + 1,
+  }));
+}
+
+function buildSyntheticCurve(input: {
+  sampleTimes: number[];
+  currentTime: number;
+  startingCapital: number;
+  finalEquity: number;
+  seed: number;
+}): ShowcaseCurveValue[] {
+  const visibleIndexes = input.sampleTimes
+    .map((timestamp, index) => ({ timestamp, index }))
+    .filter((item) => item.timestamp <= input.currentTime);
+  const visibleCount = visibleIndexes.length;
+  const amplitude = Math.max(18, Math.abs(input.finalEquity - input.startingCapital) * 0.22);
+  const phase = seededUnit(input.seed) * Math.PI * 2;
+  const waveCycles = 1.2 + seededUnit(input.seed + 3) * 2.2;
+
+  return input.sampleTimes.map((timestamp, index) => {
+    if (timestamp > input.currentTime) return null;
+    if (visibleCount <= 1) return input.startingCapital;
+
+    const progress = visibleIndexes.findIndex((item) => item.index === index) / (visibleCount - 1);
+    const eased = 1 - Math.pow(1 - progress, 1.2);
+    const baseline = input.startingCapital + (input.finalEquity - input.startingCapital) * eased;
+    const oscillation = Math.sin(progress * Math.PI * 2 * waveCycles + phase) * amplitude * (0.45 + progress * 0.55);
+    const drift = (seededUnit(input.seed + index * 11) - 0.5) * amplitude * 0.18;
+    const value = round2(baseline + oscillation * 0.35 + drift);
+
+    if (index === visibleIndexes[0]?.index) return input.startingCapital;
+    if (index === visibleIndexes[visibleIndexes.length - 1]?.index) return round2(input.finalEquity);
+    return value;
+  });
+}
+
+function buildSyntheticShowcase(input: {
+  competitionId: number;
+  sampleTimes: number[];
+  currentTime: number;
+  startingCapital: number;
+  existingRows: RawLeaderboardRow[];
+  existingSeriesMap: Map<number, ShowcaseCurveValue[]>;
+  chatMessages: Array<{
+    id: string;
+    username: string;
+    message: string;
+    timestamp: number;
+    type: string;
+  }>;
+}): {
+  rows: RawLeaderboardRow[];
+  seriesMap: Map<number, ShowcaseCurveValue[]>;
+  chatMessages: Array<{
+    id: string;
+    username: string;
+    message: string;
+    timestamp: number;
+    type: string;
+  }>;
+} {
+  if (input.existingRows.length >= MIN_SHOWCASE_PARTICIPANTS) {
+    return {
+      rows: input.existingRows,
+      seriesMap: input.existingSeriesMap,
+      chatMessages: input.chatMessages,
+    };
+  }
+
+  const existingNames = new Set(input.existingRows.map((row) => row.username));
+  const needed = MIN_SHOWCASE_PARTICIPANTS - input.existingRows.length;
+  const syntheticRows: RawLeaderboardRow[] = [];
+  const seriesMap = new Map(input.existingSeriesMap);
+  const syntheticNames = SHOWCASE_DEMO_NAMES.filter((name) => !existingNames.has(name));
+  const realTop = input.existingRows[0]?.pnlPct ?? 3.2;
+  const realBottom = input.existingRows[input.existingRows.length - 1]?.pnlPct ?? -6.8;
+
+  for (let index = 0; index < needed; index += 1) {
+    const seed = input.competitionId * 1000 + index * 97;
+    const username = syntheticNames[index] ?? `ShowcaseAgent_${index + 1}`;
+    const span = Math.max(5.5, realTop - realBottom + 2.5);
+    const descendingBase = realTop - span * ((index + 1) / (needed + 2));
+    const finalPct = round2(descendingBase + (seededUnit(seed) - 0.5) * 1.2);
+    const finalPnl = round2((input.startingCapital * finalPct) / 100);
+    const arenaAccountId = 900000 + input.competitionId * 100 + index;
+    const finalEquity = round2(input.startingCapital + finalPnl);
+
+    syntheticRows.push({
+      arenaAccountId,
+      rank: 0,
+      username,
+      pnlPct: finalPct,
+      pnl: finalPnl,
+      weightedPnl: finalPnl,
+      matchPoints: 0,
+      prizeEligible: true,
+      prizeAmount: 0,
+      rankTier: "gold",
+    });
+
+    seriesMap.set(arenaAccountId, buildSyntheticCurve({
+      sampleTimes: input.sampleTimes,
+      currentTime: input.currentTime,
+      startingCapital: input.startingCapital,
+      finalEquity,
+      seed,
+    }));
+  }
+
+  const mergedRows = normalizeShowcaseRows([...input.existingRows, ...syntheticRows]);
+  const nowBucket = input.sampleTimes
+    .filter((timestamp) => timestamp <= input.currentTime)
+    .slice(-1)[0] ?? input.currentTime;
+
+  const mergedMessages = [...input.chatMessages];
+  const desiredMessageCount = 12;
+  for (let index = mergedMessages.length; index < desiredMessageCount; index += 1) {
+    const seed = input.competitionId * 2000 + index * 17;
+    const syntheticAgent = mergedRows[(index * 3) % Math.max(mergedRows.length, 1)];
+    const template = SHOWCASE_CHAT_TEMPLATES[index % SHOWCASE_CHAT_TEMPLATES.length];
+    if (!syntheticAgent) break;
+
+    mergedMessages.push({
+      id: `showcase-chat-${seed}`,
+      username: syntheticAgent.username,
+      message: template.message,
+      timestamp: nowBucket - (desiredMessageCount - index) * 3 * 60 * 1000,
+      type: template.type,
+    });
+  }
+
+  return {
+    rows: mergedRows,
+    seriesMap,
+    chatMessages: mergedMessages.sort((a, b) => a.timestamp - b.timestamp),
+  };
 }
 
 // ─── Route Registration ─────────────────────────────────────
@@ -297,6 +523,7 @@ export function registerCompetitionRoutes(
           competition: null,
           topAgents: [],
           curvePoints: [],
+          agentCurves: [],
           chatMessages: [],
           myAgent: null,
           myAgentStatus: getAuthToken(req) ? "no_live_match" : "viewer",
@@ -305,39 +532,54 @@ export function registerCompetitionRoutes(
         return;
       }
 
-      const [leaderboardRows, myAgentAccountId, chatMessages] = await Promise.all([
+      const [rawLeaderboardRows, myAgentAccountId, rawChatMessages] = await Promise.all([
         buildLiveLeaderboardRows(comp),
         getCurrentOwnedAgentAccountId(req),
         dbHelpers.getRecentChatMessages(80, comp.id),
       ]);
 
-      const participantIds = leaderboardRows.map((row) => row.arenaAccountId);
+      const currentTime = Math.min(Date.now(), comp.endTime);
+      const participantIds = rawLeaderboardRows.map((row) => row.arenaAccountId);
       const currentEquityMap = new Map(
-        leaderboardRows.map((row) => [row.arenaAccountId, round2(comp.startingCapital + row.pnl)]),
+        rawLeaderboardRows.map((row) => [row.arenaAccountId, round2(comp.startingCapital + row.pnl)]),
       );
       const trades = comp.matchId && participantIds.length > 0
         ? await dbHelpers.getTradesForMatch(comp.matchId, participantIds)
         : [];
-      const sampleTimes = buildSampleTimes(comp.startTime, Date.now(), 24);
-      const allSeriesMap = buildEquitySeriesForAccounts({
+      const sampleTimes = buildSampleTimes(comp.startTime, comp.endTime);
+      const baseSeriesMap = buildEquitySeriesForAccounts({
         accountIds: participantIds,
         sampleTimes,
         startingCapital: comp.startingCapital,
         trades,
         currentEquityMap,
+        currentTime,
       });
+      const showcase = buildSyntheticShowcase({
+        competitionId: comp.id,
+        sampleTimes,
+        currentTime,
+        startingCapital: comp.startingCapital,
+        existingRows: normalizeShowcaseRows(rawLeaderboardRows),
+        existingSeriesMap: baseSeriesMap,
+        chatMessages: rawChatMessages,
+      });
+      const leaderboardRows = showcase.rows;
+      const allSeriesMap = showcase.seriesMap;
+      const chatMessages = showcase.chatMessages;
 
+      const allAccountIds = leaderboardRows.map((row) => row.arenaAccountId);
       const topRows = leaderboardRows.slice(0, 10);
       const myAgentRow = myAgentAccountId
         ? leaderboardRows.find((row) => row.arenaAccountId === myAgentAccountId) ?? null
         : null;
       const averageSeries = sampleTimes.map((_, index) => {
-        if (participantIds.length === 0) return comp.startingCapital;
-        const total = participantIds.reduce(
-          (sum, accountId) => sum + (allSeriesMap.get(accountId)?.[index] ?? comp.startingCapital),
-          0,
-        );
-        return round2(total / participantIds.length);
+        const visibleValues = allAccountIds
+          .map((accountId) => allSeriesMap.get(accountId)?.[index])
+          .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+        if (visibleValues.length === 0) return null;
+        const total = visibleValues.reduce((sum, value) => sum + value, 0);
+        return round2(total / visibleValues.length);
       });
 
       res.json({
@@ -355,7 +597,10 @@ export function registerCompetitionRoutes(
           rank: row.rank,
           username: row.username,
           pnlPct: row.pnlPct,
-          latestEquity: round2(comp.startingCapital + row.pnl),
+          latestEquity: getLastVisibleCurveValue(
+            allSeriesMap.get(row.arenaAccountId),
+            comp.startingCapital + row.pnl,
+          ),
           isMyAgent: row.arenaAccountId === myAgentAccountId,
         })),
         curvePoints: sampleTimes.map((timestamp, index) => ({
@@ -363,12 +608,22 @@ export function registerCompetitionRoutes(
           label: formatCurveLabel(timestamp),
           topAgents: topRows.map((row) => ({
             username: row.username,
-            equity: allSeriesMap.get(row.arenaAccountId)?.[index] ?? comp.startingCapital,
+            equity: allSeriesMap.get(row.arenaAccountId)?.[index] ?? null,
           })),
           myAgent: myAgentRow
-            ? allSeriesMap.get(myAgentRow.arenaAccountId)?.[index] ?? comp.startingCapital
+            ? allSeriesMap.get(myAgentRow.arenaAccountId)?.[index] ?? null
             : null,
-          average: averageSeries[index] ?? comp.startingCapital,
+          average: averageSeries[index] ?? null,
+        })),
+        agentCurves: leaderboardRows.map((row) => ({
+          username: row.username,
+          rank: row.rank,
+          pnlPct: row.pnlPct,
+          latestEquity: getLastVisibleCurveValue(
+            allSeriesMap.get(row.arenaAccountId),
+            comp.startingCapital + row.pnl,
+          ),
+          values: allSeriesMap.get(row.arenaAccountId) ?? sampleTimes.map(() => null),
         })),
         chatMessages,
         myAgent: myAgentRow
@@ -376,7 +631,10 @@ export function registerCompetitionRoutes(
               rank: myAgentRow.rank,
               username: myAgentRow.username,
               pnlPct: myAgentRow.pnlPct,
-              latestEquity: round2(comp.startingCapital + myAgentRow.pnl),
+              latestEquity: getLastVisibleCurveValue(
+                allSeriesMap.get(myAgentRow.arenaAccountId),
+                comp.startingCapital + myAgentRow.pnl,
+              ),
             }
           : null,
         myAgentStatus: !getAuthToken(req)
@@ -411,8 +669,35 @@ export function registerCompetitionRoutes(
         return;
       }
 
-      const leaderboardRows = await buildLiveLeaderboardRows(comp);
+      const rawLeaderboardRows = await buildLiveLeaderboardRows(comp);
       const myAgentAccountId = await getCurrentOwnedAgentAccountId(req);
+      const currentTime = Math.min(Date.now(), comp.endTime);
+      const participantIds = rawLeaderboardRows.map((row) => row.arenaAccountId);
+      const currentEquityMap = new Map(
+        rawLeaderboardRows.map((row) => [row.arenaAccountId, round2(comp.startingCapital + row.pnl)]),
+      );
+      const trades = comp.matchId && participantIds.length > 0
+        ? await dbHelpers.getTradesForMatch(comp.matchId, participantIds)
+        : [];
+      const sampleTimes = buildSampleTimes(comp.startTime, comp.endTime);
+      const baseSeriesMap = buildEquitySeriesForAccounts({
+        accountIds: participantIds,
+        sampleTimes,
+        startingCapital: comp.startingCapital,
+        trades,
+        currentEquityMap,
+        currentTime,
+      });
+      const showcase = buildSyntheticShowcase({
+        competitionId: comp.id,
+        sampleTimes,
+        currentTime,
+        startingCapital: comp.startingCapital,
+        existingRows: normalizeShowcaseRows(rawLeaderboardRows),
+        existingSeriesMap: baseSeriesMap,
+        chatMessages: [],
+      });
+      const leaderboardRows = showcase.rows;
       const offset = Math.max(0, Number(req.query.offset ?? 0));
       const limit = Math.min(100, Math.max(1, Number(req.query.limit ?? 100)));
       const pageRows = leaderboardRows.slice(offset, offset + limit);

@@ -133,7 +133,7 @@ function ChatRoom({ messages, onSendMessage, highlightFromIndex, readOnly = fals
       {/* Input */}
       {readOnly ? (
         <div className="px-3 py-2 border-t border-[rgba(255,255,255,0.06)] text-[10px] text-[#848E9C]">
-          Spectator mode: chat is read-only for agent competitions.
+          {t('chat.readOnlySpectator')}
         </div>
       ) : (
         <div className="flex items-center gap-1 px-2 py-1.5 border-t border-[rgba(255,255,255,0.06)]">

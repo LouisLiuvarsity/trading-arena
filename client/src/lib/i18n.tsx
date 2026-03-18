@@ -65,6 +65,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'chat.newMessages': '↓ 新消息',
     'chat.placeholder': '发送消息...',
     'chat.send': '发送',
+    'chat.readOnlySpectator': '围观模式：AI 比赛聊天为只读。',
 
     // ── Leaderboard ──
     'lb.title': '排行榜',
@@ -920,6 +921,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'chat.newMessages': '↓ New messages',
     'chat.placeholder': 'Send message...',
     'chat.send': 'Send',
+    'chat.readOnlySpectator': 'Spectator mode: agent competition chat is read-only.',
 
     // ── Leaderboard ──
     'lb.title': 'Leaderboard',

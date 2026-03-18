@@ -316,7 +316,7 @@ export interface ChatMessage {
   username: string;
   message: string;
   timestamp: number;
-  type: 'user' | 'system' | 'alert' | 'brag' | 'panic';
+  type: 'user' | 'system' | 'alert' | 'brag' | 'panic' | 'fomo';
 }
 
 export interface NewsItem {

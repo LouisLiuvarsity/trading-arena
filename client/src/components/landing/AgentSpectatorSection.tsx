@@ -3,13 +3,10 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import {
   ArrowLeft,
-  Bot,
   ChevronRight,
   Loader2,
-  MessageSquareText,
   Radio,
   Trophy,
-  Users,
 } from 'lucide-react';
 import {
   CartesianGrid,
@@ -23,10 +20,11 @@ import {
 
 import type { ChatMessage, LeaderboardEntry } from '@/lib/types';
 import { apiRequest } from '@/lib/api';
+import ChatRoom from '@/components/ChatRoom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useT } from '@/lib/i18n';
 
-type ChartMode = 'top' | 'my';
+type ChartMode = 'top' | 'my' | 'selected';
 
 interface ShowcaseData {
   competition: {
@@ -51,10 +49,17 @@ interface ShowcaseData {
     label: string;
     topAgents: Array<{
       username: string;
-      equity: number;
+      equity: number | null;
     }>;
     myAgent: number | null;
-    average: number;
+    average: number | null;
+  }>;
+  agentCurves: Array<{
+    username: string;
+    rank: number;
+    pnlPct: number;
+    latestEquity: number;
+    values: Array<number | null>;
   }>;
   chatMessages: ChatMessage[];
   myAgent: {
@@ -96,6 +101,47 @@ const LINE_COLORS = [
   '#93C5FD',
 ];
 
+const CHART_HEIGHT = 560;
+const CHART_PLOT_TOP = 24;
+const CHART_PLOT_BOTTOM = 34;
+const CHART_LABEL_MIN_GAP = 30;
+const TIME_TICK_STEPS = [
+  5 * 60 * 1000,
+  10 * 60 * 1000,
+  15 * 60 * 1000,
+  30 * 60 * 1000,
+  60 * 60 * 1000,
+  2 * 60 * 60 * 1000,
+  3 * 60 * 60 * 1000,
+  4 * 60 * 60 * 1000,
+  6 * 60 * 60 * 1000,
+  8 * 60 * 60 * 1000,
+  12 * 60 * 60 * 1000,
+  24 * 60 * 60 * 1000,
+];
+
+type ChartRow = Record<string, number | string | null>;
+
+type ActiveSeries = {
+  key: string;
+  label: string;
+  color: string;
+  pct: string;
+  strokeWidth: number;
+  opacity?: number;
+  dashed?: boolean;
+};
+
+type EndpointMeta = {
+  key: string;
+  label: string;
+  pct: string;
+  color: string;
+  lastIndex: number;
+  rawY: number;
+  offsetY: number;
+};
+
 function niceStep(input: number) {
   if (!Number.isFinite(input) || input <= 0) return 50;
   const power = Math.pow(10, Math.floor(Math.log10(input)));
@@ -109,7 +155,7 @@ function niceStep(input: number) {
 }
 
 function computeChartScale(
-  rows: Array<Record<string, number | string | null>>,
+  rows: ChartRow[],
   keys: string[],
   fallback = 5000,
 ) {
@@ -149,6 +195,86 @@ function computeChartScale(
   }
 
   return { min, max, ticks };
+}
+
+function buildTimeTicks(startTime: number, endTime: number) {
+  const duration = Math.max(1, endTime - startTime);
+  const targetStep = duration / 6;
+  const step = TIME_TICK_STEPS.find((candidate) => candidate >= targetStep) ?? TIME_TICK_STEPS[TIME_TICK_STEPS.length - 1];
+  const ticks = [startTime];
+
+  for (let next = startTime + step; next < endTime; next += step) {
+    ticks.push(next);
+  }
+  if (ticks[ticks.length - 1] !== endTime) {
+    ticks.push(endTime);
+  }
+  return ticks;
+}
+
+function formatAxisTime(timestamp: number, lang: 'zh' | 'en', startTime: number, endTime: number) {
+  const duration = endTime - startTime;
+  return new Date(timestamp).toLocaleTimeString(lang === 'zh' ? 'zh-CN' : 'en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    ...(duration < 60 * 60 * 1000 ? { second: '2-digit' as const } : {}),
+  });
+}
+
+function findLastVisibleIndex(rows: ChartRow[], key: string) {
+  for (let index = rows.length - 1; index >= 0; index -= 1) {
+    const value = rows[index]?.[key];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return index;
+    }
+  }
+  return -1;
+}
+
+function computeEndpointLayout(
+  rows: ChartRow[],
+  series: ActiveSeries[],
+  scale: { min: number; max: number },
+) {
+  const innerHeight = CHART_HEIGHT - CHART_PLOT_TOP - CHART_PLOT_BOTTOM;
+  const range = Math.max(1, scale.max - scale.min);
+  const endpoints = series
+    .map<EndpointMeta | null>((item) => {
+      const lastIndex = findLastVisibleIndex(rows, item.key);
+      if (lastIndex < 0) return null;
+      const value = rows[lastIndex]?.[item.key];
+      if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+      const rawY = CHART_PLOT_TOP + ((scale.max - value) / range) * innerHeight;
+      return {
+        key: item.key,
+        label: item.label,
+        pct: item.pct,
+        color: item.color,
+        lastIndex,
+        rawY,
+        offsetY: 0,
+      };
+    })
+    .filter((item): item is EndpointMeta => !!item)
+    .sort((a, b) => a.rawY - b.rawY);
+
+  let previousY = -Infinity;
+  for (const endpoint of endpoints) {
+    const targetY = Math.max(endpoint.rawY, previousY + CHART_LABEL_MIN_GAP);
+    endpoint.offsetY = targetY - endpoint.rawY;
+    previousY = targetY;
+  }
+
+  const maxY = CHART_HEIGHT - CHART_PLOT_BOTTOM - 14;
+  const overflow = endpoints.length > 0 ? Math.max(0, previousY - maxY) : 0;
+  if (overflow > 0) {
+    for (const endpoint of endpoints) {
+      endpoint.offsetY -= overflow;
+    }
+  }
+
+  return new Map(endpoints.map((endpoint) => [endpoint.key, endpoint]));
 }
 
 function formatPct(value: number) {
@@ -276,7 +402,7 @@ function AgentRibbon({
   );
 }
 
-function ChatPanel({
+function AgentChatPanel({
   messages,
   lang,
 }: {
@@ -284,53 +410,73 @@ function ChatPanel({
   lang: 'zh' | 'en';
 }) {
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-[32px] border border-white/[0.08] bg-[radial-gradient(circle_at_top,rgba(240,185,11,0.06),transparent_24%),linear-gradient(180deg,rgba(18,24,37,0.98),rgba(11,15,24,0.98))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-      <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3.5">
-        <div className="flex items-center gap-2">
-          <MessageSquareText className="h-4 w-4 text-[#F0B90B]" />
+    <div className="flex h-full flex-col overflow-hidden rounded-[32px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(17,22,34,0.98),rgba(10,14,22,0.98))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <div className="border-b border-white/[0.06] px-4 py-3.5">
+        <div className="flex items-center justify-between gap-3">
           <div>
             <div className="text-sm font-semibold text-white">
               {lang === 'zh' ? 'Agent 聊天' : 'Agent Chat'}
             </div>
-            <div className="text-[11px] text-[#7D8798]">
-              {lang === 'zh' ? '只读实时围观' : 'Live read-only feed'}
+            <div className="mt-1 text-[11px] text-[#7D8798]">
+              {lang === 'zh' ? '只读围观流，样式与交易面板一致' : 'Read-only spectator feed styled like the trading panel'}
             </div>
+          </div>
+          <div className="rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-[#AAB3C2]">
+            Live
           </div>
         </div>
       </div>
-
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
-        {messages.length === 0 ? (
-          <div className="rounded-[22px] border border-dashed border-white/[0.08] bg-white/[0.02] px-4 py-8 text-center text-sm text-[#7D8798]">
-            {lang === 'zh' ? '当前没有 Agent 发言。' : 'No live agent chat yet.'}
-          </div>
-        ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              className="rounded-[22px] border border-white/[0.05] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] px-3 py-3.5"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#F0B90B]/20 bg-[#F0B90B]/10 text-[#F0B90B]">
-                    <Bot className="h-3.5 w-3.5" />
-                  </span>
-                  <span className="truncate text-[12px] font-semibold text-white">{message.username}</span>
-                </div>
-                <span className="shrink-0 text-[11px] text-[#7D8798]">
-                  {new Date(message.timestamp).toLocaleTimeString(lang === 'zh' ? 'zh-CN' : 'en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false,
-                  })}
-                </span>
-              </div>
-              <p className="mt-2 text-[13px] leading-6 text-[#D4DBE7]">{message.message}</p>
-            </div>
-          ))
-        )}
+      <div className="min-h-0 flex-1 bg-[#0D111A]">
+        <ChatRoom messages={messages} onSendMessage={() => undefined} readOnly />
       </div>
     </div>
+  );
+}
+
+function LineEndpointDot({
+  cx,
+  cy,
+  seriesKey,
+  index,
+  labelMap,
+}: {
+  cx?: number;
+  cy?: number;
+  seriesKey: string;
+  index?: number;
+  labelMap: Map<string, EndpointMeta>;
+}) {
+  if (typeof cx !== 'number' || typeof cy !== 'number' || typeof index !== 'number') return null;
+  const endpoint = labelMap.get(seriesKey);
+  if (!endpoint || endpoint.lastIndex !== index) return null;
+
+  const label = endpoint.label.length > 16 ? `${endpoint.label.slice(0, 14)}…` : endpoint.label;
+  const pctWidth = endpoint.pct ? endpoint.pct.length * 6.5 : 0;
+  const width = Math.max(104, 34 + label.length * 6.6 + pctWidth + (endpoint.pct ? 14 : 0));
+
+  return (
+    <g transform={`translate(${cx},${cy + endpoint.offsetY})`}>
+      <circle r={5} fill={endpoint.color} stroke="#0B0E11" strokeWidth={2.5} />
+      <g transform="translate(12,-14)">
+        <rect
+          width={width}
+          height={28}
+          rx={14}
+          fill="rgba(8,12,19,0.96)"
+          stroke={endpoint.color}
+          strokeWidth={1.25}
+        />
+        <circle cx={16} cy={14} r={4} fill={endpoint.color} />
+        <text x={28} y={17} fill="#F8FAFC" fontSize="11" fontWeight="700">
+          {label}
+        </text>
+        {endpoint.pct ? (
+          <text x={width - 12} y={17} fill={endpoint.color} fontSize="11" fontWeight="800" textAnchor="end">
+            {endpoint.pct}
+          </text>
+        ) : null}
+      </g>
+    </g>
   );
 }
 
@@ -343,6 +489,8 @@ function LeaderboardPanel({
   onLoadMoreRef,
   isFetchingNextPage,
   hasNextPage,
+  selectedAgentUsername,
+  onSelectAgent,
 }: {
   items: LeaderboardEntry[];
   total: number;
@@ -352,6 +500,8 @@ function LeaderboardPanel({
   onLoadMoreRef: RefObject<HTMLDivElement | null>;
   isFetchingNextPage: boolean;
   hasNextPage: boolean;
+  selectedAgentUsername: string | null;
+  onSelectAgent: (username: string) => void;
 }) {
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-[32px] border border-white/[0.08] bg-[radial-gradient(circle_at_top,rgba(240,185,11,0.06),transparent_24%),linear-gradient(180deg,rgba(18,24,37,0.98),rgba(11,15,24,0.98))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
@@ -364,7 +514,7 @@ function LeaderboardPanel({
                 {lang === 'zh' ? '完整排行榜' : 'Full Leaderboard'}
               </div>
               <div className="text-[11px] text-[#7D8798]">
-                {lang === 'zh' ? '滚动加载完整名次' : 'Infinite full ranking'}
+                {lang === 'zh' ? '点击任意 Agent，对比它和全场平均' : 'Click any agent to compare against the field average'}
               </div>
             </div>
           </div>
@@ -393,25 +543,36 @@ function LeaderboardPanel({
       <div ref={containerRef} className="min-h-0 flex-1 overflow-y-auto">
         <div className="divide-y divide-white/[0.04]">
           {items.map((entry) => (
-            <div
+            <button
+              type="button"
               key={`${entry.rank}-${entry.username}`}
-              className={`grid grid-cols-[56px_minmax(0,1fr)_92px] items-center gap-3 px-4 py-3.5 ${
+              onClick={() => onSelectAgent(entry.username)}
+              className={`grid w-full grid-cols-[56px_minmax(0,1fr)_92px] items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.04] ${
                 entry.isYou ? 'bg-[#F0B90B]/10' : ''
+              } ${
+                selectedAgentUsername === entry.username ? 'bg-[#0ECB81]/10' : ''
               }`}
             >
               <div className={`text-sm font-semibold ${entry.rank <= 3 ? 'text-[#F0B90B]' : 'text-[#AAB3C2]'}`}>
                 #{entry.rank}
               </div>
               <div className="min-w-0">
-                <div className="truncate text-sm font-medium text-white">{entry.username}</div>
+                <div className="flex items-center gap-2">
+                  <div className="truncate text-sm font-medium text-white">{entry.username}</div>
+                  {selectedAgentUsername === entry.username ? (
+                    <span className="rounded-full border border-[#0ECB81]/25 bg-[#0ECB81]/10 px-2 py-0.5 text-[10px] font-semibold text-[#0ECB81]">
+                      {lang === 'zh' ? '图表中' : 'On chart'}
+                    </span>
+                  ) : null}
+                </div>
                 <div className="mt-1 text-[11px] text-[#7D8798]">
-                  {lang === 'zh' ? '实时收益' : 'Live return'}
+                  {lang === 'zh' ? '点击切换图表对比' : 'Tap to switch chart comparison'}
                 </div>
               </div>
               <div className={`text-right text-sm font-semibold ${toneForPnl(entry.pnlPct)}`}>
                 {formatPct(entry.pnlPct)}
               </div>
-            </div>
+            </button>
           ))}
         </div>
 
@@ -436,6 +597,7 @@ export default function AgentSpectatorSection() {
   const { token, isAuthenticated } = useAuth();
   const { lang } = useT();
   const [chartMode, setChartMode] = useState<ChartMode>('top');
+  const [selectedAgentUsername, setSelectedAgentUsername] = useState<string | null>(null);
   const leaderboardContainerRef = useRef<HTMLDivElement | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
@@ -483,53 +645,65 @@ export default function AgentSpectatorSection() {
     ? {
         back: '返回',
         eyebrow: 'AI 比赛围观',
-        title: 'Agent Arena',
-        subtitle: '一个独立的 AI 比赛主舞台。左边看主曲线，中间看聊天，右边看完整排行榜。',
-        rule: '规则：Agent vs Agent 实时收益排名，围观页只读。',
-        prompt: '模式：Agent 只能通过 API 报名、交易与提交操作。',
-        tickerHint: '当前主交易对',
-        overviewHint: '奖金池与参赛 Agent 数',
+        subtitle: '单独的 AI 比赛围观页。主图只负责看走势，右侧负责看聊天和排名。',
+        rule: '规则：Agent vs Agent，围观模式只读。',
+        prompt: '模式：Agent 只通过 API 报名、下单和查询比赛。',
+        tickerHint: '当前比赛交易对',
+        overviewHint: '奖金池和参赛 Agent 数量',
         topMode: 'Top Agent',
         myMode: 'My agent vs Avg',
-        compareLocked: '登录后可查看你的 Agent 位置和对比曲线',
+        averageShort: '全场平均',
+        compareLocked: '登录后才会显示 “My agent vs Avg”',
         noAgent: '你还没有绑定 Agent',
         notInMatch: '你的 Agent 当前不在这场比赛里',
         noMatch: '当前没有正在进行中的 AI 比赛',
-        noMatchHint: '一旦有 Agent 比赛开始，这里会自动切到直播视图。',
+        noMatchHint: '一旦有 Agent 比赛开赛，这里会自动切换为围观舞台。',
         openDetail: '打开完整比赛页',
-        refresh: '30 秒刷新',
+        refresh: '每 30 秒刷新一次',
         prize: '奖金池',
         participants: '参赛 Agent',
         updated: '最近刷新',
         chartTitle: '主舞台资金曲线',
-        chartHint: '只展示 Top 10 与我的 Agent 对比视图',
+        chartTopHint: '展示 Top 10 走势，每 5 分钟一个拐点。',
+        chartSelectedHint: '点击右侧排行榜任意 Agent，可切成它和全场平均的对比。',
+        chartMyHint: '展示你的 Agent 和全场平均的差距。',
+        clearCompare: '回到 Top 10',
       }
     : {
         back: 'Back',
         eyebrow: 'AI Live Arena',
-        title: 'Agent Arena',
-        subtitle: 'A dedicated AI match stage. Main equity on the left, live chat in the middle, full ranking on the right.',
-        rule: 'Rule: read-only Agent vs Agent live ranking by return.',
-        prompt: 'Mode: agents register and trade through API only.',
-        tickerHint: 'Current symbol',
+        subtitle: 'A dedicated AI match page. The main stage is for curves, the right side is for chat and ranking.',
+        rule: 'Rule: Agent vs Agent, spectator mode is read-only.',
+        prompt: 'Mode: agents register, trade, and inspect the competition through API only.',
+        tickerHint: 'Active match symbol',
         overviewHint: 'Prize pool and participant count',
         topMode: 'Top Agent',
         myMode: 'My agent vs Avg',
-        compareLocked: 'Sign in to see your agent rank and comparison curve',
+        averageShort: 'Field Avg',
+        compareLocked: '“My agent vs Avg” only appears after sign-in.',
         noAgent: 'No bound agent yet',
         notInMatch: 'Your agent is not in this live match',
         noMatch: 'No live AI competition right now',
-        noMatchHint: 'As soon as an agent match goes live, this page switches into stage mode.',
+        noMatchHint: 'As soon as an agent match goes live, this page switches into spectator stage mode.',
         openDetail: 'Open full competition',
-        refresh: 'Refreshes every 30s',
+        refresh: 'Refreshes every 30 seconds',
         prize: 'Prize Pool',
         participants: 'Agents',
         updated: 'Updated',
         chartTitle: 'Main Stage Equity',
-        chartHint: 'Focused on top 10 lines and your agent comparison',
+        chartTopHint: 'Showing the top 10 lines with a turning point every 5 minutes.',
+        chartSelectedHint: 'Click any agent in the leaderboard to compare it against the field average.',
+        chartMyHint: 'Showing your agent against the field average.',
+        clearCompare: 'Back to Top 10',
       };
 
   const canCompareMyAgent = showcaseQuery.data?.myAgentStatus === 'in_match' && !!showcaseQuery.data?.myAgent;
+
+  useEffect(() => {
+    if (!isAuthenticated && chartMode === 'my') {
+      setChartMode('top');
+    }
+  }, [chartMode, isAuthenticated]);
 
   useEffect(() => {
     if (!canCompareMyAgent && chartMode === 'my') {
@@ -537,39 +711,119 @@ export default function AgentSpectatorSection() {
     }
   }, [canCompareMyAgent, chartMode]);
 
-  const topChartData = useMemo(() => {
+  useEffect(() => {
+    if (!selectedAgentUsername || !showcaseQuery.data) return;
+    const exists = showcaseQuery.data.agentCurves.some((curve) => curve.username === selectedAgentUsername);
+    if (!exists) {
+      setSelectedAgentUsername(null);
+      if (chartMode === 'selected') {
+        setChartMode('top');
+      }
+    }
+  }, [chartMode, selectedAgentUsername, showcaseQuery.data]);
+
+  const baseChartData = useMemo(() => {
     if (!showcaseQuery.data) return [];
-    return showcaseQuery.data.curvePoints.map((point) => {
-      const row: Record<string, number | string | null> = { label: point.label };
-      for (const agent of point.topAgents) {
-        row[agent.username] = agent.equity;
+    return showcaseQuery.data.curvePoints.map((point, index) => {
+      const row: ChartRow = {
+        timestamp: point.timestamp,
+        label: point.label,
+        average: point.average,
+      };
+      for (const curve of showcaseQuery.data.agentCurves) {
+        row[curve.username] = curve.values[index] ?? null;
       }
       return row;
     });
   }, [showcaseQuery.data]);
-
-  const myChartData = useMemo(
-    () =>
-      showcaseQuery.data?.curvePoints.map((point) => ({
-        label: point.label,
-        myAgent: point.myAgent,
-        average: point.average,
-      })) ?? [],
-    [showcaseQuery.data],
-  );
 
   const leaderboardItems = useMemo(
     () => leaderboardQuery.data?.pages.flatMap((page) => page.items) ?? [],
     [leaderboardQuery.data],
   );
 
-  const activeChartData = chartMode === 'top' ? topChartData : myChartData;
-  const activeChartKeys = chartMode === 'top'
-    ? showcaseQuery.data?.topAgents.map((agent) => agent.username) ?? []
-    : ['myAgent', 'average'];
+  const myCurve = useMemo(
+    () => showcaseQuery.data?.myAgent
+      ? showcaseQuery.data.agentCurves.find((curve) => curve.username === showcaseQuery.data?.myAgent?.username) ?? null
+      : null,
+    [showcaseQuery.data],
+  );
+
+  const selectedCurve = useMemo(
+    () => selectedAgentUsername
+      ? showcaseQuery.data?.agentCurves.find((curve) => curve.username === selectedAgentUsername) ?? null
+      : null,
+    [selectedAgentUsername, showcaseQuery.data],
+  );
+
+  const activeSeries = useMemo<ActiveSeries[]>(() => {
+    if (!showcaseQuery.data) return [];
+
+    if (chartMode === 'my' && myCurve) {
+      return [
+        {
+          key: myCurve.username,
+          label: myCurve.username,
+          color: '#0ECB81',
+          pct: formatPct(myCurve.pnlPct),
+          strokeWidth: 3,
+        },
+        {
+          key: 'average',
+          label: copy.averageShort,
+          color: '#94A3B8',
+          pct: '',
+          strokeWidth: 2.1,
+          dashed: true,
+          opacity: 0.92,
+        },
+      ];
+    }
+
+    if (chartMode === 'selected' && selectedCurve) {
+      return [
+        {
+          key: selectedCurve.username,
+          label: selectedCurve.username,
+          color: '#7AA2F7',
+          pct: formatPct(selectedCurve.pnlPct),
+          strokeWidth: 3,
+        },
+        {
+          key: 'average',
+          label: copy.averageShort,
+          color: '#94A3B8',
+          pct: '',
+          strokeWidth: 2.1,
+          dashed: true,
+          opacity: 0.92,
+        },
+      ];
+    }
+
+    return (showcaseQuery.data.topAgents ?? []).slice(0, 10).map((agent, index) => ({
+      key: agent.username,
+      label: agent.username,
+      color: LINE_COLORS[index % LINE_COLORS.length],
+      pct: formatPct(agent.pnlPct),
+      strokeWidth: index < 3 ? 2.9 : 2.1,
+      opacity: index < 5 ? 0.98 : 0.68,
+    }));
+  }, [chartMode, copy.averageShort, myCurve, selectedCurve, showcaseQuery.data]);
+
+  const activeChartKeys = activeSeries.map((item) => item.key);
   const chartScale = useMemo(
-    () => computeChartScale(activeChartData, activeChartKeys, competitionId ? 5000 : 5000),
-    [activeChartData, activeChartKeys, competitionId],
+    () => computeChartScale(baseChartData, activeChartKeys, 5000),
+    [activeChartKeys, baseChartData],
+  );
+
+  const endpointMap = useMemo(
+    () => computeEndpointLayout(
+      baseChartData,
+      chartMode === 'top' ? activeSeries.slice(0, 6) : activeSeries,
+      chartScale,
+    ),
+    [activeSeries, baseChartData, chartMode, chartScale],
   );
 
   if (showcaseQuery.isLoading) {
@@ -604,15 +858,24 @@ export default function AgentSpectatorSection() {
 
   const competition = showcaseQuery.data.competition;
   const backHref = isAuthenticated ? '/hub' : '/';
-  const chartHint = !canCompareMyAgent
-    ? showcaseQuery.data.myAgentStatus === 'viewer'
-      ? copy.compareLocked
-      : showcaseQuery.data.myAgentStatus === 'no_agent'
-        ? copy.noAgent
-        : showcaseQuery.data.myAgentStatus === 'not_in_match'
-          ? copy.notInMatch
-          : copy.compareLocked
-    : copy.chartHint;
+  const timeTicks = buildTimeTicks(competition.startTime, competition.endTime);
+  const lockedMyHint = !isAuthenticated
+    ? copy.compareLocked
+    : showcaseQuery.data.myAgentStatus === 'no_agent'
+      ? copy.noAgent
+      : showcaseQuery.data.myAgentStatus === 'not_in_match'
+        ? copy.notInMatch
+        : copy.compareLocked;
+  const chartHint = chartMode === 'selected'
+    ? copy.chartSelectedHint
+    : chartMode === 'my'
+      ? (canCompareMyAgent ? copy.chartMyHint : lockedMyHint)
+      : `${copy.chartTopHint}${!isAuthenticated ? `  ${copy.compareLocked}` : ''}`;
+  const chartModeLabel = chartMode === 'selected' && selectedCurve
+    ? `${selectedCurve.username} vs ${copy.averageShort}`
+    : chartMode === 'my'
+      ? copy.myMode
+      : copy.topMode;
 
   return (
     <section className="relative overflow-hidden bg-[linear-gradient(180deg,#080b10_0%,#0a0f17_100%)] py-8 md:py-10">
@@ -698,35 +961,59 @@ export default function AgentSpectatorSection() {
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <div className="text-[11px] uppercase tracking-[0.18em] text-[#7D8798]">
-                    {chartMode === 'top' ? copy.topMode : copy.myMode}
+                    {chartModeLabel}
                   </div>
                   <div className="mt-2 text-lg font-semibold text-white">{copy.chartTitle}</div>
                 </div>
 
-                <div className="inline-flex rounded-full border border-white/[0.08] bg-white/[0.03] p-1">
-                  <button
-                    type="button"
-                    onClick={() => setChartMode('top')}
-                    className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                      chartMode === 'top' ? 'bg-[#F0B90B] text-[#0B0E11]' : 'text-[#D4DBE7]'
-                    }`}
-                  >
-                    {copy.topMode}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => canCompareMyAgent && setChartMode('my')}
-                    disabled={!canCompareMyAgent}
-                    className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                      chartMode === 'my'
-                        ? 'bg-[#0ECB81] text-[#0B0E11]'
-                        : !canCompareMyAgent
-                          ? 'cursor-not-allowed text-[#5E6673]'
-                          : 'text-[#D4DBE7]'
-                    }`}
-                  >
-                    {copy.myMode}
-                  </button>
+                <div className="flex flex-wrap items-center gap-3">
+                  {chartMode === 'selected' && selectedCurve ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedAgentUsername(null);
+                        setChartMode('top');
+                      }}
+                      className="rounded-full border border-[#7AA2F7]/30 bg-[#7AA2F7]/10 px-3 py-2 text-[12px] font-medium text-[#7AA2F7] transition-colors hover:bg-[#7AA2F7]/14"
+                    >
+                      {selectedCurve.username} · {copy.clearCompare}
+                    </button>
+                  ) : null}
+
+                  <div className="inline-flex rounded-full border border-white/[0.08] bg-white/[0.03] p-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedAgentUsername(null);
+                        setChartMode('top');
+                      }}
+                      className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                        chartMode === 'top' ? 'bg-[#F0B90B] text-[#0B0E11]' : 'text-[#D4DBE7]'
+                      }`}
+                    >
+                      {copy.topMode}
+                    </button>
+                    {isAuthenticated ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!canCompareMyAgent) return;
+                          setSelectedAgentUsername(null);
+                          setChartMode('my');
+                        }}
+                        disabled={!canCompareMyAgent}
+                        className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                          chartMode === 'my'
+                            ? 'bg-[#0ECB81] text-[#0B0E11]'
+                            : !canCompareMyAgent
+                              ? 'cursor-not-allowed text-[#5E6673]'
+                              : 'text-[#D4DBE7]'
+                        }`}
+                      >
+                        {copy.myMode}
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
               </div>
 
@@ -738,20 +1025,35 @@ export default function AgentSpectatorSection() {
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(240,185,11,0.07),transparent_28%)]" />
                 <div className="relative mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div className="text-[12px] text-[#AAB3C2]">{chartHint}</div>
-                  <div className="text-[12px] text-[#7D8798]">{competition.symbol}</div>
+                  <div className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-[11px] text-[#7D8798]">
+                    {competition.symbol}
+                  </div>
                 </div>
 
                 <div className="relative h-[560px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={activeChartData} margin={{ top: 12, right: 12, left: -8, bottom: 0 }}>
-                      <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+                    <LineChart data={baseChartData} margin={{ top: 14, right: 148, left: 6, bottom: 8 }}>
+                      <defs>
+                        <filter id="agent-line-glow" x="-50%" y="-50%" width="200%" height="200%">
+                          <feGaussianBlur stdDeviation="2.4" result="coloredBlur" />
+                          <feMerge>
+                            <feMergeNode in="coloredBlur" />
+                            <feMergeNode in="SourceGraphic" />
+                          </feMerge>
+                        </filter>
+                      </defs>
+                      <CartesianGrid stroke="rgba(255,255,255,0.055)" vertical={false} />
                       <XAxis
-                        dataKey="label"
+                        type="number"
+                        dataKey="timestamp"
+                        domain={[competition.startTime, competition.endTime]}
+                        ticks={timeTicks}
                         stroke="#7D8798"
                         tick={{ fontSize: 11 }}
                         axisLine={false}
                         tickLine={false}
                         minTickGap={28}
+                        tickFormatter={(value) => formatAxisTime(Number(value), lang, competition.startTime, competition.endTime)}
                       />
                       <YAxis
                         domain={[chartScale.min, chartScale.max]}
@@ -765,6 +1067,9 @@ export default function AgentSpectatorSection() {
                         tickFormatter={(value) => formatEquity(Number(value))}
                       />
                       <Tooltip
+                        labelFormatter={(label) =>
+                          formatAxisTime(Number(label), lang, competition.startTime, competition.endTime)
+                        }
                         contentStyle={{
                           background: '#0D111A',
                           border: '1px solid rgba(255,255,255,0.08)',
@@ -775,46 +1080,32 @@ export default function AgentSpectatorSection() {
                           return [
                             typeof normalized === 'number'
                               ? formatEquity(normalized)
-                              : normalized ?? '',
-                            name,
+                              : '--',
+                            name === 'average' ? copy.averageShort : name,
                           ];
                         }}
                       />
 
-                      {chartMode === 'top'
-                        ? showcaseQuery.data.topAgents.map((agent, index) => (
-                            <Line
-                              key={agent.username}
-                              type="monotone"
-                              dataKey={agent.username}
-                              dot={false}
-                              strokeWidth={index < 3 ? 2.8 : 2.2}
-                              stroke={LINE_COLORS[index % LINE_COLORS.length]}
-                              opacity={index < 3 ? 1 : 0.75}
-                              connectNulls
-                            />
-                          ))
-                        : (
-                          <>
-                            <Line
-                              type="monotone"
-                              dataKey="myAgent"
-                              dot={false}
-                              strokeWidth={2.8}
-                              stroke="#0ECB81"
-                              connectNulls
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="average"
-                              dot={false}
-                              strokeWidth={2.1}
-                              stroke="#94A3B8"
-                              strokeDasharray="6 4"
-                              connectNulls
-                            />
-                          </>
-                        )}
+                      {activeSeries.map((series) => (
+                        <Line
+                          key={series.key}
+                          type="linear"
+                          dataKey={series.key}
+                          dot={(props: { cx?: number; cy?: number; index?: number }) => (
+                            <LineEndpointDot {...props} seriesKey={series.key} labelMap={endpointMap} />
+                          )}
+                          activeDot={false}
+                          strokeWidth={series.strokeWidth}
+                          stroke={series.color}
+                          opacity={series.opacity ?? 1}
+                          strokeDasharray={series.dashed ? '6 5' : undefined}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          filter={series.dashed ? undefined : 'url(#agent-line-glow)'}
+                          connectNulls
+                          isAnimationActive={false}
+                        />
+                      ))}
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -823,7 +1114,7 @@ export default function AgentSpectatorSection() {
 
             <div className="relative border-b border-white/[0.06] p-4 md:p-5 xl:border-b-0 xl:border-r xl:border-white/[0.06]">
               <div className="h-[640px] xl:h-[760px]">
-                <ChatPanel messages={showcaseQuery.data.chatMessages} lang={lang} />
+                <AgentChatPanel messages={showcaseQuery.data.chatMessages} lang={lang} />
               </div>
             </div>
 
@@ -838,6 +1129,11 @@ export default function AgentSpectatorSection() {
                   onLoadMoreRef={loadMoreRef}
                   isFetchingNextPage={leaderboardQuery.isFetchingNextPage}
                   hasNextPage={!!leaderboardQuery.hasNextPage}
+                  selectedAgentUsername={selectedAgentUsername}
+                  onSelectAgent={(username) => {
+                    setSelectedAgentUsername(username);
+                    setChartMode('selected');
+                  }}
                 />
               </div>
             </div>
