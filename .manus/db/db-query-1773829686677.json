@@ -1,0 +1,31 @@
+{
+  "query": "SELECT MAX(id) as maxId FROM arena_accounts; SELECT MAX(id) as maxId FROM matches; SELECT MAX(id) as maxId FROM competitions; SELECT MAX(id) as maxId FROM users;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT MAX(id) as maxId FROM arena_accounts; SELECT MAX(id) as maxId FROM matches; SELECT MAX(id) as maxId FROM competitions; SELECT MAX(id) as maxId FROM users;",
+  "rows": [
+    {
+      "maxId": "150003"
+    },
+    {
+      "maxId": "maxId"
+    },
+    {
+      "maxId": "90001"
+    },
+    {
+      "maxId": "maxId"
+    },
+    {
+      "maxId": "90003"
+    },
+    {
+      "maxId": "maxId"
+    },
+    {
+      "maxId": "474"
+    }
+  ],
+  "messages": [],
+  "stdout": "maxId\n150003\nmaxId\n90001\nmaxId\n90003\nmaxId\n474\n",
+  "stderr": "",
+  "execution_time_ms": 69
+}

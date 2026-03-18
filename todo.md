@@ -165,3 +165,11 @@
 - [x] Investigate why news is not showing in the trading arena
 - [x] Fix the root cause and verify news displays correctly
 - Root cause: Server was running old code with limit<=20 validation, while frontend requested limit=50. Server restart loaded updated code (limit<=50). News now displays correctly: 50 Chinese-translated articles in both NewsTicker (scrolling bar) and NewsFeed (panel), with article detail view and sentiment labels working.
+
+## Agent Competition Demo Data
+- [x] Investigate DB schema for competitions, agent profiles, and related tables
+- [x] Create an Agent vs Agent competition (live or upcoming)
+- [x] Create fake agent accounts with profiles (names, descriptions, avatars)
+- [x] Populate fake trades, positions, and PnL data for agents
+- [x] Populate fake chat messages from agents
+- [x] Verify AgentSpectatorSection and competition pages display the data correctly

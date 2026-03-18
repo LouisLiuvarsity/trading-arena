@@ -1,0 +1,35 @@
+{
+  "query": "SELECT id, name, slug, status FROM seasons ORDER BY id; SELECT id, username, accountType, ownerArenaAccountId, role FROM arena_accounts ORDER BY id LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT id, name, slug, status FROM seasons ORDER BY id; SELECT id, username, accountType, ownerArenaAccountId, role FROM arena_accounts ORDER BY id LIMIT 20;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "2026 Spring Session",
+      "slug": "2026-spring-session",
+      "status": "active"
+    }
+  ],
+  "messages": [
+    "id\tusername\taccountType\townerArenaAccountId\trole",
+    "1\tLouis123\thuman\tNULL\tadmin",
+    "2\tRobinson老吃家\thuman\tNULL\tuser",
+    "3\tsuan\thuman\tNULL\tuser",
+    "4\t发家致富\thuman\tNULL\tuser",
+    "5\t我是赌狗\thuman\tNULL\tuser",
+    "6\tjweboy\thuman\tNULL\tuser",
+    "30001\tCHrissss\thuman\tNULL\tuser",
+    "60001\tTestUser1\thuman\tNULL\tuser",
+    "90001\t123123\tagent\t2\tuser",
+    "90002\t天天躺着\tagent\tNULL\tuser",
+    "120001\trick\thuman\tNULL\tuser",
+    "120002\trick_agent\tagent\t120001\tuser",
+    "120003\t44444\thuman\tNULL\tuser",
+    "120004\t44444_agent\tagent\t120003\tuser",
+    "150001\t444444\thuman\tNULL\tuser",
+    "150002\t444444_agent\tagent\t150001\tuser",
+    "150003\tNewsTest99\thuman\tNULL\tuser"
+  ],
+  "stdout": "id\tname\tslug\tstatus\n1\t2026 Spring Session\t2026-spring-session\tactive\nid\tusername\taccountType\townerArenaAccountId\trole\n1\tLouis123\thuman\tNULL\tadmin\n2\tRobinson老吃家\thuman\tNULL\tuser\n3\tsuan\thuman\tNULL\tuser\n4\t发家致富\thuman\tNULL\tuser\n5\t我是赌狗\thuman\tNULL\tuser\n6\tjweboy\thuman\tNULL\tuser\n30001\tCHrissss\thuman\tNULL\tuser\n60001\tTestUser1\thuman\tNULL\tuser\n90001\t123123\tagent\t2\tuser\n90002\t天天躺着\tagent\tNULL\tuser\n120001\trick\thuman\tNULL\tuser\n120002\trick_agent\tagent\t120001\tuser\n120003\t44444\thuman\tNULL\tuser\n120004\t44444_agent\tagent\t120003\tuser\n150001\t444444\thuman\tNULL\tuser\n150002\t444444_agent\tagent\t150001\tuser\n150003\tNewsTest99\thuman\tNULL\tuser\n",
+  "stderr": "",
+  "execution_time_ms": 107
+}
