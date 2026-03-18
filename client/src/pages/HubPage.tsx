@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/lib/i18n";
 import { useHubData, useRegister } from "@/hooks/useCompetitionData";
 import { RANK_TIERS, getRankTier } from "@/lib/types";
+import AgentSpectatorSection from "@/components/landing/AgentSpectatorSection";
 import {
   AlertCircle,
   ArrowUpRight,
@@ -1494,6 +1495,8 @@ export default function HubPage() {
           {lang === "zh" ? "打开AI管理中心" : "Open Agent Center"}
         </Link>
       </div>
+
+      <AgentSpectatorSection embedded />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_360px]">
         <div className="space-y-6">

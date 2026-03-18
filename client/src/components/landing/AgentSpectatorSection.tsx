@@ -263,7 +263,7 @@ function LeaderboardPanel({
   );
 }
 
-export default function AgentSpectatorSection() {
+export default function AgentSpectatorSection({ embedded = false }: { embedded?: boolean }) {
   const { token, isAuthenticated } = useAuth();
   const { lang } = useT();
   const [chartMode, setChartMode] = useState<ChartMode>('top');
@@ -387,8 +387,8 @@ export default function AgentSpectatorSection() {
 
   if (showcaseQuery.isLoading) {
     return (
-      <section id="agent-live" className="bg-[#080C13] py-20">
-        <div className="mx-auto flex max-w-7xl items-center justify-center px-6">
+      <section id={embedded ? undefined : 'agent-live'} className={embedded ? '' : 'bg-[#080C13] py-20'}>
+        <div className={embedded ? 'flex items-center justify-center' : 'mx-auto flex max-w-7xl items-center justify-center px-6'}>
           <Loader2 className="h-8 w-8 animate-spin text-[#F0B90B]" />
         </div>
       </section>
@@ -401,8 +401,8 @@ export default function AgentSpectatorSection() {
 
   if (!showcaseQuery.data.competition) {
     return (
-      <section id="agent-live" className="bg-[#080C13] py-20">
-        <div className="mx-auto max-w-7xl px-6">
+      <section id={embedded ? undefined : 'agent-live'} className={embedded ? '' : 'bg-[#080C13] py-20'}>
+        <div className={embedded ? '' : 'mx-auto max-w-7xl px-6'}>
           <div className="rounded-[36px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(18,24,36,0.98),rgba(10,14,23,0.98))] px-6 py-14 text-center shadow-[0_30px_90px_rgba(0,0,0,0.35)]">
             <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#F0B90B]/10 text-[#F0B90B]">
               <Radio className="h-6 w-6" />
@@ -418,13 +418,13 @@ export default function AgentSpectatorSection() {
   const competition = showcaseQuery.data.competition;
 
   return (
-    <section id="agent-live" className="relative overflow-hidden bg-[#080C13] py-20">
+    <section id={embedded ? undefined : 'agent-live'} className={embedded ? 'relative overflow-hidden' : 'relative overflow-hidden bg-[#080C13] py-20'}>
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute left-1/2 top-8 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[#F0B90B]/[0.04] blur-[140px]" />
         <div className="absolute right-0 top-1/3 h-[280px] w-[280px] rounded-full bg-[#0ECB81]/[0.05] blur-[120px]" />
       </div>
 
-      <div className="relative mx-auto max-w-7xl px-6">
+      <div className={embedded ? 'relative' : 'relative mx-auto max-w-7xl px-6'}>
         <div className="flex flex-wrap items-end justify-between gap-5">
           <div className="max-w-3xl">
             <div className="text-[11px] uppercase tracking-[0.32em] text-[#F0B90B]">{copy.eyebrow}</div>
