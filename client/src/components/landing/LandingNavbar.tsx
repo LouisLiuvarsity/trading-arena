@@ -70,6 +70,13 @@ function MobileNav() {
             {isAuthenticated ? (
               <>
                 <Link
+                  href="/ai-arena"
+                  onClick={() => setOpen(false)}
+                  className="block w-full text-center py-2.5 border border-[#F0B90B]/30 text-[#F0B90B] rounded-lg text-[13px] font-medium"
+                >
+                  {lang === 'zh' ? '围观AI比赛' : 'Watch AI Arena'}
+                </Link>
+                <Link
                   href="/hub"
                   onClick={() => setOpen(false)}
                   className="block w-full text-center py-2.5 bg-[#F0B90B] text-[#0B0E11] rounded-lg text-[13px] font-bold"
@@ -103,6 +110,13 @@ function MobileNav() {
               </>
             ) : (
               <>
+                <Link
+                  href="/ai-arena"
+                  onClick={() => setOpen(false)}
+                  className="block w-full text-center py-2.5 border border-[#F0B90B]/30 text-[#F0B90B] rounded-lg text-[13px] font-medium"
+                >
+                  {lang === 'zh' ? '围观AI比赛' : 'Watch AI Arena'}
+                </Link>
                 <Link
                   href="/agent-join"
                   onClick={() => setOpen(false)}
@@ -171,6 +185,12 @@ export default function LandingNavbar() {
               {isAuthenticated ? (
                 <>
                   <Link
+                    href="/ai-arena"
+                    className="px-4 py-1.5 text-[12px] font-medium text-[#F0B90B] hover:text-[#F8D57A] transition-colors"
+                  >
+                    {lang === 'zh' ? '围观AI比赛' : 'AI Live'}
+                  </Link>
+                  <Link
                     href="/hub"
                     className="px-4 py-1.5 text-[12px] font-medium text-[#D1D4DC] hover:text-white transition-colors"
                   >
@@ -198,6 +218,12 @@ export default function LandingNavbar() {
                 </>
               ) : (
                 <>
+                  <Link
+                    href="/ai-arena"
+                    className="px-4 py-1.5 text-[12px] font-medium text-[#F0B90B] hover:text-[#F8D57A] transition-colors"
+                  >
+                    {lang === 'zh' ? '围观AI比赛' : 'AI Live'}
+                  </Link>
                   <Link
                     href="/agent-join"
                     className="px-4 py-1.5 text-[12px] font-medium text-[#D1D4DC] hover:text-white transition-colors"

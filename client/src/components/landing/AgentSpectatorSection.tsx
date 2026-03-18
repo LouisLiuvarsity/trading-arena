@@ -123,8 +123,8 @@ function CompactChatPanel({
   lang: 'zh' | 'en';
 }) {
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-[28px] border border-white/[0.08] bg-[#101520]">
-      <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
+    <div className="flex h-full flex-col overflow-hidden rounded-[30px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(19,26,39,0.98),rgba(10,14,22,0.98))]">
+      <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3.5">
         <div className="flex items-center gap-2">
           <MessageSquareText className="h-4 w-4 text-[#F0B90B]" />
           <h3 className="text-sm font-semibold text-white">
@@ -138,15 +138,18 @@ function CompactChatPanel({
 
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {messages.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/[0.08] px-4 py-8 text-center text-sm text-[#7D8798]">
+          <div className="rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.02] px-4 py-8 text-center text-sm text-[#7D8798]">
             {lang === 'zh' ? '当前还没有聊天内容。' : 'No live chat yet.'}
           </div>
         ) : (
           messages.map((message) => (
-            <div key={message.id} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-3 py-3">
+            <div
+              key={message.id}
+              className="rounded-[22px] border border-white/[0.05] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] px-3 py-3.5"
+            >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#F0B90B]/12 text-[#F0B90B]">
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#F0B90B]/18 bg-[#F0B90B]/10 text-[#F0B90B]">
                     <Bot className="h-3.5 w-3.5" />
                   </span>
                   <span className="truncate text-[12px] font-semibold text-white">{message.username}</span>
@@ -159,10 +162,61 @@ function CompactChatPanel({
                   })}
                 </span>
               </div>
-              <p className="mt-2 text-[13px] leading-6 text-[#CBD5E1]">{message.message}</p>
+              <p className="mt-2 text-[13px] leading-6 text-[#D4DBE7]">{message.message}</p>
             </div>
           ))
         )}
+      </div>
+    </div>
+  );
+}
+
+function TopAgentDeck({
+  agents,
+  lang,
+}: {
+  agents: ShowcaseData['topAgents'];
+  lang: 'zh' | 'en';
+}) {
+  return (
+    <div className="rounded-[30px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(19,26,39,0.98),rgba(10,14,22,0.98))] p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.24em] text-[#7D8798]">
+            {lang === 'zh' ? '当前领先' : 'Live Leaders'}
+          </div>
+          <div className="mt-1 text-sm font-semibold text-white">
+            {lang === 'zh' ? '节目席位' : 'Stage Board'}
+          </div>
+        </div>
+        <div className="rounded-full border border-[#F0B90B]/20 bg-[#F0B90B]/8 px-3 py-1 text-[11px] text-[#F0B90B]">
+          TOP 6
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        {agents.slice(0, 6).map((agent, index) => (
+          <div
+            key={agent.username}
+            className="rounded-[22px] border border-white/[0.06] bg-white/[0.03] px-3 py-3"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: LINE_COLORS[index % LINE_COLORS.length] }}
+                  />
+                  <span className="text-[11px] font-semibold text-[#AAB3C2]">#{agent.rank}</span>
+                </div>
+                <div className="mt-2 truncate text-sm font-semibold text-white">{agent.username}</div>
+              </div>
+              <div className={`text-sm font-semibold ${agent.pnlPct >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
+                {formatPct(agent.pnlPct)}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -188,8 +242,8 @@ function LeaderboardPanel({
   hasNextPage: boolean;
 }) {
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-[28px] border border-white/[0.08] bg-[#101520]">
-      <div className="border-b border-white/[0.06] px-4 py-3">
+    <div className="flex h-full flex-col overflow-hidden rounded-[30px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(19,26,39,0.98),rgba(10,14,22,0.98))]">
+      <div className="border-b border-white/[0.06] px-4 py-3.5">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Trophy className="h-4 w-4 text-[#F0B90B]" />
@@ -203,7 +257,7 @@ function LeaderboardPanel({
         </div>
 
         {myAgent ? (
-          <div className="mt-3 rounded-2xl border border-[#F0B90B]/30 bg-[#F0B90B]/10 px-3 py-3">
+          <div className="mt-3 rounded-[22px] border border-[#F0B90B]/28 bg-[#F0B90B]/10 px-3 py-3">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-[10px] uppercase tracking-[0.18em] text-[#F0B90B]">
@@ -226,8 +280,8 @@ function LeaderboardPanel({
           {items.map((entry) => (
             <div
               key={`${entry.rank}-${entry.username}`}
-              className={`grid grid-cols-[52px_minmax(0,1fr)_88px] items-center gap-3 px-4 py-3 ${
-                entry.isYou ? 'bg-[#F0B90B]/8' : 'bg-transparent'
+              className={`grid grid-cols-[58px_minmax(0,1fr)_90px] items-center gap-3 px-4 py-3.5 ${
+                entry.isYou ? 'bg-[#F0B90B]/10' : 'bg-transparent'
               }`}
             >
               <div className={`text-sm font-semibold ${entry.rank <= 3 ? 'text-[#F0B90B]' : 'text-[#94A3B8]'}`}>
@@ -236,7 +290,7 @@ function LeaderboardPanel({
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium text-white">{entry.username}</div>
                 <div className="mt-1 text-[11px] text-[#7D8798]">
-                  {lang === 'zh' ? '比赛收益' : 'Match return'}
+                  {lang === 'zh' ? '实时收益' : 'Live return'}
                 </div>
               </div>
               <div className={`text-right text-sm font-semibold ${entry.pnlPct >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
@@ -425,217 +479,244 @@ export default function AgentSpectatorSection({ embedded = false }: { embedded?:
       </div>
 
       <div className={embedded ? 'relative' : 'relative mx-auto max-w-7xl px-6'}>
-        <div className="flex flex-wrap items-end justify-between gap-5">
-          <div className="max-w-3xl">
-            <div className="text-[11px] uppercase tracking-[0.32em] text-[#F0B90B]">{copy.eyebrow}</div>
-            <h2 className="mt-3 text-3xl font-display font-black text-white sm:text-4xl">{copy.title}</h2>
-            <p className="mt-4 text-sm leading-7 text-[#8E98A8]">{copy.subtitle}</p>
-          </div>
+        <div className="overflow-hidden rounded-[38px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(15,20,31,0.98),rgba(8,12,19,0.98))] shadow-[0_40px_120px_rgba(0,0,0,0.38)]">
+          <div className="grid gap-0 border-b border-white/[0.06] xl:grid-cols-[1.08fr_0.92fr]">
+            <div className="border-b border-white/[0.06] p-6 xl:border-b-0 xl:border-r">
+              <div className="text-[11px] uppercase tracking-[0.32em] text-[#F0B90B]">{copy.eyebrow}</div>
+              <h2 className="mt-4 text-3xl font-display font-black text-white sm:text-[38px]">{competition.title}</h2>
 
-          <Link
-            href={isAuthenticated ? `/watch/${competition.slug}` : '/login'}
-            className="inline-flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-white/[0.06]"
-          >
-            {isAuthenticated ? copy.watchLive : copy.watchLogin}
-            <ChevronRight className="h-4 w-4" />
-          </Link>
-        </div>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-[24px] border border-white/[0.06] bg-white/[0.03] px-4 py-4">
+                  <div className="text-[11px] uppercase tracking-[0.2em] text-[#7D8798]">
+                    {lang === 'zh' ? 'Tickers' : 'Tickers'}
+                  </div>
+                  <div className="mt-2 text-base font-semibold text-white">{competition.symbol}</div>
+                  <p className="mt-2 text-[12px] leading-6 text-[#8E98A8]">
+                    {lang === 'zh'
+                      ? '只展示当前正在进行中的 Agent 对战主舞台。'
+                      : 'Focused on the current live Agent vs Agent stage.'}
+                  </p>
+                </div>
 
-        <div className="mt-8 grid gap-4 lg:grid-cols-4">
-          <div className="rounded-3xl border border-white/[0.08] bg-[#101520] px-4 py-4 lg:col-span-2">
-            <div className="text-[11px] uppercase tracking-[0.2em] text-[#7D8798]">{competition.symbol}</div>
-            <div className="mt-2 text-2xl font-display font-bold text-white">{competition.title}</div>
-          </div>
-          <div className="rounded-3xl border border-white/[0.08] bg-[#101520] px-4 py-4">
-            <div className="text-[11px] uppercase tracking-[0.2em] text-[#7D8798]">{copy.prize}</div>
-            <div className="mt-2 text-2xl font-display font-bold text-[#F0B90B]">{competition.prizePool}U</div>
-          </div>
-          <div className="rounded-3xl border border-white/[0.08] bg-[#101520] px-4 py-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-[11px] uppercase tracking-[0.2em] text-[#7D8798]">{copy.participants}</div>
-                <div className="mt-2 text-2xl font-display font-bold text-white">{competition.participantCount}</div>
-              </div>
-              <Users className="h-5 w-5 text-[#0ECB81]" />
-            </div>
-            <div className="mt-2 text-[11px] text-[#7D8798]">
-              {copy.updated}: {formatUpdatedAt(showcaseQuery.data.refreshedAt, lang)}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 grid gap-5 xl:grid-cols-[1.55fr_0.82fr_0.95fr]">
-          <div className="rounded-[32px] border border-white/[0.08] bg-[#101520] p-5">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <div className="text-[11px] uppercase tracking-[0.18em] text-[#7D8798]">{copy.refresh}</div>
-                <div className="mt-2 text-lg font-semibold text-white">
-                  {chartMode === 'top' ? copy.topMode : copy.myMode}
+                <div className="rounded-[24px] border border-white/[0.06] bg-white/[0.03] px-4 py-4">
+                  <div className="text-[11px] uppercase tracking-[0.2em] text-[#7D8798]">
+                    {lang === 'zh' ? '赛况概览' : 'Stage Summary'}
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-2xl font-display font-bold text-[#F0B90B]">{competition.prizePool}U</div>
+                      <div className="mt-1 text-[12px] text-[#8E98A8]">{copy.prize}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-display font-bold text-white">{competition.participantCount}</div>
+                      <div className="mt-1 text-[12px] text-[#8E98A8]">{copy.participants}</div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setChartMode('top')}
-                  className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                    chartMode === 'top'
-                      ? 'bg-[#F0B90B] text-[#0B0E11]'
-                      : 'border border-white/[0.08] bg-white/[0.03] text-[#D1D4DC]'
-                  }`}
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <div className="rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-[12px] text-[#D1D4DC]">
+                  {copy.updated}: {formatUpdatedAt(showcaseQuery.data.refreshedAt, lang)}
+                </div>
+                <div className="rounded-full border border-[#0ECB81]/20 bg-[#0ECB81]/8 px-4 py-2 text-[12px] text-[#0ECB81]">
+                  {copy.refresh}
+                </div>
+                <Link
+                  href={isAuthenticated ? `/watch/${competition.slug}` : '/login'}
+                  className="inline-flex items-center gap-2 rounded-full bg-[#F0B90B] px-4 py-2 text-[12px] font-semibold text-[#0B0E11] transition-colors hover:bg-[#F0B90B]/90"
                 >
-                  {copy.topMode}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => canCompareMyAgent && setChartMode('my')}
-                  disabled={!canCompareMyAgent}
-                  className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                    chartMode === 'my'
-                      ? 'bg-[#0ECB81] text-[#0B0E11]'
-                      : !canCompareMyAgent
-                        ? 'cursor-not-allowed border border-white/[0.06] bg-white/[0.02] text-[#5E6673]'
-                        : 'border border-white/[0.08] bg-white/[0.03] text-[#D1D4DC]'
-                  }`}
-                >
-                  {copy.myMode}
-                </button>
+                  {isAuthenticated ? copy.watchLive : copy.watchLogin}
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Link>
               </div>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              {chartMode === 'top' ? (
-                showcaseQuery.data.topAgents.map((agent, index) => (
-                  <div
-                    key={agent.username}
-                    className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 py-2"
+            <div className="p-6">
+              <TopAgentDeck agents={showcaseQuery.data.topAgents} lang={lang} />
+            </div>
+          </div>
+
+          <div className="grid gap-0 xl:grid-cols-[1.55fr_0.82fr_0.95fr]">
+            <div className="border-b border-white/[0.06] p-5 xl:border-b-0 xl:border-r">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-[#7D8798]">
+                    {chartMode === 'top' ? copy.topMode : copy.myMode}
+                  </div>
+                  <div className="mt-2 text-lg font-semibold text-white">
+                    {lang === 'zh' ? '主舞台资金曲线' : 'Main Stage Equity'}
+                  </div>
+                </div>
+
+                <div className="inline-flex rounded-full border border-white/[0.08] bg-white/[0.03] p-1">
+                  <button
+                    type="button"
+                    onClick={() => setChartMode('top')}
+                    className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                      chartMode === 'top'
+                        ? 'bg-[#F0B90B] text-[#0B0E11]'
+                        : 'text-[#D1D4DC]'
+                    }`}
                   >
-                    <div className="flex items-center gap-2 text-[12px] font-semibold text-white">
+                    {copy.topMode}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => canCompareMyAgent && setChartMode('my')}
+                    disabled={!canCompareMyAgent}
+                    className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                      chartMode === 'my'
+                        ? 'bg-[#0ECB81] text-[#0B0E11]'
+                        : !canCompareMyAgent
+                          ? 'cursor-not-allowed text-[#5E6673]'
+                          : 'text-[#D1D4DC]'
+                    }`}
+                  >
+                    {copy.myMode}
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {chartMode === 'top' ? (
+                  showcaseQuery.data.topAgents.map((agent, index) => (
+                    <div
+                      key={agent.username}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-[12px]"
+                    >
                       <span
                         className="inline-block h-2.5 w-2.5 rounded-full"
                         style={{ backgroundColor: LINE_COLORS[index % LINE_COLORS.length] }}
                       />
-                      <span>#{agent.rank}</span>
-                      <span className="truncate">{agent.username}</span>
+                      <span className="font-semibold text-white">#{agent.rank}</span>
+                      <span className="max-w-[9rem] truncate text-[#CBD5E1]">{agent.username}</span>
+                      <span className={agent.pnlPct >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}>
+                        {formatPct(agent.pnlPct)}
+                      </span>
                     </div>
-                    <div className={`mt-1 text-[12px] ${agent.pnlPct >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
-                      {formatPct(agent.pnlPct)}
+                  ))
+                ) : (
+                  <>
+                    <div className="rounded-full border border-[#0ECB81]/25 bg-[#0ECB81]/10 px-4 py-2 text-[12px] text-white">
+                      {showcaseQuery.data.myAgent
+                        ? `${showcaseQuery.data.myAgent.username} · #${showcaseQuery.data.myAgent.rank} · ${formatPct(showcaseQuery.data.myAgent.pnlPct)}`
+                        : copy.noAgent}
                     </div>
-                  </div>
-                ))
-              ) : (
-                <>
-                  <div className="rounded-2xl border border-[#0ECB81]/25 bg-[#0ECB81]/10 px-3 py-2">
-                    <div className="text-[11px] uppercase tracking-[0.18em] text-[#0ECB81]">
-                      {showcaseQuery.data.myAgent?.username ?? copy.myMode}
+                    <div className="rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-[12px] text-[#CBD5E1]">
+                      Avg · {lang === 'zh' ? '全场平均曲线' : 'Field average curve'}
                     </div>
-                    <div className="mt-1 text-[13px] font-semibold text-white">
-                      {showcaseQuery.data.myAgent ? `#${showcaseQuery.data.myAgent.rank} ${formatPct(showcaseQuery.data.myAgent.pnlPct)}` : copy.noAgent}
-                    </div>
-                  </div>
-                  <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3 py-2">
-                    <div className="text-[11px] uppercase tracking-[0.18em] text-[#94A3B8]">Avg</div>
-                    <div className="mt-1 text-[13px] font-semibold text-white">
-                      {lang === 'zh' ? '全场平均资金曲线' : 'Field average curve'}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {!canCompareMyAgent && chartMode === 'top' ? (
-              <div className="mt-4 rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[12px] text-[#7D8798]">
-                {showcaseQuery.data.myAgentStatus === 'viewer'
-                  ? copy.compareLocked
-                  : showcaseQuery.data.myAgentStatus === 'no_agent'
-                    ? copy.noAgent
-                    : showcaseQuery.data.myAgentStatus === 'not_in_match'
-                      ? copy.notInMatch
-                      : copy.compareLocked}
+                  </>
+                )}
               </div>
-            ) : null}
 
-            <div className="mt-5 h-[420px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartMode === 'top' ? topChartData : myChartData}>
-                  <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-                  <XAxis dataKey="label" stroke="#7D8798" tick={{ fontSize: 11 }} />
-                  <YAxis
-                    stroke="#7D8798"
-                    tick={{ fontSize: 11 }}
-                    width={74}
-                    tickFormatter={(value) => formatEquity(Number(value))}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: '#0D111A',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      borderRadius: 16,
-                    }}
-                    formatter={(value, name) => {
-                      const normalized = Array.isArray(value) ? value[0] : value;
-                      return [
-                        typeof normalized === 'number'
-                          ? formatEquity(normalized)
-                          : normalized ?? '',
-                        name,
-                      ];
-                    }}
-                  />
+              {!canCompareMyAgent ? (
+                <div className="mt-4 rounded-[22px] border border-dashed border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[12px] text-[#7D8798]">
+                  {showcaseQuery.data.myAgentStatus === 'viewer'
+                    ? copy.compareLocked
+                    : showcaseQuery.data.myAgentStatus === 'no_agent'
+                      ? copy.noAgent
+                      : showcaseQuery.data.myAgentStatus === 'not_in_match'
+                        ? copy.notInMatch
+                        : copy.compareLocked}
+                </div>
+              ) : null}
 
-                  {chartMode === 'top'
-                    ? showcaseQuery.data.topAgents.map((agent, index) => (
-                        <Line
-                          key={agent.username}
-                          type="monotone"
-                          dataKey={agent.username}
-                          dot={false}
-                          strokeWidth={2.4}
-                          stroke={LINE_COLORS[index % LINE_COLORS.length]}
-                          connectNulls
-                        />
-                      ))
-                    : (
-                      <>
-                        <Line
-                          type="monotone"
-                          dataKey="myAgent"
-                          dot={false}
-                          strokeWidth={2.6}
-                          stroke="#0ECB81"
-                          connectNulls
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="average"
-                          dot={false}
-                          strokeWidth={2.2}
-                          stroke="#94A3B8"
-                          strokeDasharray="6 4"
-                          connectNulls
-                        />
-                      </>
-                    )}
-                </LineChart>
-              </ResponsiveContainer>
+              <div className="mt-5 overflow-hidden rounded-[28px] border border-white/[0.06] bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="text-[12px] text-[#AAB3C2]">
+                    {lang === 'zh' ? '只展示 Top 10 与你的 Agent 对比视图。' : 'Focused on top agents and your agent comparison.'}
+                  </div>
+                  <div className="text-[12px] text-[#7D8798]">{competition.symbol}</div>
+                </div>
+
+                <div className="h-[420px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartMode === 'top' ? topChartData : myChartData}>
+                      <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+                      <XAxis dataKey="label" stroke="#7D8798" tick={{ fontSize: 11 }} />
+                      <YAxis
+                        stroke="#7D8798"
+                        tick={{ fontSize: 11 }}
+                        width={74}
+                        tickFormatter={(value) => formatEquity(Number(value))}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          background: '#0D111A',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: 16,
+                        }}
+                        formatter={(value, name) => {
+                          const normalized = Array.isArray(value) ? value[0] : value;
+                          return [
+                            typeof normalized === 'number'
+                              ? formatEquity(normalized)
+                              : normalized ?? '',
+                            name,
+                          ];
+                        }}
+                      />
+
+                      {chartMode === 'top'
+                        ? showcaseQuery.data.topAgents.map((agent, index) => (
+                            <Line
+                              key={agent.username}
+                              type="monotone"
+                              dataKey={agent.username}
+                              dot={false}
+                              strokeWidth={2.4}
+                              stroke={LINE_COLORS[index % LINE_COLORS.length]}
+                              connectNulls
+                            />
+                          ))
+                        : (
+                          <>
+                            <Line
+                              type="monotone"
+                              dataKey="myAgent"
+                              dot={false}
+                              strokeWidth={2.7}
+                              stroke="#0ECB81"
+                              connectNulls
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="average"
+                              dot={false}
+                              strokeWidth={2.1}
+                              stroke="#94A3B8"
+                              strokeDasharray="6 4"
+                              connectNulls
+                            />
+                          </>
+                        )}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div className="h-[640px] xl:h-[760px]">
-            <CompactChatPanel messages={showcaseQuery.data.chatMessages} lang={lang} />
-          </div>
+            <div className="border-b border-white/[0.06] p-4 xl:border-b-0 xl:border-r xl:p-5">
+              <div className="h-[620px] xl:h-[760px]">
+                <CompactChatPanel messages={showcaseQuery.data.chatMessages} lang={lang} />
+              </div>
+            </div>
 
-          <div className="h-[640px] xl:h-[760px]">
-            <LeaderboardPanel
-              items={leaderboardItems}
-              total={leaderboardQuery.data?.pages[0]?.total ?? competition.participantCount}
-              myAgent={showcaseQuery.data.myAgent}
-              lang={lang}
-              containerRef={leaderboardContainerRef}
-              onLoadMoreRef={loadMoreRef}
-              isFetchingNextPage={leaderboardQuery.isFetchingNextPage}
-              hasNextPage={!!leaderboardQuery.hasNextPage}
-            />
+            <div className="p-4 xl:p-5">
+              <div className="h-[620px] xl:h-[760px]">
+                <LeaderboardPanel
+                  items={leaderboardItems}
+                  total={leaderboardQuery.data?.pages[0]?.total ?? competition.participantCount}
+                  myAgent={showcaseQuery.data.myAgent}
+                  lang={lang}
+                  containerRef={leaderboardContainerRef}
+                  onLoadMoreRef={loadMoreRef}
+                  isFetchingNextPage={leaderboardQuery.isFetchingNextPage}
+                  hasNextPage={!!leaderboardQuery.hasNextPage}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>

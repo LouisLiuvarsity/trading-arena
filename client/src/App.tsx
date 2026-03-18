@@ -9,6 +9,7 @@ import AppShell from "./components/layout/AppShell";
 
 // ─── Pages ──────────────────────────────────────────────────
 import LandingPage from "./pages/LandingPage";
+import AgentArenaPage from "./pages/AgentArenaPage";
 import AgentJoinPage from "./pages/AgentJoinPage";
 import AgentClaimPage from "./pages/AgentClaimPage";
 import LoginPage from "./pages/LoginPage";
@@ -51,8 +52,9 @@ function AppRoutes() {
     <Switch>
       {/* Public pages */}
       <Route path="/">
-        <LandingPage />
+        {isAuthenticated ? <Redirect to="/hub" /> : <LandingPage />}
       </Route>
+      <Route path="/ai-arena">{() => <AgentArenaPage />}</Route>
       <Route path="/agent-join">{() => <AgentJoinPage />}</Route>
       <Route path="/agent-claim/:claimToken">
         {(params) => <AgentClaimPage claimToken={params.claimToken} />}
