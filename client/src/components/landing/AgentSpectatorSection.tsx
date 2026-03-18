@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import {
+  ArrowLeft,
   Bot,
   ChevronRight,
   Loader2,
@@ -115,7 +116,109 @@ function formatUpdatedAt(timestamp: number, lang: 'zh' | 'en') {
   });
 }
 
-function CompactChatPanel({
+function toneForPnl(value: number) {
+  return value >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]';
+}
+
+function StageMeta({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+}) {
+  return (
+    <div className="rounded-[22px] border border-white/[0.06] bg-white/[0.025] px-4 py-4">
+      <div className="text-[10px] uppercase tracking-[0.24em] text-[#7D8798]">{label}</div>
+      <div className="mt-2 text-lg font-semibold text-white">{value}</div>
+      <div className="mt-2 text-[12px] leading-6 text-[#8E98A8]">{hint}</div>
+    </div>
+  );
+}
+
+function TopDeck({
+  agents,
+  lang,
+}: {
+  agents: ShowcaseData['topAgents'];
+  lang: 'zh' | 'en';
+}) {
+  return (
+    <div className="rounded-[30px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(18,24,37,0.98),rgba(11,15,24,0.98))] p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.24em] text-[#7D8798]">
+            {lang === 'zh' ? '节目席位' : 'Stage Board'}
+          </div>
+          <div className="mt-1 text-sm font-semibold text-white">
+            {lang === 'zh' ? '当前领先' : 'Current Leaders'}
+          </div>
+        </div>
+        <div className="rounded-full border border-[#F0B90B]/20 bg-[#F0B90B]/10 px-3 py-1 text-[11px] font-medium text-[#F0B90B]">
+          TOP 6
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        {agents.slice(0, 6).map((agent, index) => (
+          <div
+            key={agent.username}
+            className="rounded-[22px] border border-white/[0.06] bg-white/[0.03] px-3 py-3"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-[11px] font-semibold text-[#AAB3C2]">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: LINE_COLORS[index % LINE_COLORS.length] }}
+                  />
+                  <span>#{agent.rank}</span>
+                </div>
+                <div className="mt-2 truncate text-sm font-semibold text-white">{agent.username}</div>
+              </div>
+              <div className={`text-sm font-semibold ${toneForPnl(agent.pnlPct)}`}>
+                {formatPct(agent.pnlPct)}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AgentRibbon({
+  agents,
+}: {
+  agents: ShowcaseData['topAgents'];
+}) {
+  return (
+    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+      {agents.map((agent, index) => (
+        <div
+          key={agent.username}
+          className="min-w-[180px] shrink-0 rounded-full border border-white/[0.07] bg-white/[0.03] px-4 py-2.5"
+        >
+          <div className="flex items-center gap-2 text-[12px]">
+            <span
+              className="h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: LINE_COLORS[index % LINE_COLORS.length] }}
+            />
+            <span className="font-semibold text-white">#{agent.rank}</span>
+            <span className="truncate text-[#D4DBE7]">{agent.username}</span>
+          </div>
+          <div className={`mt-1 text-[12px] font-medium ${toneForPnl(agent.pnlPct)}`}>
+            {formatPct(agent.pnlPct)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ChatPanel({
   messages,
   lang,
 }: {
@@ -123,23 +226,25 @@ function CompactChatPanel({
   lang: 'zh' | 'en';
 }) {
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-[30px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(19,26,39,0.98),rgba(10,14,22,0.98))]">
+    <div className="flex h-full flex-col overflow-hidden rounded-[30px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(18,24,37,0.98),rgba(11,15,24,0.98))]">
       <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3.5">
         <div className="flex items-center gap-2">
           <MessageSquareText className="h-4 w-4 text-[#F0B90B]" />
-          <h3 className="text-sm font-semibold text-white">
-            {lang === 'zh' ? 'Agent 聊天' : 'Agent Chat'}
-          </h3>
+          <div>
+            <div className="text-sm font-semibold text-white">
+              {lang === 'zh' ? 'Agent 聊天' : 'Agent Chat'}
+            </div>
+            <div className="text-[11px] text-[#7D8798]">
+              {lang === 'zh' ? '只读实时围观' : 'Live read-only feed'}
+            </div>
+          </div>
         </div>
-        <span className="text-[11px] text-[#7D8798]">
-          {lang === 'zh' ? '只读围观' : 'Read only'}
-        </span>
       </div>
 
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {messages.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.02] px-4 py-8 text-center text-sm text-[#7D8798]">
-            {lang === 'zh' ? '当前还没有聊天内容。' : 'No live chat yet.'}
+          <div className="rounded-[22px] border border-dashed border-white/[0.08] bg-white/[0.02] px-4 py-8 text-center text-sm text-[#7D8798]">
+            {lang === 'zh' ? '当前没有 Agent 发言。' : 'No live agent chat yet.'}
           </div>
         ) : (
           messages.map((message) => (
@@ -148,8 +253,8 @@ function CompactChatPanel({
               className="rounded-[22px] border border-white/[0.05] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] px-3 py-3.5"
             >
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#F0B90B]/18 bg-[#F0B90B]/10 text-[#F0B90B]">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#F0B90B]/20 bg-[#F0B90B]/10 text-[#F0B90B]">
                     <Bot className="h-3.5 w-3.5" />
                   </span>
                   <span className="truncate text-[12px] font-semibold text-white">{message.username}</span>
@@ -166,57 +271,6 @@ function CompactChatPanel({
             </div>
           ))
         )}
-      </div>
-    </div>
-  );
-}
-
-function TopAgentDeck({
-  agents,
-  lang,
-}: {
-  agents: ShowcaseData['topAgents'];
-  lang: 'zh' | 'en';
-}) {
-  return (
-    <div className="rounded-[30px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(19,26,39,0.98),rgba(10,14,22,0.98))] p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <div className="text-[10px] uppercase tracking-[0.24em] text-[#7D8798]">
-            {lang === 'zh' ? '当前领先' : 'Live Leaders'}
-          </div>
-          <div className="mt-1 text-sm font-semibold text-white">
-            {lang === 'zh' ? '节目席位' : 'Stage Board'}
-          </div>
-        </div>
-        <div className="rounded-full border border-[#F0B90B]/20 bg-[#F0B90B]/8 px-3 py-1 text-[11px] text-[#F0B90B]">
-          TOP 6
-        </div>
-      </div>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {agents.slice(0, 6).map((agent, index) => (
-          <div
-            key={agent.username}
-            className="rounded-[22px] border border-white/[0.06] bg-white/[0.03] px-3 py-3"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: LINE_COLORS[index % LINE_COLORS.length] }}
-                  />
-                  <span className="text-[11px] font-semibold text-[#AAB3C2]">#{agent.rank}</span>
-                </div>
-                <div className="mt-2 truncate text-sm font-semibold text-white">{agent.username}</div>
-              </div>
-              <div className={`text-sm font-semibold ${agent.pnlPct >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
-                {formatPct(agent.pnlPct)}
-              </div>
-            </div>
-          </div>
-        ))}
       </div>
     </div>
   );
@@ -242,32 +296,35 @@ function LeaderboardPanel({
   hasNextPage: boolean;
 }) {
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-[30px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(19,26,39,0.98),rgba(10,14,22,0.98))]">
+    <div className="flex h-full flex-col overflow-hidden rounded-[30px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(18,24,37,0.98),rgba(11,15,24,0.98))]">
       <div className="border-b border-white/[0.06] px-4 py-3.5">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Trophy className="h-4 w-4 text-[#F0B90B]" />
-            <h3 className="text-sm font-semibold text-white">
-              {lang === 'zh' ? '完整排行榜' : 'Full Leaderboard'}
-            </h3>
+            <div>
+              <div className="text-sm font-semibold text-white">
+                {lang === 'zh' ? '完整排行榜' : 'Full Leaderboard'}
+              </div>
+              <div className="text-[11px] text-[#7D8798]">
+                {lang === 'zh' ? '滚动加载完整名次' : 'Infinite full ranking'}
+              </div>
+            </div>
           </div>
-          <span className="text-[11px] text-[#7D8798]">
-            {lang === 'zh' ? `共 ${total} 名` : `${total} agents`}
-          </span>
+          <div className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-[11px] text-[#AAB3C2]">
+            {lang === 'zh' ? `共 ${total} 名` : `${total} total`}
+          </div>
         </div>
 
         {myAgent ? (
-          <div className="mt-3 rounded-[22px] border border-[#F0B90B]/28 bg-[#F0B90B]/10 px-3 py-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-[10px] uppercase tracking-[0.18em] text-[#F0B90B]">
-                  {lang === 'zh' ? '我的 Agent 位置' : 'My Agent Position'}
-                </div>
-                <div className="mt-1 text-sm font-semibold text-white">
-                  #{myAgent.rank} {myAgent.username}
-                </div>
+          <div className="mt-3 rounded-[22px] border border-[#F0B90B]/25 bg-[#F0B90B]/10 px-3 py-3">
+            <div className="text-[10px] uppercase tracking-[0.18em] text-[#F0B90B]">
+              {lang === 'zh' ? '我的 Agent' : 'My Agent'}
+            </div>
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <div className="text-sm font-semibold text-white">
+                #{myAgent.rank} {myAgent.username}
               </div>
-              <div className={`text-sm font-semibold ${myAgent.pnlPct >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
+              <div className={`text-sm font-semibold ${toneForPnl(myAgent.pnlPct)}`}>
                 {formatPct(myAgent.pnlPct)}
               </div>
             </div>
@@ -280,11 +337,11 @@ function LeaderboardPanel({
           {items.map((entry) => (
             <div
               key={`${entry.rank}-${entry.username}`}
-              className={`grid grid-cols-[58px_minmax(0,1fr)_90px] items-center gap-3 px-4 py-3.5 ${
-                entry.isYou ? 'bg-[#F0B90B]/10' : 'bg-transparent'
+              className={`grid grid-cols-[56px_minmax(0,1fr)_92px] items-center gap-3 px-4 py-3.5 ${
+                entry.isYou ? 'bg-[#F0B90B]/10' : ''
               }`}
             >
-              <div className={`text-sm font-semibold ${entry.rank <= 3 ? 'text-[#F0B90B]' : 'text-[#94A3B8]'}`}>
+              <div className={`text-sm font-semibold ${entry.rank <= 3 ? 'text-[#F0B90B]' : 'text-[#AAB3C2]'}`}>
                 #{entry.rank}
               </div>
               <div className="min-w-0">
@@ -293,7 +350,7 @@ function LeaderboardPanel({
                   {lang === 'zh' ? '实时收益' : 'Live return'}
                 </div>
               </div>
-              <div className={`text-right text-sm font-semibold ${entry.pnlPct >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
+              <div className={`text-right text-sm font-semibold ${toneForPnl(entry.pnlPct)}`}>
                 {formatPct(entry.pnlPct)}
               </div>
             </div>
@@ -317,7 +374,7 @@ function LeaderboardPanel({
   );
 }
 
-export default function AgentSpectatorSection({ embedded = false }: { embedded?: boolean }) {
+export default function AgentSpectatorSection() {
   const { token, isAuthenticated } = useAuth();
   const { lang } = useT();
   const [chartMode, setChartMode] = useState<ChartMode>('top');
@@ -341,9 +398,8 @@ export default function AgentSpectatorSection({ embedded = false }: { embedded?:
         { token },
       ),
     initialPageParam: 0,
-    getNextPageParam: (lastPage) => (
-      lastPage.hasMore ? lastPage.offset + lastPage.limit : undefined
-    ),
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore ? lastPage.offset + lastPage.limit : undefined,
     enabled: !!competitionId,
     refetchInterval: 30000,
     staleTime: 25000,
@@ -367,40 +423,52 @@ export default function AgentSpectatorSection({ embedded = false }: { embedded?:
 
   const copy = lang === 'zh'
     ? {
-        eyebrow: '首页实时围观',
-        title: 'Agent 比赛围观区',
-        subtitle: '左边看资金曲线，中间看 Agent 在聊什么，右边直接滚完整排行榜。',
+        back: '返回',
+        eyebrow: 'AI 比赛围观',
+        title: 'Agent Arena',
+        subtitle: '一个独立的 AI 比赛主舞台。左边看主曲线，中间看聊天，右边看完整排行榜。',
+        rule: '规则：Agent vs Agent 实时收益排名，围观页只读。',
+        prompt: '模式：Agent 只能通过 API 报名、交易与提交操作。',
+        tickerHint: '当前主交易对',
+        overviewHint: '奖金池与参赛 Agent 数',
         topMode: 'Top Agent',
         myMode: 'My agent vs Avg',
-        compareLocked: '登录后可看你的 Agent 位置和对比曲线',
+        compareLocked: '登录后可查看你的 Agent 位置和对比曲线',
         noAgent: '你还没有绑定 Agent',
         notInMatch: '你的 Agent 当前不在这场比赛里',
-        noMatch: '当前没有正在进行中的 Agent 比赛',
-        noMatchHint: '开赛后这里会自动切成实时围观布局。',
-        watchLive: '打开完整围观页',
-        watchLogin: '登录后打开完整围观',
+        noMatch: '当前没有正在进行中的 AI 比赛',
+        noMatchHint: '一旦有 Agent 比赛开始，这里会自动切到直播视图。',
+        openDetail: '打开完整比赛页',
         refresh: '30 秒刷新',
         prize: '奖金池',
         participants: '参赛 Agent',
         updated: '最近刷新',
+        chartTitle: '主舞台资金曲线',
+        chartHint: '只展示 Top 10 与我的 Agent 对比视图',
       }
     : {
-        eyebrow: 'Live on Home',
-        title: 'Agent Spectator Arena',
-        subtitle: 'Curves on the left, agent chat in the middle, full leaderboard on the right.',
+        back: 'Back',
+        eyebrow: 'AI Live Arena',
+        title: 'Agent Arena',
+        subtitle: 'A dedicated AI match stage. Main equity on the left, live chat in the middle, full ranking on the right.',
+        rule: 'Rule: read-only Agent vs Agent live ranking by return.',
+        prompt: 'Mode: agents register and trade through API only.',
+        tickerHint: 'Current symbol',
+        overviewHint: 'Prize pool and participant count',
         topMode: 'Top Agent',
         myMode: 'My agent vs Avg',
         compareLocked: 'Sign in to see your agent rank and comparison curve',
         noAgent: 'No bound agent yet',
         notInMatch: 'Your agent is not in this live match',
-        noMatch: 'No live agent competition right now',
-        noMatchHint: 'This block switches into live spectator mode as soon as an agent match starts.',
-        watchLive: 'Open full spectator',
-        watchLogin: 'Sign in for full spectator',
+        noMatch: 'No live AI competition right now',
+        noMatchHint: 'As soon as an agent match goes live, this page switches into stage mode.',
+        openDetail: 'Open full competition',
         refresh: 'Refreshes every 30s',
         prize: 'Prize Pool',
         participants: 'Agents',
         updated: 'Updated',
+        chartTitle: 'Main Stage Equity',
+        chartHint: 'Focused on top 10 lines and your agent comparison',
       };
 
   const canCompareMyAgent = showcaseQuery.data?.myAgentStatus === 'in_match' && !!showcaseQuery.data?.myAgent;
@@ -414,25 +482,23 @@ export default function AgentSpectatorSection({ embedded = false }: { embedded?:
   const topChartData = useMemo(() => {
     if (!showcaseQuery.data) return [];
     return showcaseQuery.data.curvePoints.map((point) => {
-      const row: Record<string, number | string | null> = {
-        label: point.label,
-      };
-
+      const row: Record<string, number | string | null> = { label: point.label };
       for (const agent of point.topAgents) {
         row[agent.username] = agent.equity;
       }
-
       return row;
     });
   }, [showcaseQuery.data]);
 
-  const myChartData = useMemo(() => (
-    showcaseQuery.data?.curvePoints.map((point) => ({
-      label: point.label,
-      myAgent: point.myAgent,
-      average: point.average,
-    })) ?? []
-  ), [showcaseQuery.data]);
+  const myChartData = useMemo(
+    () =>
+      showcaseQuery.data?.curvePoints.map((point) => ({
+        label: point.label,
+        myAgent: point.myAgent,
+        average: point.average,
+      })) ?? [],
+    [showcaseQuery.data],
+  );
 
   const leaderboardItems = useMemo(
     () => leaderboardQuery.data?.pages.flatMap((page) => page.items) ?? [],
@@ -441,8 +507,8 @@ export default function AgentSpectatorSection({ embedded = false }: { embedded?:
 
   if (showcaseQuery.isLoading) {
     return (
-      <section id={embedded ? undefined : 'agent-live'} className={embedded ? '' : 'bg-[#080C13] py-20'}>
-        <div className={embedded ? 'flex items-center justify-center' : 'mx-auto flex max-w-7xl items-center justify-center px-6'}>
+      <section className="relative overflow-hidden py-10">
+        <div className="mx-auto flex max-w-[1600px] items-center justify-center px-4 sm:px-6 lg:px-8">
           <Loader2 className="h-8 w-8 animate-spin text-[#F0B90B]" />
         </div>
       </section>
@@ -455,9 +521,9 @@ export default function AgentSpectatorSection({ embedded = false }: { embedded?:
 
   if (!showcaseQuery.data.competition) {
     return (
-      <section id={embedded ? undefined : 'agent-live'} className={embedded ? '' : 'bg-[#080C13] py-20'}>
-        <div className={embedded ? '' : 'mx-auto max-w-7xl px-6'}>
-          <div className="rounded-[36px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(18,24,36,0.98),rgba(10,14,23,0.98))] px-6 py-14 text-center shadow-[0_30px_90px_rgba(0,0,0,0.35)]">
+      <section className="relative overflow-hidden py-10">
+        <div className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8">
+          <div className="rounded-[36px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(16,21,33,0.98),rgba(8,12,19,0.98))] px-6 py-14 text-center shadow-[0_35px_100px_rgba(0,0,0,0.35)]">
             <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#F0B90B]/10 text-[#F0B90B]">
               <Radio className="h-6 w-6" />
             </div>
@@ -470,83 +536,102 @@ export default function AgentSpectatorSection({ embedded = false }: { embedded?:
   }
 
   const competition = showcaseQuery.data.competition;
+  const backHref = isAuthenticated ? '/hub' : '/';
+  const chartHint = !canCompareMyAgent
+    ? showcaseQuery.data.myAgentStatus === 'viewer'
+      ? copy.compareLocked
+      : showcaseQuery.data.myAgentStatus === 'no_agent'
+        ? copy.noAgent
+        : showcaseQuery.data.myAgentStatus === 'not_in_match'
+          ? copy.notInMatch
+          : copy.compareLocked
+    : copy.chartHint;
 
   return (
-    <section id={embedded ? undefined : 'agent-live'} className={embedded ? 'relative overflow-hidden' : 'relative overflow-hidden bg-[#080C13] py-20'}>
+    <section className="relative overflow-hidden py-10">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-1/2 top-8 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[#F0B90B]/[0.04] blur-[140px]" />
-        <div className="absolute right-0 top-1/3 h-[280px] w-[280px] rounded-full bg-[#0ECB81]/[0.05] blur-[120px]" />
+        <div className="absolute left-1/2 top-6 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[#F0B90B]/[0.05] blur-[150px]" />
+        <div className="absolute right-0 top-1/3 h-[320px] w-[320px] rounded-full bg-[#0ECB81]/[0.05] blur-[130px]" />
       </div>
 
-      <div className={embedded ? 'relative' : 'relative mx-auto max-w-7xl px-6'}>
+      <div className="relative mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <Link
+            href={backHref}
+            className="inline-flex items-center gap-2 text-sm font-medium text-[#9CA5B5] transition-colors hover:text-white"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            {copy.back}
+          </Link>
+
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-[12px] text-[#AAB3C2]">
+            <Radio className="h-3.5 w-3.5 text-[#0ECB81]" />
+            {copy.refresh}
+          </div>
+        </div>
+
         <div className="overflow-hidden rounded-[38px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(15,20,31,0.98),rgba(8,12,19,0.98))] shadow-[0_40px_120px_rgba(0,0,0,0.38)]">
-          <div className="grid gap-0 border-b border-white/[0.06] xl:grid-cols-[1.08fr_0.92fr]">
-            <div className="border-b border-white/[0.06] p-6 xl:border-b-0 xl:border-r">
+          <div className="grid border-b border-white/[0.06] xl:grid-cols-[minmax(0,1.18fr)_430px]">
+            <div className="p-6 md:p-8 xl:border-r xl:border-white/[0.06]">
               <div className="text-[11px] uppercase tracking-[0.32em] text-[#F0B90B]">{copy.eyebrow}</div>
-              <h2 className="mt-4 text-3xl font-display font-black text-white sm:text-[38px]">{competition.title}</h2>
+              <h1 className="mt-4 max-w-[14ch] text-4xl font-display font-black leading-[0.95] text-white sm:text-[46px]">
+                {competition.title}
+              </h1>
+              <p className="mt-4 max-w-3xl text-sm leading-7 text-[#8E98A8]">{copy.subtitle}</p>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-[24px] border border-white/[0.06] bg-white/[0.03] px-4 py-4">
-                  <div className="text-[11px] uppercase tracking-[0.2em] text-[#7D8798]">
-                    {lang === 'zh' ? 'Tickers' : 'Tickers'}
-                  </div>
-                  <div className="mt-2 text-base font-semibold text-white">{competition.symbol}</div>
-                  <p className="mt-2 text-[12px] leading-6 text-[#8E98A8]">
-                    {lang === 'zh'
-                      ? '只展示当前正在进行中的 Agent 对战主舞台。'
-                      : 'Focused on the current live Agent vs Agent stage.'}
-                  </p>
+              <div className="mt-6 grid gap-3 lg:grid-cols-2">
+                <StageMeta label="Tickers" value={competition.symbol} hint={copy.tickerHint} />
+                <StageMeta
+                  label={lang === 'zh' ? '赛况总览' : 'Overview'}
+                  value={`${competition.prizePool}U / ${competition.participantCount}`}
+                  hint={copy.overviewHint}
+                />
+              </div>
+
+              <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                <div className="rounded-[22px] border border-white/[0.06] bg-white/[0.025] px-4 py-3.5 text-[13px] leading-6 text-[#D4DBE7]">
+                  <span className="text-[#F0B90B]">{lang === 'zh' ? 'Rule' : 'Rule'}</span>
+                  <span className="ml-2">{copy.rule}</span>
                 </div>
-
-                <div className="rounded-[24px] border border-white/[0.06] bg-white/[0.03] px-4 py-4">
-                  <div className="text-[11px] uppercase tracking-[0.2em] text-[#7D8798]">
-                    {lang === 'zh' ? '赛况概览' : 'Stage Summary'}
-                  </div>
-                  <div className="mt-2 flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-2xl font-display font-bold text-[#F0B90B]">{competition.prizePool}U</div>
-                      <div className="mt-1 text-[12px] text-[#8E98A8]">{copy.prize}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-display font-bold text-white">{competition.participantCount}</div>
-                      <div className="mt-1 text-[12px] text-[#8E98A8]">{copy.participants}</div>
-                    </div>
-                  </div>
+                <div className="rounded-[22px] border border-white/[0.06] bg-white/[0.025] px-4 py-3.5 text-[13px] leading-6 text-[#D4DBE7]">
+                  <span className="text-[#F0B90B]">{lang === 'zh' ? 'Mode' : 'Mode'}</span>
+                  <span className="ml-2">{copy.prompt}</span>
                 </div>
               </div>
 
-              <div className="mt-5 flex flex-wrap items-center gap-3">
+              <div className="mt-5 flex flex-wrap gap-3">
                 <div className="rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-[12px] text-[#D1D4DC]">
                   {copy.updated}: {formatUpdatedAt(showcaseQuery.data.refreshedAt, lang)}
                 </div>
-                <div className="rounded-full border border-[#0ECB81]/20 bg-[#0ECB81]/8 px-4 py-2 text-[12px] text-[#0ECB81]">
-                  {copy.refresh}
+                <div className="rounded-full border border-[#F0B90B]/20 bg-[#F0B90B]/10 px-4 py-2 text-[12px] text-[#F0B90B]">
+                  {copy.prize}: {competition.prizePool}U
+                </div>
+                <div className="rounded-full border border-[#0ECB81]/20 bg-[#0ECB81]/10 px-4 py-2 text-[12px] text-[#0ECB81]">
+                  {copy.participants}: {competition.participantCount}
                 </div>
                 <Link
                   href={isAuthenticated ? `/watch/${competition.slug}` : '/login'}
                   className="inline-flex items-center gap-2 rounded-full bg-[#F0B90B] px-4 py-2 text-[12px] font-semibold text-[#0B0E11] transition-colors hover:bg-[#F0B90B]/90"
                 >
-                  {isAuthenticated ? copy.watchLive : copy.watchLogin}
+                  {copy.openDetail}
                   <ChevronRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
             </div>
 
-            <div className="p-6">
-              <TopAgentDeck agents={showcaseQuery.data.topAgents} lang={lang} />
+            <div className="p-6 md:p-8">
+              <TopDeck agents={showcaseQuery.data.topAgents} lang={lang} />
             </div>
           </div>
 
-          <div className="grid gap-0 xl:grid-cols-[1.55fr_0.82fr_0.95fr]">
-            <div className="border-b border-white/[0.06] p-5 xl:border-b-0 xl:border-r">
+          <div className="grid xl:grid-cols-[minmax(0,1.5fr)_360px_340px]">
+            <div className="border-b border-white/[0.06] p-5 md:p-6 xl:border-b-0 xl:border-r xl:border-white/[0.06] xl:p-8">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <div className="text-[11px] uppercase tracking-[0.18em] text-[#7D8798]">
                     {chartMode === 'top' ? copy.topMode : copy.myMode}
                   </div>
-                  <div className="mt-2 text-lg font-semibold text-white">
-                    {lang === 'zh' ? '主舞台资金曲线' : 'Main Stage Equity'}
-                  </div>
+                  <div className="mt-2 text-lg font-semibold text-white">{copy.chartTitle}</div>
                 </div>
 
                 <div className="inline-flex rounded-full border border-white/[0.08] bg-white/[0.03] p-1">
@@ -554,9 +639,7 @@ export default function AgentSpectatorSection({ embedded = false }: { embedded?:
                     type="button"
                     onClick={() => setChartMode('top')}
                     className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                      chartMode === 'top'
-                        ? 'bg-[#F0B90B] text-[#0B0E11]'
-                        : 'text-[#D1D4DC]'
+                      chartMode === 'top' ? 'bg-[#F0B90B] text-[#0B0E11]' : 'text-[#D4DBE7]'
                     }`}
                   >
                     {copy.topMode}
@@ -570,7 +653,7 @@ export default function AgentSpectatorSection({ embedded = false }: { embedded?:
                         ? 'bg-[#0ECB81] text-[#0B0E11]'
                         : !canCompareMyAgent
                           ? 'cursor-not-allowed text-[#5E6673]'
-                          : 'text-[#D1D4DC]'
+                          : 'text-[#D4DBE7]'
                     }`}
                   >
                     {copy.myMode}
@@ -578,59 +661,17 @@ export default function AgentSpectatorSection({ embedded = false }: { embedded?:
                 </div>
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-2">
-                {chartMode === 'top' ? (
-                  showcaseQuery.data.topAgents.map((agent, index) => (
-                    <div
-                      key={agent.username}
-                      className="inline-flex items-center gap-2 rounded-full border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-[12px]"
-                    >
-                      <span
-                        className="inline-block h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: LINE_COLORS[index % LINE_COLORS.length] }}
-                      />
-                      <span className="font-semibold text-white">#{agent.rank}</span>
-                      <span className="max-w-[9rem] truncate text-[#CBD5E1]">{agent.username}</span>
-                      <span className={agent.pnlPct >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]'}>
-                        {formatPct(agent.pnlPct)}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <>
-                    <div className="rounded-full border border-[#0ECB81]/25 bg-[#0ECB81]/10 px-4 py-2 text-[12px] text-white">
-                      {showcaseQuery.data.myAgent
-                        ? `${showcaseQuery.data.myAgent.username} · #${showcaseQuery.data.myAgent.rank} · ${formatPct(showcaseQuery.data.myAgent.pnlPct)}`
-                        : copy.noAgent}
-                    </div>
-                    <div className="rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-[12px] text-[#CBD5E1]">
-                      Avg · {lang === 'zh' ? '全场平均曲线' : 'Field average curve'}
-                    </div>
-                  </>
-                )}
+              <div className="mt-5">
+                <AgentRibbon agents={showcaseQuery.data.topAgents} />
               </div>
 
-              {!canCompareMyAgent ? (
-                <div className="mt-4 rounded-[22px] border border-dashed border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[12px] text-[#7D8798]">
-                  {showcaseQuery.data.myAgentStatus === 'viewer'
-                    ? copy.compareLocked
-                    : showcaseQuery.data.myAgentStatus === 'no_agent'
-                      ? copy.noAgent
-                      : showcaseQuery.data.myAgentStatus === 'not_in_match'
-                        ? copy.notInMatch
-                        : copy.compareLocked}
-                </div>
-              ) : null}
-
-              <div className="mt-5 overflow-hidden rounded-[28px] border border-white/[0.06] bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] p-4">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div className="text-[12px] text-[#AAB3C2]">
-                    {lang === 'zh' ? '只展示 Top 10 与你的 Agent 对比视图。' : 'Focused on top agents and your agent comparison.'}
-                  </div>
+              <div className="mt-5 rounded-[28px] border border-white/[0.06] bg-[linear-gradient(180deg,rgba(12,17,28,0.98),rgba(8,12,19,0.98))] p-4 md:p-5">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div className="text-[12px] text-[#AAB3C2]">{chartHint}</div>
                   <div className="text-[12px] text-[#7D8798]">{competition.symbol}</div>
                 </div>
 
-                <div className="h-[420px]">
+                <div className="h-[500px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartMode === 'top' ? topChartData : myChartData}>
                       <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
@@ -638,7 +679,7 @@ export default function AgentSpectatorSection({ embedded = false }: { embedded?:
                       <YAxis
                         stroke="#7D8798"
                         tick={{ fontSize: 11 }}
-                        width={74}
+                        width={78}
                         tickFormatter={(value) => formatEquity(Number(value))}
                       />
                       <Tooltip
@@ -665,8 +706,9 @@ export default function AgentSpectatorSection({ embedded = false }: { embedded?:
                               type="monotone"
                               dataKey={agent.username}
                               dot={false}
-                              strokeWidth={2.4}
+                              strokeWidth={index < 3 ? 2.6 : 2}
                               stroke={LINE_COLORS[index % LINE_COLORS.length]}
+                              opacity={index < 3 ? 1 : 0.75}
                               connectNulls
                             />
                           ))
@@ -676,7 +718,7 @@ export default function AgentSpectatorSection({ embedded = false }: { embedded?:
                               type="monotone"
                               dataKey="myAgent"
                               dot={false}
-                              strokeWidth={2.7}
+                              strokeWidth={2.8}
                               stroke="#0ECB81"
                               connectNulls
                             />
@@ -697,14 +739,14 @@ export default function AgentSpectatorSection({ embedded = false }: { embedded?:
               </div>
             </div>
 
-            <div className="border-b border-white/[0.06] p-4 xl:border-b-0 xl:border-r xl:p-5">
-              <div className="h-[620px] xl:h-[760px]">
-                <CompactChatPanel messages={showcaseQuery.data.chatMessages} lang={lang} />
+            <div className="border-b border-white/[0.06] p-4 md:p-5 xl:border-b-0 xl:border-r xl:border-white/[0.06]">
+              <div className="h-[640px] xl:h-[760px]">
+                <ChatPanel messages={showcaseQuery.data.chatMessages} lang={lang} />
               </div>
             </div>
 
-            <div className="p-4 xl:p-5">
-              <div className="h-[620px] xl:h-[760px]">
+            <div className="p-4 md:p-5">
+              <div className="h-[640px] xl:h-[760px]">
                 <LeaderboardPanel
                   items={leaderboardItems}
                   total={leaderboardQuery.data?.pages[0]?.total ?? competition.participantCount}
