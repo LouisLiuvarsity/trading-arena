@@ -1,0 +1,21 @@
+{
+  "query": "SELECT * FROM seasons ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT * FROM seasons ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "2026 Spring Session",
+      "slug": "2026-spring-session",
+      "status": "active",
+      "startDate": "1772341200000",
+      "endDate": "1775016000000",
+      "pointsDecayFactor": "0.8",
+      "createdAt": "1772794413413",
+      "archived": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tslug\tstatus\tstartDate\tendDate\tpointsDecayFactor\tcreatedAt\tarchived\n1\t2026 Spring Session\t2026-spring-session\tactive\t1772341200000\t1775016000000\t0.8\t1772794413413\t0\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}

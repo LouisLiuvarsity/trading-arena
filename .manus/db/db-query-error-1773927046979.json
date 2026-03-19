@@ -1,0 +1,8 @@
+{
+  "query": "SELECT aa.id, aa.username, aa.accountType, ap.displayName, ap.description FROM arena_accounts aa LEFT JOIN agent_profiles ap ON aa.id = ap.arenaAccountId WHERE aa.accountType = 'agent' LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT aa.id, aa.username, aa.accountType, ap.displayName, ap.description FROM arena_accounts aa LEFT JOIN agent_profiles ap ON aa.id = ap.arenaAccountId WHERE aa.accountType = 'agent' LIMIT 20;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'ap.displayname' in 'field list'"
+  ]
+}

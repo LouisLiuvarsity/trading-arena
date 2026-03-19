@@ -1,0 +1,130 @@
+{
+  "query": "SELECT id, title, slug, status, competitionType, startTime, endTime, startingCapital, prizePool, matchId FROM competitions ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT id, title, slug, status, competitionType, startTime, endTime, startingCapital, prizePool, matchId FROM competitions ORDER BY id;",
+  "rows": [
+    {
+      "id": "22",
+      "title": "uuuuuu",
+      "slug": "uuuuuu",
+      "status": "completed",
+      "competitionType": "regular",
+      "startTime": "1773041220000",
+      "endTime": "1773300420000",
+      "startingCapital": "5000",
+      "prizePool": "0",
+      "matchId": "9"
+    },
+    {
+      "id": "30001",
+      "title": "456456456",
+      "slug": "456456456",
+      "status": "completed",
+      "competitionType": "regular",
+      "startTime": "1773309600000",
+      "endTime": "1773655200000",
+      "startingCapital": "5000",
+      "prizePool": "500",
+      "matchId": "30002"
+    },
+    {
+      "id": "60001",
+      "title": "uyuyuyuyu",
+      "slug": "uyuyuyuyu",
+      "status": "completed",
+      "competitionType": "regular",
+      "startTime": "1773640980000",
+      "endTime": "1773813780000",
+      "startingCapital": "5000",
+      "prizePool": "0",
+      "matchId": "60003"
+    },
+    {
+      "id": "60002",
+      "title": "wewewe",
+      "slug": "wewewe",
+      "status": "registration_open",
+      "competitionType": "grand_final",
+      "startTime": "1773641280000",
+      "endTime": "1773641280000",
+      "startingCapital": "5000",
+      "prizePool": "3000",
+      "matchId": "NULL"
+    },
+    {
+      "id": "60003",
+      "title": "232323",
+      "slug": "232323",
+      "status": "registration_open",
+      "competitionType": "regular",
+      "startTime": "1773650100000",
+      "endTime": "1773736500000",
+      "startingCapital": "5000",
+      "prizePool": "0",
+      "matchId": "NULL"
+    },
+    {
+      "id": "90001",
+      "title": "qweqwe",
+      "slug": "qweqwe",
+      "status": "registration_open",
+      "competitionType": "regular",
+      "startTime": "1773738840000",
+      "endTime": "1773825300000",
+      "startingCapital": "5000",
+      "prizePool": "500",
+      "matchId": "NULL"
+    },
+    {
+      "id": "90002",
+      "title": "ggggg",
+      "slug": "ggggg",
+      "status": "registration_open",
+      "competitionType": "special",
+      "startTime": "1773741480000",
+      "endTime": "1773827940000",
+      "startingCapital": "5000",
+      "prizePool": "500",
+      "matchId": "NULL"
+    },
+    {
+      "id": "90003",
+      "title": "rrrrr",
+      "slug": "rrrrr",
+      "status": "live",
+      "competitionType": "regular",
+      "startTime": "1773815880000",
+      "endTime": "1774075080000",
+      "startingCapital": "5000",
+      "prizePool": "0",
+      "matchId": "90001"
+    },
+    {
+      "id": "200001",
+      "title": "Agent Arena: SOL/USDT 24H Challenge",
+      "slug": "agent-arena-sol-24h",
+      "status": "completed",
+      "competitionType": "regular",
+      "startTime": "1773786605949",
+      "endTime": "1773873005949",
+      "startingCapital": "5000",
+      "prizePool": "1000",
+      "matchId": "200001"
+    },
+    {
+      "id": "200002",
+      "title": "looooo",
+      "slug": "looooo",
+      "status": "registration_closed",
+      "competitionType": "regular",
+      "startTime": "1773926700000",
+      "endTime": "1774013100000",
+      "startingCapital": "5000",
+      "prizePool": "500",
+      "matchId": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\tslug\tstatus\tcompetitionType\tstartTime\tendTime\tstartingCapital\tprizePool\tmatchId\n22\tuuuuuu\tuuuuuu\tcompleted\tregular\t1773041220000\t1773300420000\t5000\t0\t9\n30001\t456456456\t456456456\tcompleted\tregular\t1773309600000\t1773655200000\t5000\t500\t30002\n60001\tuyuyuyuyu\tuyuyuyuyu\tcompleted\tregular\t1773640980000\t1773813780000\t5000\t0\t60003\n60002\twewewe\twewewe\tregistration_open\tgrand_final\t1773641280000\t1773641280000\t5000\t3000\tNULL\n60003\t232323\t232323\tregistration_open\tregular\t1773650100000\t1773736500000\t5000\t0\tNULL\n90001\tqweqwe\tqweqwe\tregistration_open\tregular\t1773738840000\t1773825300000\t5000\t500\tNULL\n90002\tggggg\tggggg\tregistration_open\tspecial\t1773741480000\t1773827940000\t5000\t500\tNULL\n90003\trrrrr\trrrrr\tlive\tregular\t1773815880000\t1774075080000\t5000\t0\t90001\n200001\tAgent Arena: SOL/USDT 24H Challenge\tagent-arena-sol-24h\tcompleted\tregular\t1773786605949\t1773873005949\t5000\t1000\t200001\n200002\tlooooo\tlooooo\tregistration_closed\tregular\t1773926700000\t1774013100000\t5000\t500\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 57
+}

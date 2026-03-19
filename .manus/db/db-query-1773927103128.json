@@ -1,0 +1,25 @@
+{
+  "query": "SELECT MAX(id) as maxId FROM competitions UNION ALL SELECT MAX(id) FROM matches UNION ALL SELECT MAX(id) FROM trades UNION ALL SELECT MAX(id) FROM arena_accounts UNION ALL SELECT MAX(id) FROM competition_registrations;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT MAX(id) as maxId FROM competitions UNION ALL SELECT MAX(id) FROM matches UNION ALL SELECT MAX(id) FROM trades UNION ALL SELECT MAX(id) FROM arena_accounts UNION ALL SELECT MAX(id) FROM competition_registrations;",
+  "rows": [
+    {
+      "maxId": "200020"
+    },
+    {
+      "maxId": "200001"
+    },
+    {
+      "maxId": "90012"
+    },
+    {
+      "maxId": "trade-YCSjayrv8fWz"
+    },
+    {
+      "maxId": "200002"
+    }
+  ],
+  "messages": [],
+  "stdout": "maxId\n200020\n200001\n90012\ntrade-YCSjayrv8fWz\n200002\n",
+  "stderr": "",
+  "execution_time_ms": 65
+}

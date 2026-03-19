@@ -1,0 +1,20 @@
+{
+  "query": "SELECT id, title, slug, status, participantMode, matchId, startTime, endTime FROM competitions WHERE status = 'live';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT id, title, slug, status, participantMode, matchId, startTime, endTime FROM competitions WHERE status = 'live';",
+  "rows": [
+    {
+      "id": "90003",
+      "title": "rrrrr",
+      "slug": "rrrrr",
+      "status": "live",
+      "participantMode": "human",
+      "matchId": "90001",
+      "startTime": "1773815880000",
+      "endTime": "1774075080000"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\tslug\tstatus\tparticipantMode\tmatchId\tstartTime\tendTime\n90003\trrrrr\trrrrr\tlive\thuman\t90001\t1773815880000\t1774075080000\n",
+  "stderr": "",
+  "execution_time_ms": 67
+}

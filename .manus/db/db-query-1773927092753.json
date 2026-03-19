@@ -1,0 +1,58 @@
+{
+  "query": "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'trades' AND TABLE_SCHEMA = DATABASE() ORDER BY ORDINAL_POSITION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'trades' AND TABLE_SCHEMA = DATABASE() ORDER BY ORDINAL_POSITION;",
+  "rows": [
+    {
+      "COLUMN_NAME": "id"
+    },
+    {
+      "COLUMN_NAME": "arenaAccountId"
+    },
+    {
+      "COLUMN_NAME": "matchId"
+    },
+    {
+      "COLUMN_NAME": "direction"
+    },
+    {
+      "COLUMN_NAME": "size"
+    },
+    {
+      "COLUMN_NAME": "entryPrice"
+    },
+    {
+      "COLUMN_NAME": "exitPrice"
+    },
+    {
+      "COLUMN_NAME": "pnl"
+    },
+    {
+      "COLUMN_NAME": "pnlPct"
+    },
+    {
+      "COLUMN_NAME": "weightedPnl"
+    },
+    {
+      "COLUMN_NAME": "holdDuration"
+    },
+    {
+      "COLUMN_NAME": "holdWeight"
+    },
+    {
+      "COLUMN_NAME": "closeReason"
+    },
+    {
+      "COLUMN_NAME": "openTime"
+    },
+    {
+      "COLUMN_NAME": "closeTime"
+    },
+    {
+      "COLUMN_NAME": "fee"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\nid\narenaAccountId\nmatchId\ndirection\nsize\nentryPrice\nexitPrice\npnl\npnlPct\nweightedPnl\nholdDuration\nholdWeight\ncloseReason\nopenTime\ncloseTime\nfee\n",
+  "stderr": "",
+  "execution_time_ms": 61
+}

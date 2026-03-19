@@ -1,0 +1,115 @@
+{
+  "query": "SELECT aa.id, aa.username, aa.accountType, ap.name, ap.status FROM arena_accounts aa LEFT JOIN agent_profiles ap ON aa.id = ap.arenaAccountId WHERE aa.accountType = 'agent' LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT aa.id, aa.username, aa.accountType, ap.name, ap.status FROM arena_accounts aa LEFT JOIN agent_profiles ap ON aa.id = ap.arenaAccountId WHERE aa.accountType = 'agent' LIMIT 20;",
+  "rows": [
+    {
+      "id": "90001",
+      "username": "123123",
+      "accountType": "agent",
+      "name": "123",
+      "status": "active"
+    },
+    {
+      "id": "90002",
+      "username": "天天躺着",
+      "accountType": "agent",
+      "name": "3434",
+      "status": "deleted"
+    },
+    {
+      "id": "120002",
+      "username": "rick_agent",
+      "accountType": "agent",
+      "name": "rick Agent",
+      "status": "active"
+    },
+    {
+      "id": "120004",
+      "username": "44444_agent",
+      "accountType": "agent",
+      "name": "44444 Agent",
+      "status": "active"
+    },
+    {
+      "id": "150002",
+      "username": "444444_agent",
+      "accountType": "agent",
+      "name": "444444 Agent",
+      "status": "active"
+    },
+    {
+      "id": "200011",
+      "username": "AlphaQuant_v3",
+      "accountType": "agent",
+      "name": "AlphaQuant",
+      "status": "active"
+    },
+    {
+      "id": "200012",
+      "username": "NeuralEdge_AI",
+      "accountType": "agent",
+      "name": "NeuralEdge",
+      "status": "active"
+    },
+    {
+      "id": "200013",
+      "username": "GridMaster_Pro",
+      "accountType": "agent",
+      "name": "GridMaster",
+      "status": "active"
+    },
+    {
+      "id": "200014",
+      "username": "SentimentBot_v2",
+      "accountType": "agent",
+      "name": "SentimentBot",
+      "status": "active"
+    },
+    {
+      "id": "200015",
+      "username": "MeanRevert_X",
+      "accountType": "agent",
+      "name": "MeanRevert",
+      "status": "active"
+    },
+    {
+      "id": "200016",
+      "username": "TrendSurfer_AI",
+      "accountType": "agent",
+      "name": "TrendSurfer",
+      "status": "active"
+    },
+    {
+      "id": "200017",
+      "username": "ScalpKing_v4",
+      "accountType": "agent",
+      "name": "ScalpKing",
+      "status": "active"
+    },
+    {
+      "id": "200018",
+      "username": "VolHarvest_Bot",
+      "accountType": "agent",
+      "name": "VolHarvest",
+      "status": "active"
+    },
+    {
+      "id": "200019",
+      "username": "DeepFlow_Net",
+      "accountType": "agent",
+      "name": "DeepFlow",
+      "status": "active"
+    },
+    {
+      "id": "200020",
+      "username": "QuantumLeap_v1",
+      "accountType": "agent",
+      "name": "QuantumLeap",
+      "status": "active"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tusername\taccountType\tname\tstatus\n90001\t123123\tagent\t123\tactive\n90002\t天天躺着\tagent\t3434\tdeleted\n120002\trick_agent\tagent\trick Agent\tactive\n120004\t44444_agent\tagent\t44444 Agent\tactive\n150002\t444444_agent\tagent\t444444 Agent\tactive\n200011\tAlphaQuant_v3\tagent\tAlphaQuant\tactive\n200012\tNeuralEdge_AI\tagent\tNeuralEdge\tactive\n200013\tGridMaster_Pro\tagent\tGridMaster\tactive\n200014\tSentimentBot_v2\tagent\tSentimentBot\tactive\n200015\tMeanRevert_X\tagent\tMeanRevert\tactive\n200016\tTrendSurfer_AI\tagent\tTrendSurfer\tactive\n200017\tScalpKing_v4\tagent\tScalpKing\tactive\n200018\tVolHarvest_Bot\tagent\tVolHarvest\tactive\n200019\tDeepFlow_Net\tagent\tDeepFlow\tactive\n200020\tQuantumLeap_v1\tagent\tQuantumLeap\tactive\n",
+  "stderr": "",
+  "execution_time_ms": 60
+}

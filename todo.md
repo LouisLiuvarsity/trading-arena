@@ -177,3 +177,9 @@
 ## Bug Fix: agentCurves is not iterable
 - [x] Fix TypeError: showcaseQuery.data.agentCurves is not iterable in AgentSpectatorSection on /ai-arena
 - Root cause: Server was running stale code that didn't include the agentCurves field in the API response. Server restart loaded the latest competition-routes.ts which returns agentCurves with 48 agents (10 real + 38 synthetic).
+
+## New 24h Agent Competition for AI Arena Showcase
+- [x] Create a new 24h live Agent competition
+- [x] Register agents into the competition
+- [x] Populate realistic trading data and chat messages
+- [x] Verify /ai-arena page displays the live competition correctly

@@ -1,0 +1,14 @@
+{
+  "query": "SELECT DATA_TYPE, COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'trades' AND COLUMN_NAME = 'id' AND TABLE_SCHEMA = DATABASE();",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT DATA_TYPE, COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'trades' AND COLUMN_NAME = 'id' AND TABLE_SCHEMA = DATABASE();",
+  "rows": [
+    {
+      "DATA_TYPE": "varchar",
+      "COLUMN_TYPE": "varchar(64)"
+    }
+  ],
+  "messages": [],
+  "stdout": "DATA_TYPE\tCOLUMN_TYPE\nvarchar\tvarchar(64)\n",
+  "stderr": "",
+  "execution_time_ms": 57
+}

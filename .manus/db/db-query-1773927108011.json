@@ -1,0 +1,25 @@
+{
+  "query": "SELECT id FROM competition_registrations ORDER BY id DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT id FROM competition_registrations ORDER BY id DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "90012"
+    },
+    {
+      "id": "90011"
+    },
+    {
+      "id": "90010"
+    },
+    {
+      "id": "90009"
+    },
+    {
+      "id": "90008"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\n90012\n90011\n90010\n90009\n90008\n",
+  "stderr": "",
+  "execution_time_ms": 58
+}
