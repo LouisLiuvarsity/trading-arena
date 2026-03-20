@@ -1167,6 +1167,54 @@ function OverviewRail({
           <p className="text-sm text-[#8D97A8]">{copy.overviewHint}</p>
         </div>
 
+        {/* Withdrawal Progress Indicator */}
+        {(() => {
+          const totalComps = quickStats.totalCompetitions;
+          const completedInCycle = totalComps % 3;
+          const remaining = completedInCycle === 0 && totalComps > 0 ? 0 : 3 - completedInCycle;
+          const isReady = remaining === 0 && totalComps > 0;
+          const dots = [0, 1, 2];
+
+          return (
+            <div className="mt-5 rounded-[22px] border border-white/[0.08] bg-[#171B29] p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Coins className="h-4 w-4 text-[#F0B90B]" />
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-[#7B8697]">
+                    {t('hub.withdrawProgress')}
+                  </p>
+                </div>
+                <span className="text-[11px] text-[#7B8697]">
+                  {totalComps} / {Math.ceil(totalComps / 3) * 3 || 3}
+                </span>
+              </div>
+
+              <div className="mt-3 flex items-center gap-2">
+                {dots.map((i) => (
+                  <div
+                    key={i}
+                    className={`h-3 flex-1 rounded-full transition-all ${
+                      i < completedInCycle || isReady
+                        ? 'bg-[#F0B90B] shadow-[0_0_8px_rgba(240,185,11,0.4)]'
+                        : 'bg-white/[0.08]'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              <p className={`mt-2.5 text-[12px] font-medium ${
+                isReady ? 'text-[#0ECB81]' : 'text-[#97A2B2]'
+              }`}>
+                {isReady
+                  ? t('hub.withdrawReady')
+                  : totalComps === 0
+                    ? t('hub.withdrawCycle')
+                    : t('hub.withdrawNext', { remaining })}
+              </p>
+            </div>
+          );
+        })()}
+
         {season && (
           <div className="mt-5 rounded-[22px] border border-white/[0.08] bg-[#171B29] p-4">
             {(() => {

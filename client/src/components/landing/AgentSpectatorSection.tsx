@@ -4,6 +4,7 @@ import { Link } from 'wouter';
 import {
   ArrowLeft,
   ChevronRight,
+  Eye,
   Loader2,
   Radio,
   Trophy,
@@ -23,6 +24,8 @@ import { apiRequest } from '@/lib/api';
 import ChatRoom from '@/components/ChatRoom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useT } from '@/lib/i18n';
+import { useSpectatorSocial } from '@/hooks/useSpectatorSocial';
+import { EmojiReactionBar, FloatingEmojis } from '@/components/EmojiReactions';
 
 type ChartMode = 'top' | 'my' | 'selected';
 
@@ -274,11 +277,13 @@ function InfoBar({
   refreshedAt,
   lang,
   isAuthenticated,
+  viewerCount,
 }: {
   competition: NonNullable<ShowcaseData['competition']>;
   refreshedAt: number;
   lang: 'zh' | 'en';
   isAuthenticated: boolean;
+  viewerCount: number;
 }) {
   const elapsed = competition.endTime - Date.now();
   const hoursLeft = Math.max(0, Math.floor(elapsed / 3600000));
@@ -323,6 +328,17 @@ function InfoBar({
       <span className="text-[#7D8798]">
         {lang === 'zh' ? `剩余 ${timeLeft}` : `${timeLeft} left`}
       </span>
+
+      {/* Viewer count */}
+      {viewerCount > 0 && (
+        <>
+          <div className="hidden sm:block h-4 w-px bg-white/[0.08]" />
+          <span className="inline-flex items-center gap-1.5 text-[#AAB3C2]">
+            <Eye className="h-3 w-3" />
+            {viewerCount} {lang === 'zh' ? '围观' : 'watching'}
+          </span>
+        </>
+      )}
 
       {/* Spacer */}
       <div className="flex-1" />
@@ -515,6 +531,8 @@ export default function AgentSpectatorSection() {
   });
 
   const competitionId = showcaseQuery.data?.competition?.id ?? null;
+
+  const { viewerCount, reactions, sendReaction, removeReaction } = useSpectatorSocial(competitionId);
 
   const leaderboardQuery = useInfiniteQuery({
     queryKey: ['landing-agent-showcase-leaderboard', competitionId, token],
@@ -738,6 +756,7 @@ export default function AgentSpectatorSection() {
           refreshedAt={showcaseQuery.data.refreshedAt}
           lang={lang}
           isAuthenticated={isAuthenticated}
+          viewerCount={viewerCount}
         />
 
         {/* Main content: Chart (dominant) | Chat | Leaderboard */}
@@ -810,6 +829,8 @@ export default function AgentSpectatorSection() {
             {/* Chart */}
             <div className="relative mt-3 overflow-hidden rounded-xl border border-white/[0.05] bg-[#080C14] p-3">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(240,185,11,0.05),transparent_28%)]" />
+              {/* Floating emoji reactions overlay */}
+              <FloatingEmojis reactions={reactions} onRemove={removeReaction} />
               <div className="relative mb-2 flex items-center justify-between text-[11px]">
                 <span className="text-[#AAB3C2]">{chartHint}</span>
                 <span className="rounded-md border border-white/[0.06] bg-white/[0.02] px-2 py-0.5 font-mono text-[#7D8798]">
@@ -892,6 +913,14 @@ export default function AgentSpectatorSection() {
                   </LineChart>
                 </ResponsiveContainer>
               </div>
+            </div>
+
+            {/* Emoji reaction bar */}
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <EmojiReactionBar onReact={sendReaction} />
+              <span className="text-[10px] text-[#5E6673] shrink-0">
+                {lang === 'zh' ? '发送表情反应' : 'Send a reaction'}
+              </span>
             </div>
           </div>
 

@@ -4,7 +4,7 @@ import { apiRequest } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { useProfile, useSaveProfile } from "@/hooks/useCompetitionData";
 import { useLocation } from "wouter";
-import { ArrowLeft, Loader2, Search, Check, Wallet } from "lucide-react";
+import { ArrowLeft, Clock, Loader2, Search, Check, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 interface ProfileData {
@@ -433,6 +433,19 @@ export default function ProfileEditPage() {
         <p className="text-[10px] text-[#F0B90B]/70 leading-relaxed">
           {t('profileEdit.walletEligibility')}
         </p>
+
+        {/* Withdrawal History */}
+        <div className="border-t border-white/[0.06] pt-4 mt-2">
+          <div className="flex items-center gap-2 mb-3">
+            <Clock className="w-3.5 h-3.5 text-[#7AA2F7]" />
+            <h3 className="text-[11px] font-semibold text-[#D1D4DC]">{t('profileEdit.withdrawHistory')}</h3>
+          </div>
+          <div className="rounded-lg border border-dashed border-white/[0.08] bg-[#0B0E11]/60 px-4 py-6 text-center">
+            <Wallet className="mx-auto h-6 w-6 text-[#7D8899]/60" />
+            <p className="mt-2 text-[11px] text-[#848E9C]">{t('profileEdit.noWithdrawals')}</p>
+            <p className="mt-1 text-[10px] text-[#848E9C]/60">{t('profileEdit.noWithdrawalsHint')}</p>
+          </div>
+        </div>
       </div>
 
       <div className="flex gap-3">

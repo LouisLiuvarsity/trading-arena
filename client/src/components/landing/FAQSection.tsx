@@ -7,7 +7,7 @@ import {
   AccordionContent,
 } from '@/components/ui/accordion';
 
-const FAQ_KEYS = [1, 2, 3, 4, 5, 6] as const;
+const FAQ_KEYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
 export default function FAQSection() {
   const { t } = useT();

@@ -428,6 +428,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'land.faq.a5': '累计赛季积分决定段位（黑铁→钻石），高段位解锁更高杠杆。每月积分 ×0.8 衰减。',
     'land.faq.q6': '如何进入总决赛？',
     'land.faq.a6': '每月累计积分排名前 500 名自动晋级总决赛，争夺 2,500 USDT 大奖。',
+    'land.faq.q7': 'AI Agent 如何接入比赛？',
+    'land.faq.a7': '平台支持 Agent vs Agent 比赛模式。你可以通过 API 接口接入自己的交易 Agent，报名参加专属的 AI 比赛。登录后在「赛事中心」查看 Agent 比赛，点击「通过 Agent API 报名」获取接入文档和 API Key。',
 
     'land.hero.title': '24小时加密货币交易竞技场',
     'land.hero.subtitle': '零风险模拟交易，真实奖金。每月15场常规赛 + 总决赛，与全球交易者同台竞技。',
@@ -604,6 +606,10 @@ const translations: Record<Lang, Record<string, string>> = {
     'hub.noPushedHint': '有新比赛时会自动推送给你',
     'hub.prizeEligibility': '奖金提取规则: 每参加 3 次比赛可提取一次奖金（循环），每场至少 4 笔交易',
     'hub.prizeSettlement': '奖金通过 USDT 钱包地址结算',
+    'hub.withdrawProgress': '提取进度',
+    'hub.withdrawReady': '已满足提取条件！',
+    'hub.withdrawNext': '再参加 {remaining} 场即可提取',
+    'hub.withdrawCycle': '每 3 场比赛可提取 1 次奖金',
 
     // ── CompetitionsPage ──
     'comp.title': '赛程',
@@ -741,6 +747,9 @@ const translations: Record<Lang, Record<string, string>> = {
     'profileEdit.walletNetwork': '提取网络',
     'profileEdit.walletNetworkPh': '选择网络',
     'profileEdit.walletEligibility': '提取规则: 每参加 3 次比赛可提取一次奖金（第 3、6、9 场…），每场至少 4 笔交易',
+    'profileEdit.withdrawHistory': '提取记录',
+    'profileEdit.noWithdrawals': '暂无提取记录',
+    'profileEdit.noWithdrawalsHint': '完成比赛并满足提取条件后，提取记录将在这里显示',
 
     // ── LeaderboardPage ──
     'lbpage.title': '排行榜',
@@ -1286,6 +1295,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'land.faq.a5': 'Cumulative season points determine your tier (Iron→Diamond). Higher tiers unlock more leverage. Monthly ×0.8 decay.',
     'land.faq.q6': 'How do I qualify for the Grand Final?',
     'land.faq.a6': 'Top 500 by cumulative monthly points automatically qualify for the Grand Final with a 2,500 USDT prize pool.',
+    'land.faq.q7': 'How do I connect my AI Agent?',
+    'land.faq.a7': 'The platform supports Agent vs Agent competitions. You can connect your trading bot via our API to participate in dedicated AI matches. After logging in, visit the Competition Hub to find Agent competitions and click "Register via Agent API" to get the integration docs and your API Key.',
 
     'land.hero.title': '24-Hour Crypto Trading Arena',
     'land.hero.subtitle': 'Zero-risk simulated trading, real prizes. 15 regular matches + Grand Final monthly, compete with global traders.',
@@ -1460,6 +1471,10 @@ const translations: Record<Lang, Record<string, string>> = {
     'hub.noPushedHint': 'New matches will be pushed to you automatically',
     'hub.prizeEligibility': 'Withdrawal rule: 1 withdrawal per 3 participations (repeating cycle), min 4 trades each',
     'hub.prizeSettlement': 'Prizes settled via USDT wallet transfer',
+    'hub.withdrawProgress': 'Withdrawal Progress',
+    'hub.withdrawReady': 'Ready to withdraw!',
+    'hub.withdrawNext': '{remaining} more match(es) to next withdrawal',
+    'hub.withdrawCycle': '1 withdrawal per 3 competitions',
 
     // ── CompetitionsPage ──
     'comp.title': 'Schedule',
@@ -1597,6 +1612,9 @@ const translations: Record<Lang, Record<string, string>> = {
     'profileEdit.walletNetwork': 'Network',
     'profileEdit.walletNetworkPh': 'Select network',
     'profileEdit.walletEligibility': 'Withdrawal rule: 1 withdrawal per 3 participations (3rd, 6th, 9th...), min 4 trades each',
+    'profileEdit.withdrawHistory': 'Withdrawal History',
+    'profileEdit.noWithdrawals': 'No withdrawal records yet',
+    'profileEdit.noWithdrawalsHint': 'Complete competitions and meet withdrawal conditions to see your records here',
 
     // ── LeaderboardPage ──
     'lbpage.title': 'Leaderboard',

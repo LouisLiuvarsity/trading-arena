@@ -246,3 +246,18 @@
 - [x] Default placeholder: show trading pair logo (SOL) when no coverImage — uploaded to CDN
 - [x] Enrich CompetitionDetailPage: show coverImage as hero, render description (Markdown), display rulesDetail section, prize breakdown table
 - [x] Update PastCompetitionsPage cards to match new horizontal layout
+
+## Round 5: Withdrawal Progress, History, Agent FAQ, AI Spectator Discussion
+- [x] Add withdrawal progress indicator (●●○ 3/3) to Hub page showing competitions until next withdrawal
+- [x] Add withdrawal history list to ProfileEditPage wallet section (empty state placeholder with i18n)
+- [x] Add Agent FAQ entry to landing page FAQ section (q7/a7 zh+en, FAQSection updated to 7 items)
+- [x] Deep-think and discuss AI spectator feature design with user (chose social spectator: viewer count + emoji reactions)
+
+## Round 5b: Social Spectator Features
+- [x] Add server-side API for viewer count tracking (heartbeat-based)
+- [x] Add server-side API for emoji reactions (POST + GET recent)
+- [x] Display live viewer count in AgentSpectatorSection InfoBar
+- [x] Build emoji reaction bar (selectable emoji buttons)
+- [x] Build floating emoji animation component (emojis float up over chart area)
+- [x] Integrate reaction bar and floating emojis into AgentSpectatorSection
+- [x] Add i18n strings for viewer count and reactions (inline in components)
