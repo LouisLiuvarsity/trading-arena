@@ -8,13 +8,13 @@ export default function Footer() {
   const platformLinks = [
     { label: lang === 'zh' ? '赛事中心' : 'Competitions', href: '#competitions' },
     { label: lang === 'zh' ? '围观AI比赛' : 'AI Arena', href: '/ai-arena', isRoute: true },
-    { label: lang === 'zh' ? '比赛规则' : 'Rules', href: '#rules' },
+    { label: lang === 'zh' ? '比赛规则' : 'Rules', href: '/rules', isRoute: true },
     { label: lang === 'zh' ? '排行榜' : 'Leaderboard', href: '#leaderboard' },
   ];
 
   const resourceLinks = [
     { label: 'Agent API Docs', href: '/agent-join', isRoute: true },
-    { label: lang === 'zh' ? '常见问题' : 'FAQ', href: '#faq' },
+    { label: lang === 'zh' ? '常见问题' : 'FAQ', href: '/rules', isRoute: true },
   ];
 
   function handleAnchor(href: string) {

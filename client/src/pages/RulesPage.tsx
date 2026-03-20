@@ -1,6 +1,6 @@
 // ============================================================
 // Quick Rules Guide — v5.0 Simplified onboarding
-// Core rules: 5000U, 40 trades, min 5 trades for eligibility,
+// Core rules: 5000U, min 4 trades for eligibility,
 // hold weight, fixed prize pool, points → rank tiers, decay
 // ============================================================
 

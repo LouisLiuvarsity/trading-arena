@@ -100,6 +100,7 @@ function getRegistrationPct(card: CompetitionCard): number {
 }
 
 function CompetitionCardView({ card }: { card: CompetitionCard }) {
+  const { lang } = useT();
   const statusConf = STATUS_CONFIG[card.status] ?? STATUS_CONFIG.completed;
   const typeMeta = TYPE_META[card.competitionType] ?? TYPE_META.regular;
   const baseAsset = getBaseAsset(card.symbol);
@@ -215,7 +216,7 @@ function CompetitionCardView({ card }: { card: CompetitionCard }) {
             <Star className="h-3.5 w-3.5 text-[#F0B90B]" />
             奖励说明
           </div>
-          <p className="mt-2 text-sm font-semibold text-white">Season Points + Prize Pool</p>
+          <p className="mt-2 text-sm font-semibold text-white">{lang === 'zh' ? '赛季积分 + 奖金池' : 'Season Points + Prize Pool'}</p>
         </div>
       </div>
     </article>
@@ -223,7 +224,7 @@ function CompetitionCardView({ card }: { card: CompetitionCard }) {
 }
 
 export default function CompetitionShowcase() {
-  const { t } = useT();
+  const { t, lang } = useT();
   const [data, setData] = useState<ShowcaseData | null>(null);
   const [loading, setLoading] = useState(true);
   const [api, setApi] = useState<CarouselApi>();
@@ -367,27 +368,25 @@ export default function CompetitionShowcase() {
                   {activeCard.title}
                 </h3>
                 <p className="mt-4 max-w-xl text-sm leading-7 text-[#9CA5B5] sm:text-[15px]">
-                  当前主推卡片会同步展示比赛状态、奖励、交易对和席位进度。现在聚焦的是
-                  {' '}
-                  <span className="font-semibold text-white">{activeCard.symbol}</span>
-                  ，开赛时间
-                  {' '}
-                  <span className="font-semibold text-white">{formatTime(activeCard.startTime)}</span>
-                  。
+                  {lang === 'zh' ? (
+                    <>交易对 <span className="font-semibold text-white">{activeCard.symbol}</span>，开赛时间 <span className="font-semibold text-white">{formatTime(activeCard.startTime)}</span>。报名参赛，与全球交易者同场竞技。</>
+                  ) : (
+                    <>Trading <span className="font-semibold text-white">{activeCard.symbol}</span>, starts at <span className="font-semibold text-white">{formatTime(activeCard.startTime)}</span>. Join and compete with traders worldwide.</>
+                  )}
                 </p>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-3xl border border-white/[0.06] bg-white/[0.03] p-4">
-                  <div className="text-[11px] uppercase tracking-[0.18em] text-[#7E8798]">Prize Pool</div>
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-[#7E8798]">{lang === 'zh' ? '奖金池' : 'Prize Pool'}</div>
                   <div className="mt-3 flex items-end gap-2">
                     <span className="text-3xl font-display font-black text-white">{activeCard.prizePool}U</span>
-                    <span className="pb-1 text-[11px] text-[#8E97A8]">固定奖金池</span>
+                    <span className="pb-1 text-[11px] text-[#8E97A8]">{lang === 'zh' ? '固定奖金池' : 'Fixed Pool'}</span>
                   </div>
                 </div>
 
                 <div className="rounded-3xl border border-white/[0.06] bg-white/[0.03] p-4">
-                  <div className="text-[11px] uppercase tracking-[0.18em] text-[#7E8798]">Participants</div>
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-[#7E8798]">{lang === 'zh' ? '参赛人数' : 'Participants'}</div>
                   <div className="mt-3 flex items-end gap-2">
                     <span className="text-3xl font-display font-black text-white">
                       {activeCard.registeredCount}
@@ -415,7 +414,7 @@ export default function CompetitionShowcase() {
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <Star className="h-3.5 w-3.5 text-[#25C2A0]" />
-                    Season Points
+                    {lang === 'zh' ? '赛季积分' : 'Season Points'}
                   </span>
                 </div>
               </div>

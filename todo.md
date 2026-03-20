@@ -211,3 +211,11 @@
 - [x] Make equity chart the dominant visual element (50%+ width)
 - [x] Redesign layout to feel like an esports live broadcast
 - [x] Verify both Landing Page and AI Arena look correct in browser
+
+## Optimize CompetitionShowcase, FAQ, and Rules Modules
+- [x] Remove "最多40笔交易" / trade count upper limit references (i18n zh+en, HighlightsSection)
+- [x] Change minimum trades to 4 for humans (was 5) (i18n zh+en, HighlightsSection, RulesPage)
+- [x] Audit and optimize CompetitionShowcase: fix developer copy, English-mixed text, add lang-aware labels
+- [x] Audit and optimize FAQ: fix invite code → registration, fix trade count references
+- [x] Audit and optimize Rules/HighlightsSection: updated trade rules text
+- [x] Fix Footer: broken #faq and #rules anchors → /rules route links
