@@ -4,14 +4,19 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeft,
   Clock3,
-  Coins,
   Users,
   Zap,
   Trophy,
   Bot,
   Swords,
+  ArrowRight,
 } from 'lucide-react';
 import { useT } from '@/lib/i18n';
+
+/* ── Default coin logos ── */
+const COIN_LOGOS: Record<string, string> = {
+  SOL: 'https://d2xsxph8kpxj0f.cloudfront.net/310519663325188422/dRgYLfmNL5QAGwfaYvi5WU/sol-logo_8a0d6446.png',
+};
 
 interface CompetitionCard {
   id: number;
@@ -36,15 +41,12 @@ interface ShowcaseData {
   completed: CompetitionCard[];
 }
 
-function formatDate(ts: number): string {
-  return new Date(ts).toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+function formatDateRange(start: number, end: number): string {
+  const s = new Date(start);
+  const e = new Date(end);
+  const fmt = (d: Date) =>
+    d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'numeric', day: 'numeric' });
+  return `${fmt(s)} – ${fmt(e)}`;
 }
 
 function getBaseAsset(symbol: string): string {
@@ -54,6 +56,12 @@ function getBaseAsset(symbol: string): string {
 function getParticipantModeLabel(mode: string | undefined, lang: string): string {
   if (mode === 'agent') return 'Agent vs Agent';
   return lang === 'zh' ? '人类对战' : 'Human vs Human';
+}
+
+function getCoverImage(card: CompetitionCard): string {
+  if (card.coverImageUrl) return card.coverImageUrl;
+  const base = getBaseAsset(card.symbol);
+  return COIN_LOGOS[base] ?? COIN_LOGOS.SOL;
 }
 
 export default function PastCompetitionsPage() {
@@ -89,6 +97,7 @@ export default function PastCompetitionsPage() {
           <h1 className="text-lg font-display font-bold">
             {lang === 'zh' ? '往期比赛' : 'Past Competitions'}
           </h1>
+          <span className="text-[12px] text-white/30">{completed.length} {lang === 'zh' ? '场' : 'events'}</span>
         </div>
       </header>
 
@@ -105,58 +114,113 @@ export default function PastCompetitionsPage() {
             </p>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {completed.map((card, index) => (
-              <motion.div
-                key={card.id}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.06 }}
-              >
-                <Link href={`/competitions/${card.slug}`} className="block group">
-                  <article className="rounded-xl border border-white/[0.06] bg-[#0E1422]/80 p-5 transition-all duration-200 group-hover:border-white/[0.12] group-hover:bg-[#0E1422]">
-                    {/* Type + status */}
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-white/40">
-                        {card.participantMode === 'agent' ? <Bot className="h-3 w-3" /> : <Swords className="h-3 w-3" />}
-                        {getParticipantModeLabel(card.participantMode, lang)}
-                      </span>
-                      <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-medium text-white/35">
-                        {lang === 'zh' ? '已结束' : 'Completed'}
-                      </span>
-                    </div>
+          <div className="flex flex-col gap-4">
+            {completed.map((card, index) => {
+              const baseAsset = getBaseAsset(card.symbol);
+              const coverUrl = getCoverImage(card);
+              const hasCover = !!card.coverImageUrl;
 
-                    {/* Trading pair */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <Zap className="h-4 w-4 text-[#25C2A0]/60" />
-                      <span className="text-[15px] font-semibold text-white/80">{getBaseAsset(card.symbol)}/USDT</span>
-                    </div>
-
-                    {/* Stats row */}
-                    <div className="flex items-center gap-3 text-[11px] text-white/35">
-                      <div className="flex items-center gap-1">
-                        <Clock3 className="h-3 w-3" />
-                        <span>{formatDate(card.endTime)}</span>
-                      </div>
-                      <div className="h-3 w-px bg-white/8" />
-                      <div className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        <span>{card.registeredCount}</span>
-                      </div>
-                      {card.prizePool > 0 && (
-                        <>
-                          <div className="h-3 w-px bg-white/8" />
-                          <div className="flex items-center gap-1">
-                            <Coins className="h-3 w-3 text-[#F0B90B]/50" />
-                            <span>{card.prizePool}U</span>
+              return (
+                <motion.div
+                  key={card.id}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.06 }}
+                >
+                  <Link href={`/competitions/${card.slug}`} className="block group">
+                    <article className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0E1422]/80 transition-all duration-200 group-hover:border-white/[0.12] group-hover:bg-[#0E1422]">
+                      <div className="flex items-stretch min-h-[160px]">
+                        {/* Left: Text content */}
+                        <div className="flex-1 p-6 flex flex-col justify-between min-w-0">
+                          {/* Date range */}
+                          <div className="text-[12px] text-white/30 tracking-wide mb-2">
+                            {formatDateRange(card.startTime, card.endTime)}
                           </div>
-                        </>
-                      )}
-                    </div>
-                  </article>
-                </Link>
-              </motion.div>
-            ))}
+
+                          {/* Title + completed badge */}
+                          <div className="mb-3">
+                            <div className="flex items-center gap-2.5 flex-wrap">
+                              <h3 className="text-lg font-bold text-white/80 leading-tight">
+                                {card.title}
+                              </h3>
+                              <span className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] px-2.5 py-0.5 text-[10px] font-medium text-white/35">
+                                {lang === 'zh' ? '已结束' : 'Completed'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Info row */}
+                          <div className="flex items-center gap-5 flex-wrap mb-3">
+                            {card.prizePool > 0 && (
+                              <div className="flex flex-col">
+                                <span className="text-[11px] text-white/30 mb-0.5">
+                                  {lang === 'zh' ? '奖金池' : 'Prize Pool'}
+                                </span>
+                                <span className="text-sm font-bold text-[#F0B90B]/70">
+                                  {card.prizePool.toLocaleString()}U
+                                </span>
+                              </div>
+                            )}
+                            <div className="flex flex-col">
+                              <span className="text-[11px] text-white/30 mb-0.5">
+                                {lang === 'zh' ? '参赛者' : 'Participants'}
+                              </span>
+                              <span className="text-sm font-medium text-white/60 flex items-center gap-1">
+                                <Users className="h-3.5 w-3.5 text-white/30" />
+                                {card.registeredCount}
+                              </span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[11px] text-white/30 mb-0.5">
+                                {lang === 'zh' ? '交易品种' : 'Asset'}
+                              </span>
+                              <span className="text-sm font-medium text-white/60 flex items-center gap-1">
+                                <Zap className="h-3.5 w-3.5 text-[#25C2A0]/60" />
+                                {baseAsset}/USDT
+                              </span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[11px] text-white/30 mb-0.5">
+                                {lang === 'zh' ? '类型' : 'Type'}
+                              </span>
+                              <span className="text-sm font-medium text-white/50 flex items-center gap-1">
+                                {card.participantMode === 'agent' ? (
+                                  <Bot className="h-3.5 w-3.5 text-white/30" />
+                                ) : (
+                                  <Swords className="h-3.5 w-3.5 text-white/30" />
+                                )}
+                                {getParticipantModeLabel(card.participantMode, lang)}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* View details link */}
+                          <div>
+                            <span className="inline-flex items-center gap-1.5 text-[12px] text-white/35 group-hover:text-[#F0B90B] transition-colors">
+                              {lang === 'zh' ? '查看详情' : 'View Details'}
+                              <ArrowRight className="h-3.5 w-3.5" />
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Right: Cover image / coin logo */}
+                        <div className="hidden sm:flex items-center justify-center w-[180px] lg:w-[220px] shrink-0 p-6">
+                          <div className={`relative w-full h-full flex items-center justify-center ${!hasCover ? 'opacity-10' : 'opacity-60'}`}>
+                            <img
+                              src={coverUrl}
+                              alt={card.title}
+                              className={`object-contain max-h-[120px] max-w-full ${
+                                hasCover ? 'rounded-xl' : 'drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]'
+                              }`}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  </Link>
+                </motion.div>
+              );
+            })}
           </div>
         )}
       </main>

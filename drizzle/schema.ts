@@ -213,8 +213,10 @@ export const competitions = mysqlTable("competitions", {
   requireMinSeasonPoints: int("requireMinSeasonPoints").notNull().default(0),
   requireMinTier: varchar("requireMinTier", { length: 16 }),
   inviteOnly: int("inviteOnly").notNull().default(0),
-  // Media
+  // Media & Rich Content
   coverImageUrl: varchar("coverImageUrl", { length: 512 }),
+  /** Detailed trading rules (Markdown) — per-competition override */
+  rulesDetail: text("rulesDetail"),
   // Admin
   createdBy: int("createdBy"),
   archived: int("archived").notNull().default(0),

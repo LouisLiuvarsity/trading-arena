@@ -238,3 +238,11 @@
 - [x] Remove left panel from CompetitionShowcase (pure card grid/carousel layout)
 - [x] Update subtitle to not mention completed count
 - [x] Add i18n strings for new elements (loginToRegister zh+en)
+
+## Round 4: Horizontal Card Layout + Rich Competition Detail
+- [x] Add DB fields: coverImage (already existed), description (already existed), rulesDetail (added) to competitions table
+- [x] Update API to return new fields (description added to public list + hub list; detail endpoint already returns ...comp spread)
+- [x] Redesign CompetitionShowcase: horizontal full-width cards (left text + right image), max 3 visible, vertical scroll for overflow
+- [x] Default placeholder: show trading pair logo (SOL) when no coverImage — uploaded to CDN
+- [x] Enrich CompetitionDetailPage: show coverImage as hero, render description (Markdown), display rulesDetail section, prize breakdown table
+- [x] Update PastCompetitionsPage cards to match new horizontal layout

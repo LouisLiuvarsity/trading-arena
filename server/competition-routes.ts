@@ -499,6 +499,7 @@ export function registerCompetitionRoutes(
           registeredCount: registered,
           maxParticipants: c.maxParticipants,
           coverImageUrl: c.coverImageUrl ?? null,
+          description: c.description ?? null,
         };
       };
 
@@ -769,6 +770,7 @@ export function registerCompetitionRoutes(
           registrationOpenAt: comp.registrationOpenAt,
           registrationCloseAt: comp.registrationCloseAt,
           coverImageUrl: comp.coverImageUrl ?? null,
+          description: comp.description ?? null,
           myRegistrationStatus: myStatus,
         });
       }

@@ -2,11 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { motion } from 'framer-motion';
 import {
-  ChevronLeft,
-  ChevronRight,
   Clock3,
   Coins,
-  Sparkles,
   Users,
   Zap,
   Swords,
@@ -14,14 +11,12 @@ import {
   ArrowRight,
   Radio,
 } from 'lucide-react';
-
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  type CarouselApi,
-} from '@/components/ui/carousel';
 import { useT } from '@/lib/i18n';
+
+/* ── Default coin logos ── */
+const COIN_LOGOS: Record<string, string> = {
+  SOL: 'https://d2xsxph8kpxj0f.cloudfront.net/310519663325188422/dRgYLfmNL5QAGwfaYvi5WU/sol-logo_8a0d6446.png',
+};
 
 /* ── Types ── */
 interface CompetitionCard {
@@ -38,6 +33,7 @@ interface CompetitionCard {
   registeredCount: number;
   maxParticipants: number;
   coverImageUrl?: string | null;
+  description?: string | null;
 }
 
 interface ShowcaseData {
@@ -48,14 +44,12 @@ interface ShowcaseData {
 }
 
 /* ── Helpers ── */
-function formatTime(ts: number): string {
-  return new Date(ts).toLocaleString('zh-CN', {
-    month: 'numeric',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+function formatDateRange(start: number, end: number): string {
+  const s = new Date(start);
+  const e = new Date(end);
+  const fmt = (d: Date) =>
+    d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'numeric', day: 'numeric' });
+  return `${fmt(s)} – ${fmt(e)}`;
 }
 
 function getBaseAsset(symbol: string): string {
@@ -68,135 +62,178 @@ function getRegistrationPct(card: CompetitionCard): number {
 }
 
 function getParticipantModeLabel(mode: string | undefined, lang: string): string {
-  if (mode === 'agent') return lang === 'zh' ? 'Agent vs Agent' : 'Agent vs Agent';
-  return lang === 'zh' ? 'Human vs Human' : 'Human vs Human';
+  if (mode === 'agent') return 'Agent vs Agent';
+  return lang === 'zh' ? '人类对战' : 'Human vs Human';
 }
 
-function getParticipantModeIcon(mode: string | undefined) {
-  if (mode === 'agent') return <Bot className="h-3.5 w-3.5" />;
-  return <Swords className="h-3.5 w-3.5" />;
+function getStatusConfig(status: string, lang: string) {
+  if (status === 'live') {
+    return {
+      label: lang === 'zh' ? '进行中' : 'LIVE',
+      dotColor: '#0ECB81',
+      bgColor: 'rgba(14,203,129,0.12)',
+      textColor: '#0ECB81',
+      pulse: true,
+    };
+  }
+  if (status === 'registration_open') {
+    return {
+      label: lang === 'zh' ? '报名中' : 'OPEN',
+      dotColor: '#F0B90B',
+      bgColor: 'rgba(240,185,11,0.12)',
+      textColor: '#F0B90B',
+      pulse: false,
+    };
+  }
+  return {
+    label: lang === 'zh' ? '即将开始' : 'UPCOMING',
+    dotColor: '#8E97A8',
+    bgColor: 'rgba(142,151,168,0.12)',
+    textColor: '#8E97A8',
+    pulse: false,
+  };
 }
 
-/* ── Single competition card ── */
-function CompetitionCardSimple({ card }: { card: CompetitionCard }) {
+function getCoverImage(card: CompetitionCard): string {
+  if (card.coverImageUrl) return card.coverImageUrl;
+  const base = getBaseAsset(card.symbol);
+  return COIN_LOGOS[base] ?? COIN_LOGOS.SOL;
+}
+
+/* ── Horizontal competition card (TradingView-style) ── */
+function HorizontalCard({ card }: { card: CompetitionCard }) {
   const { lang } = useT();
   const isLive = card.status === 'live';
   const isOpen = card.status === 'registration_open';
   const baseAsset = getBaseAsset(card.symbol);
+  const statusCfg = getStatusConfig(card.status, lang);
   const regPct = getRegistrationPct(card);
-
-  // Live cards get a green accent, open cards get yellow accent
-  const accentColor = isLive ? '#0ECB81' : '#F0B90B';
-  const statusLabel = isLive
-    ? (lang === 'zh' ? '进行中' : 'LIVE')
-    : isOpen
-      ? (lang === 'zh' ? '报名中' : 'OPEN')
-      : (lang === 'zh' ? '即将开始' : 'UPCOMING');
+  const coverUrl = getCoverImage(card);
+  const hasCover = !!card.coverImageUrl;
 
   return (
     <Link href={`/competitions/${card.slug}`} className="block group">
-      <article
-        className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0E1422] transition-all duration-300 group-hover:border-[#F0B90B]/40 group-hover:shadow-[0_0_40px_rgba(240,185,11,0.08)]"
-      >
-        {/* Top gradient area with coin watermark */}
-        <div className={`relative px-5 pt-5 pb-4 ${isLive ? 'bg-gradient-to-br from-[#0ECB81]/12 via-transparent to-transparent' : 'bg-gradient-to-br from-[#F0B90B]/8 via-transparent to-transparent'}`}>
-          {/* Watermark */}
-          <div
-            className="absolute -right-4 -top-2 text-[72px] font-black uppercase tracking-[0.15em] text-white/[0.03] select-none pointer-events-none"
-            aria-hidden="true"
-          >
-            {baseAsset}
-          </div>
-
-          {/* Row 1: Status badge + participant mode */}
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <div className="flex items-center gap-2">
-              <span
-                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold"
-                style={{
-                  backgroundColor: isLive ? 'rgba(14,203,129,0.15)' : 'rgba(240,185,11,0.15)',
-                  color: accentColor,
-                }}
-              >
-                {isLive && <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />}
-                {statusLabel}
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-full border border-white/8 bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-white/55">
-                {getParticipantModeIcon(card.participantMode)}
-                {getParticipantModeLabel(card.participantMode, lang)}
-              </span>
+      <article className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0E1422] transition-all duration-300 group-hover:border-[#F0B90B]/30 group-hover:shadow-[0_0_40px_rgba(240,185,11,0.06)]">
+        <div className="flex items-stretch min-h-[180px]">
+          {/* Left: Text content */}
+          <div className="flex-1 p-6 flex flex-col justify-between min-w-0">
+            {/* Date range */}
+            <div className="text-[12px] text-white/35 tracking-wide mb-2">
+              {formatDateRange(card.startTime, card.endTime)}
             </div>
 
-            {card.prizePool > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-[#F0B90B]/20 bg-[#F0B90B]/8 px-2.5 py-1 text-[11px] font-bold text-[#F0B90B]">
-                <Coins className="h-3 w-3" />
-                {card.prizePool}U
-              </span>
-            )}
-          </div>
-
-          {/* Row 2: Trading pair + start time */}
-          <div className="flex items-center gap-4 text-[13px]">
-            <div className="flex items-center gap-1.5">
-              <Zap className="h-4 w-4 text-[#25C2A0]" />
-              <span className="font-semibold text-white">{baseAsset}/USDT</span>
-            </div>
-            <div className="h-4 w-px bg-white/10" />
-            <div className="flex items-center gap-1.5">
-              <Clock3 className="h-4 w-4" style={{ color: accentColor }} />
-              <span className="text-white/60">{formatTime(card.startTime)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom section: state-specific content */}
-        <div className="border-t border-white/[0.06] px-5 py-3.5">
-          {isOpen ? (
-            /* Registration open: show progress bar */
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1.5 text-[12px] text-white/50">
-                  <Users className="h-3.5 w-3.5" />
-                  <span>{lang === 'zh' ? '报名进度' : 'Registration'}</span>
-                </div>
-                <span className="text-[12px] font-mono font-semibold text-white/80">
-                  {card.registeredCount}/{card.maxParticipants}
+            {/* Title + status badge */}
+            <div className="mb-3">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h3 className="text-lg font-bold text-white leading-tight sm:text-xl">
+                  {card.title}
+                </h3>
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold shrink-0"
+                  style={{ backgroundColor: statusCfg.bgColor, color: statusCfg.textColor }}
+                >
+                  {statusCfg.pulse && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
+                  )}
+                  {statusCfg.label}
                 </span>
               </div>
-              <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#F0B90B] to-[#F0B90B]/70 transition-all duration-500"
-                  style={{ width: `${regPct}%` }}
-                />
+            </div>
+
+            {/* Info row: prize pool, participants, asset */}
+            <div className="flex items-center gap-5 flex-wrap mb-4">
+              {card.prizePool > 0 && (
+                <div className="flex flex-col">
+                  <span className="text-[11px] text-white/35 mb-0.5">
+                    {lang === 'zh' ? '奖金池' : 'Prize Pool'}
+                  </span>
+                  <span className="text-sm font-bold text-[#F0B90B]">
+                    {card.prizePool.toLocaleString()}U
+                  </span>
+                </div>
+              )}
+              <div className="flex flex-col">
+                <span className="text-[11px] text-white/35 mb-0.5">
+                  {isLive || card.status === 'completed'
+                    ? (lang === 'zh' ? '参赛者' : 'Participants')
+                    : (lang === 'zh' ? '已报名' : 'Registered')}
+                </span>
+                <span className="text-sm font-semibold text-white/80 flex items-center gap-1">
+                  <Users className="h-3.5 w-3.5 text-white/40" />
+                  {card.registeredCount.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[11px] text-white/35 mb-0.5">
+                  {lang === 'zh' ? '交易品种' : 'Asset'}
+                </span>
+                <span className="text-sm font-semibold text-white/80 flex items-center gap-1">
+                  <Zap className="h-3.5 w-3.5 text-[#25C2A0]" />
+                  {baseAsset}/USDT
+                </span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[11px] text-white/35 mb-0.5">
+                  {lang === 'zh' ? '类型' : 'Type'}
+                </span>
+                <span className="text-sm font-medium text-white/60 flex items-center gap-1">
+                  {card.participantMode === 'agent' ? (
+                    <Bot className="h-3.5 w-3.5 text-white/40" />
+                  ) : (
+                    <Swords className="h-3.5 w-3.5 text-white/40" />
+                  )}
+                  {getParticipantModeLabel(card.participantMode, lang)}
+                </span>
               </div>
             </div>
-          ) : isLive ? (
-            /* Live: show live indicator + participant count */
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Radio className="h-4 w-4 text-[#0ECB81] animate-pulse" />
-                <span className="text-[12px] font-medium text-[#0ECB81]">
+
+            {/* Bottom: CTA button or progress */}
+            <div className="flex items-center gap-3">
+              {isOpen ? (
+                <>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] px-3 py-1.5 text-[12px] font-semibold text-white">
+                    {lang === 'zh' ? '参加竞赛' : 'Join Competition'}
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </span>
+                  {/* Mini progress bar */}
+                  <div className="flex items-center gap-2 flex-1 max-w-[160px]">
+                    <div className="h-1.5 flex-1 rounded-full bg-white/[0.06] overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-[#F0B90B] to-[#F0B90B]/70 transition-all duration-500"
+                        style={{ width: `${regPct}%` }}
+                      />
+                    </div>
+                    <span className="text-[11px] font-mono text-white/40">
+                      {card.registeredCount}/{card.maxParticipants}
+                    </span>
+                  </div>
+                </>
+              ) : isLive ? (
+                <span className="inline-flex items-center gap-2 text-[12px] font-medium text-[#0ECB81]">
+                  <Radio className="h-4 w-4 animate-pulse" />
                   {lang === 'zh' ? '比赛进行中' : 'Match in Progress'}
                 </span>
-              </div>
-              <div className="flex items-center gap-1.5 text-[12px] text-white/50">
-                <Users className="h-3.5 w-3.5" />
-                <span>{card.registeredCount} {lang === 'zh' ? '名选手' : 'players'}</span>
-              </div>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-[12px] text-white/40 group-hover:text-[#F0B90B] transition-colors">
+                  {lang === 'zh' ? '查看详情' : 'View Details'}
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </span>
+              )}
             </div>
-          ) : (
-            /* Upcoming (announced, registration_closed): show participant count + arrow */
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-[12px] text-white/50">
-                <Users className="h-3.5 w-3.5" />
-                <span>{card.registeredCount}/{card.maxParticipants}</span>
-              </div>
-              <div className="flex items-center gap-1 text-[12px] text-white/40 group-hover:text-[#F0B90B] transition-colors">
-                <span>{lang === 'zh' ? '查看详情' : 'Details'}</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </div>
+          </div>
+
+          {/* Right: Cover image / coin logo */}
+          <div className="hidden sm:flex items-center justify-center w-[200px] lg:w-[240px] shrink-0 p-6">
+            <div className={`relative w-full h-full flex items-center justify-center ${!hasCover ? 'opacity-20' : ''}`}>
+              <img
+                src={coverUrl}
+                alt={card.title}
+                className={`object-contain max-h-[140px] max-w-full transition-transform duration-300 group-hover:scale-105 ${
+                  hasCover ? 'rounded-xl' : 'drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]'
+                }`}
+              />
             </div>
-          )}
+          </div>
         </div>
       </article>
     </Link>
@@ -208,8 +245,6 @@ export default function CompetitionShowcase() {
   const { t, lang } = useT();
   const [data, setData] = useState<ShowcaseData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [api, setApi] = useState<CarouselApi>();
-  const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
     fetch('/api/public/competitions')
@@ -224,28 +259,10 @@ export default function CompetitionShowcase() {
   // Only show live + upcoming (no completed)
   const activeCards = data ? [...data.live, ...data.upcoming] : [];
 
-  useEffect(() => {
-    if (!api) return;
-    const syncIndex = () => setCurrentIndex(api.selectedScrollSnap());
-    syncIndex();
-    api.on('select', syncIndex);
-    api.on('reInit', syncIndex);
-    return () => {
-      api.off('select', syncIndex);
-      api.off('reInit', syncIndex);
-    };
-  }, [api]);
-
-  useEffect(() => {
-    if (currentIndex < activeCards.length) return;
-    setCurrentIndex(0);
-    api?.scrollTo(0);
-  }, [api, activeCards.length, currentIndex]);
-
   if (loading) {
     return (
       <section id="competitions" className="py-20">
-        <div className="mx-auto max-w-7xl px-6 text-center">
+        <div className="mx-auto max-w-5xl px-6 text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[#F0B90B]/30 border-t-[#F0B90B]" />
         </div>
       </section>
@@ -255,7 +272,7 @@ export default function CompetitionShowcase() {
   if (!data || activeCards.length === 0) {
     return (
       <section id="competitions" className="py-20">
-        <div className="mx-auto max-w-7xl px-6">
+        <div className="mx-auto max-w-5xl px-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -274,6 +291,8 @@ export default function CompetitionShowcase() {
 
   const liveCount = data.live.length;
   const upcomingCount = data.upcoming.length;
+  const MAX_VISIBLE = 3;
+  const needsScroll = activeCards.length > MAX_VISIBLE;
 
   return (
     <section id="competitions" className="relative overflow-hidden py-20">
@@ -293,7 +312,6 @@ export default function CompetitionShowcase() {
         >
           {data.season && (
             <span className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-1.5 text-[11px] font-medium tracking-[0.24em] text-[#AAB3C2] uppercase">
-              <Sparkles className="h-3.5 w-3.5 text-[#F0B90B]" />
               {data.season.name}
             </span>
           )}
@@ -307,7 +325,7 @@ export default function CompetitionShowcase() {
           </p>
         </motion.div>
 
-        {/* Cards grid / carousel */}
+        {/* Horizontal card list */}
         <motion.div
           initial={{ opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -315,66 +333,29 @@ export default function CompetitionShowcase() {
           transition={{ duration: 0.45 }}
           className="mt-12"
         >
-          {activeCards.length <= 3 ? (
-            /* Grid layout for 1-3 cards */
-            <div className={`grid gap-5 ${activeCards.length === 1 ? 'max-w-md mx-auto' : activeCards.length === 2 ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
-              {activeCards.map((card) => (
-                <CompetitionCardSimple key={card.id} card={card} />
-              ))}
-            </div>
-          ) : (
-            /* Carousel for 4+ cards */
-            <div>
-              <Carousel
-                setApi={setApi}
-                opts={{ align: 'start', loop: activeCards.length > 2 }}
-                className="relative"
+          <div
+            className={`flex flex-col gap-4 ${
+              needsScroll ? 'max-h-[620px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent' : ''
+            }`}
+          >
+            {activeCards.map((card, i) => (
+              <motion.div
+                key={card.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.08 }}
               >
-                <CarouselContent className="-ml-4">
-                  {activeCards.map((card) => (
-                    <CarouselItem key={card.id} className="pl-4 basis-full sm:basis-1/2 lg:basis-1/3">
-                      <CompetitionCardSimple card={card} />
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-              </Carousel>
+                <HorizontalCard card={card} />
+              </motion.div>
+            ))}
+          </div>
 
-              {/* Carousel navigation */}
-              <div className="mt-6 flex items-center justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => api?.scrollPrev()}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-[#8E97A8] transition-colors hover:bg-white/[0.08] hover:text-white"
-                  aria-label={lang === 'zh' ? '上一张' : 'Previous'}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-
-                <div className="flex items-center gap-1.5">
-                  {activeCards.map((card, index) => (
-                    <button
-                      key={card.id}
-                      type="button"
-                      onClick={() => api?.scrollTo(index)}
-                      aria-label={`${index + 1}`}
-                      className={`h-2 rounded-full transition-all ${
-                        index === currentIndex
-                          ? 'w-6 bg-[#F0B90B]'
-                          : 'w-2 bg-white/20 hover:bg-white/35'
-                      }`}
-                    />
-                  ))}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => api?.scrollNext()}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-[#8E97A8] transition-colors hover:bg-white/[0.08] hover:text-white"
-                  aria-label={lang === 'zh' ? '下一张' : 'Next'}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
+          {needsScroll && (
+            <div className="mt-3 text-center">
+              <span className="text-[11px] text-white/25">
+                {lang === 'zh' ? '↕ 滚动查看更多比赛' : '↕ Scroll for more'}
+              </span>
             </div>
           )}
         </motion.div>
@@ -391,7 +372,9 @@ export default function CompetitionShowcase() {
               href="/past-competitions"
               className="inline-flex items-center gap-1.5 text-[13px] text-white/40 hover:text-[#F0B90B] transition-colors"
             >
-              {lang === 'zh' ? `查看 ${data.completed.length} 场往期比赛` : `View ${data.completed.length} past competitions`}
+              {lang === 'zh'
+                ? `查看 ${data.completed.length} 场往期比赛`
+                : `View ${data.completed.length} past competitions`}
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </motion.div>

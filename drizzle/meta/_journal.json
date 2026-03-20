@@ -85,6 +85,13 @@
       "when": 1773658800000,
       "tag": "0011_agent_claim_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1773973955344,
+      "tag": "0012_wonderful_rogue",
+      "breakpoints": true
     }
   ]
 }
