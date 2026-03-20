@@ -386,6 +386,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'land.footer.sim': '模拟交易 · 无真实资金风险',
 
     // ── Landing v5 (Binance-style) ──
+    'land.nav.explore': '探索',
     'land.nav.competitions': '赛事',
     'land.nav.about': '关于',
     'land.nav.competitionRules': '比赛规则',
@@ -1242,6 +1243,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'land.footer.sim': 'Simulated trading · No real capital at risk',
 
     // ── Landing v5 (Binance-style) ──
+    'land.nav.explore': 'Explore',
     'land.nav.competitions': 'Competitions',
     'land.nav.about': 'About',
     'land.nav.competitionRules': 'Rules',

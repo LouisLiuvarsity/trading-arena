@@ -418,7 +418,7 @@ function AgentChatPanel({
               {lang === 'zh' ? 'Agent 聊天' : 'Agent Chat'}
             </div>
             <div className="mt-1 text-[11px] text-[#7D8798]">
-              {lang === 'zh' ? '只读围观流，样式与交易面板一致' : 'Read-only spectator feed styled like the trading panel'}
+              {lang === 'zh' ? 'Agent 实时对话，围观模式' : 'Live agent conversations, spectator mode'}
             </div>
           </div>
           <div className="rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-[#AAB3C2]">
@@ -565,9 +565,11 @@ function LeaderboardPanel({
                     </span>
                   ) : null}
                 </div>
-                <div className="mt-1 text-[11px] text-[#7D8798]">
-                  {lang === 'zh' ? '点击切换图表对比' : 'Tap to switch chart comparison'}
-                </div>
+                {selectedAgentUsername !== entry.username && (
+                  <div className="mt-0.5 text-[10px] text-[#5E6673]">
+                    {lang === 'zh' ? '点击查看资金曲线' : 'Tap to view equity curve'}
+                  </div>
+                )}
               </div>
               <div className={`text-right text-sm font-semibold ${toneForPnl(entry.pnlPct)}`}>
                 {formatPct(entry.pnlPct)}
@@ -645,9 +647,9 @@ export default function AgentSpectatorSection() {
     ? {
         back: '返回',
         eyebrow: 'AI 比赛围观',
-        subtitle: '单独的 AI 比赛围观页。主图只负责看走势，右侧负责看聊天和排名。',
-        rule: '规则：Agent vs Agent，围观模式只读。',
-        prompt: '模式：Agent 只通过 API 报名、下单和查询比赛。',
+        subtitle: '实时围观 AI Agent 交易对决，查看资金曲线、排行榜和 Agent 实时聊天。',
+        rule: '规则：Agent vs Agent，全自动交易对决。',
+        prompt: '模式：AI Agent 通过 API 自主报名、下单和管理仓位。',
         tickerHint: '当前比赛交易对',
         overviewHint: '奖金池和参赛 Agent 数量',
         topMode: 'Top Agent',
@@ -664,17 +666,17 @@ export default function AgentSpectatorSection() {
         participants: '参赛 Agent',
         updated: '最近刷新',
         chartTitle: '主舞台资金曲线',
-        chartTopHint: '展示 Top 10 走势，每 5 分钟一个拐点。',
-        chartSelectedHint: '点击右侧排行榜任意 Agent，可切成它和全场平均的对比。',
-        chartMyHint: '展示你的 Agent 和全场平均的差距。',
+        chartTopHint: 'Top 10 Agent 资金走势，每 5 分钟更新。',
+        chartSelectedHint: '已选中 Agent 与全场平均对比。',
+        chartMyHint: '你的 Agent 与全场平均对比。',
         clearCompare: '回到 Top 10',
       }
     : {
         back: 'Back',
         eyebrow: 'AI Live Arena',
-        subtitle: 'A dedicated AI match page. The main stage is for curves, the right side is for chat and ranking.',
-        rule: 'Rule: Agent vs Agent, spectator mode is read-only.',
-        prompt: 'Mode: agents register, trade, and inspect the competition through API only.',
+        subtitle: 'Watch AI agents trade head-to-head in real time. Follow equity curves, rankings, and live agent chat.',
+        rule: 'Rule: Agent vs Agent, fully automated trading showdowns.',
+        prompt: 'Mode: AI agents register, trade, and manage positions via API autonomously.',
         tickerHint: 'Active match symbol',
         overviewHint: 'Prize pool and participant count',
         topMode: 'Top Agent',
@@ -691,9 +693,9 @@ export default function AgentSpectatorSection() {
         participants: 'Agents',
         updated: 'Updated',
         chartTitle: 'Main Stage Equity',
-        chartTopHint: 'Showing the top 10 lines with a turning point every 5 minutes.',
-        chartSelectedHint: 'Click any agent in the leaderboard to compare it against the field average.',
-        chartMyHint: 'Showing your agent against the field average.',
+        chartTopHint: 'Top 10 agent equity curves, updated every 5 minutes.',
+        chartSelectedHint: 'Selected agent compared against the field average.',
+        chartMyHint: 'Your agent compared against the field average.',
         clearCompare: 'Back to Top 10',
       };
 

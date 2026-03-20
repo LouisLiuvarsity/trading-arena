@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useT } from '@/lib/i18n';
 import { Link } from 'wouter';
-import { Trophy, Menu } from 'lucide-react';
+import { Trophy, Menu, ChevronDown } from 'lucide-react';
 import { useIsMobile } from '@/hooks/useMobile';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/sheet';
 import LanguageToggle from '@/components/LanguageToggle';
 
-const NAV_LINKS = [
+const ANCHOR_LINKS = [
   { key: 'land.nav.competitions', href: '#competitions' },
   { key: 'land.nav.about', href: '#how-it-works' },
   { key: 'land.nav.competitionRules', href: '#rules' },
@@ -25,6 +25,52 @@ const NAV_LINKS = [
 function scrollTo(href: string) {
   const el = document.querySelector(href);
   if (el) el.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ─── Explore Dropdown (Desktop) ─────────────────────────────
+function ExploreDropdown() {
+  const { t } = useT();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1 h-8 px-3 rounded-md text-[13px] font-medium text-[#848E9C] hover:text-[#D1D4DC] hover:bg-white/[0.04] transition-colors"
+      >
+        {t('land.nav.explore') || 'Explore'}
+        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 mt-2 w-48 rounded-xl border border-white/[0.08] bg-[#141820]/98 backdrop-blur-lg shadow-[0_16px_48px_rgba(0,0,0,0.5)] py-1.5 z-50">
+          {ANCHOR_LINKS.map(({ key, href }) => (
+            <button
+              key={key}
+              onClick={() => {
+                setOpen(false);
+                setTimeout(() => scrollTo(href), 100);
+              }}
+              className="block w-full text-left px-4 py-2.5 text-[13px] text-[#D1D4DC] hover:text-white hover:bg-white/[0.06] transition-colors"
+            >
+              {t(key)}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── Mobile Nav ──────────────────────────────────────────────
@@ -49,24 +95,31 @@ function MobileNav() {
         </SheetHeader>
 
         <div className="mt-4 px-2">
-          {/* Nav links */}
-          {NAV_LINKS.map(({ key, href }) => (
-            <button
-              key={key}
-              onClick={() => { setOpen(false); setTimeout(() => scrollTo(href), 150); }}
-              className="block w-full text-left py-3 text-[13px] text-[#D1D4DC] hover:text-[#F0B90B] transition-colors border-b border-white/[0.05]"
-            >
-              {t(key)}
-            </button>
-          ))}
+          {/* Anchor links */}
+          <div className="mb-3">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-[#5E6673] px-1 mb-2">
+              {lang === 'zh' ? '页面导航' : 'On this page'}
+            </div>
+            {ANCHOR_LINKS.map(({ key, href }) => (
+              <button
+                key={key}
+                onClick={() => { setOpen(false); setTimeout(() => scrollTo(href), 150); }}
+                className="block w-full text-left py-2.5 px-1 text-[13px] text-[#D1D4DC] hover:text-[#F0B90B] transition-colors"
+              >
+                {t(key)}
+              </button>
+            ))}
+          </div>
+
+          <div className="border-t border-white/[0.06] my-3" />
 
           {/* Language */}
-          <div className="mt-4">
+          <div className="mb-4">
             <LanguageToggle />
           </div>
 
           {/* CTA */}
-          <div className="mt-6 space-y-2">
+          <div className="space-y-2">
             {isAuthenticated ? (
               <>
                 <Link
@@ -89,13 +142,6 @@ function MobileNav() {
                   className="block w-full text-center py-2.5 border border-white/[0.08] text-[#D1D4DC] rounded-lg text-[13px] font-medium"
                 >
                   {lang === 'zh' ? 'AI管理中心' : 'Agent Center'}
-                </Link>
-                <Link
-                  href="/profile"
-                  onClick={() => setOpen(false)}
-                  className="block w-full text-center py-2.5 border border-white/[0.08] text-[#D1D4DC] rounded-lg text-[13px] font-medium"
-                >
-                  {lang === 'zh' ? '个人资料' : 'Profile'}
                 </Link>
                 <button
                   type="button"
@@ -168,15 +214,13 @@ export default function LandingNavbar() {
         {!isMobile && (
           <>
             <nav className="hidden md:flex items-center gap-1">
-              {NAV_LINKS.map(({ key, href }) => (
-                <button
-                  key={key}
-                  onClick={() => scrollTo(href)}
-                  className="h-8 px-3 rounded-md text-[13px] font-medium text-[#848E9C] hover:text-[#D1D4DC] hover:bg-white/[0.04] transition-colors"
-                >
-                  {t(key)}
-                </button>
-              ))}
+              <ExploreDropdown />
+              <Link
+                href="/ai-arena"
+                className="h-8 px-3 rounded-md text-[13px] font-medium text-[#F0B90B] hover:text-[#F8D57A] hover:bg-[#F0B90B]/[0.06] transition-colors flex items-center"
+              >
+                {lang === 'zh' ? '围观AI比赛' : 'AI Arena'}
+              </Link>
             </nav>
 
             {/* Right side */}
@@ -184,12 +228,6 @@ export default function LandingNavbar() {
               <LanguageToggle />
               {isAuthenticated ? (
                 <>
-                  <Link
-                    href="/ai-arena"
-                    className="px-4 py-1.5 text-[12px] font-medium text-[#F0B90B] hover:text-[#F8D57A] transition-colors"
-                  >
-                    {lang === 'zh' ? '围观AI比赛' : 'AI Live'}
-                  </Link>
                   <Link
                     href="/hub"
                     className="px-4 py-1.5 text-[12px] font-medium text-[#D1D4DC] hover:text-white transition-colors"
@@ -202,12 +240,6 @@ export default function LandingNavbar() {
                   >
                     {lang === 'zh' ? 'AI管理中心' : 'Agent Center'}
                   </Link>
-                  <Link
-                    href="/profile"
-                    className="px-4 py-1.5 text-[12px] font-medium text-[#D1D4DC] hover:text-white transition-colors"
-                  >
-                    {lang === 'zh' ? '个人资料' : 'Profile'}
-                  </Link>
                   <button
                     type="button"
                     onClick={logout}
@@ -218,12 +250,6 @@ export default function LandingNavbar() {
                 </>
               ) : (
                 <>
-                  <Link
-                    href="/ai-arena"
-                    className="px-4 py-1.5 text-[12px] font-medium text-[#F0B90B] hover:text-[#F8D57A] transition-colors"
-                  >
-                    {lang === 'zh' ? '围观AI比赛' : 'AI Live'}
-                  </Link>
                   <Link
                     href="/agent-join"
                     className="px-4 py-1.5 text-[12px] font-medium text-[#D1D4DC] hover:text-white transition-colors"

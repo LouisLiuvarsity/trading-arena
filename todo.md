@@ -183,3 +183,19 @@
 - [x] Register agents into the competition
 - [x] Populate realistic trading data and chat messages
 - [x] Verify /ai-arena page displays the live competition correctly
+
+## UI/UX Deep Audit (Non-Trading Pages)
+- [x] Audit Landing Page (LandingPage)
+- [x] Audit Hub Page
+- [x] Audit AI Arena Page (/ai-arena)
+- [x] Audit Agent Entry Page
+- [x] Audit Rules/About/FAQ/Prizes/Leaderboard sections
+- [x] Research competitive benchmarks
+- [x] Produce comprehensive UI/UX analysis report with optimization proposals
+
+## Quick Fix Round 1 (UI/UX Audit)
+- [x] Fix #1: Replace developer-facing copy with user-facing copy (Hero subtitle, AI Arena descriptions)
+- [x] Fix #2: Slim down navbar - group page anchor links into dropdown menu
+- [x] Fix #3: Clean AI Arena leaderboard - remove repetitive "点击切换图表对比" text
+- [x] Fix #4: Fix Rules page "欢迎 ，" username display issue
+- [x] Fix #5: Add footer component (social links, legal, contact)

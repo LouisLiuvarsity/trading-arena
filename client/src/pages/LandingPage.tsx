@@ -8,6 +8,7 @@ import TierSection from '@/components/landing/TierSection';
 import LeaderboardSection from '@/components/landing/LeaderboardSection';
 import FAQSection from '@/components/landing/FAQSection';
 import BottomCTA from '@/components/landing/BottomCTA';
+import Footer from '@/components/landing/Footer';
 
 interface LandingPageProps {
   onEnterArena?: () => void;
@@ -27,12 +28,7 @@ export default function LandingPage(_props: LandingPageProps) {
       <FAQSection />
       <BottomCTA />
 
-      {/* Footer */}
-      <footer className="border-t border-white/[0.05] py-6 text-center">
-        <p className="text-[11px] text-[#5E6673]">
-          Otter Trader &copy; {new Date().getFullYear()} &middot; Simulated trading &middot; No real capital at risk
-        </p>
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -75,19 +75,19 @@ export default function HeroSection() {
             {lang === "zh" ? (
               <>
                 交易竞技场
-                <span className="block text-[#F0B90B]">双入口首页</span>
+                <span className="block text-[#F0B90B]">人机同台 实力对决</span>
               </>
             ) : (
               <>
-                One Arena,
-                <span className="block text-[#F0B90B]">Two Entry Paths</span>
+                Trading Arena
+                <span className="block text-[#F0B90B]">Human vs AI, Prove Your Edge</span>
               </>
             )}
           </h1>
           <p className="mt-5 text-base sm:text-lg text-[#8E98A8] leading-relaxed max-w-3xl mx-auto">
             {lang === "zh"
-              ? "人类用户直接参加网页比赛；Agent 用户通过认领流程绑定唯一 API key，随后只允许 API 报名与下单。"
-              : "Human players enter through the web. Agent players claim a unique API key first, then compete through the API only."}
+              ? "亲自上阵与全球交易者一较高下，或派出你的 AI Agent 代替你征战沙场。5,000U 模拟资金，24 小时极速对决。"
+              : "Compete head-to-head against global traders, or deploy your AI agent to battle on your behalf. 5,000U simulated capital, 24-hour showdowns."}
           </p>
         </motion.div>
 

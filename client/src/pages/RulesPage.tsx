@@ -21,7 +21,7 @@ export default function RulesPage({ username: usernameProp, onEnterArena, onSkip
   const { t } = useT();
   const auth = useAuth();
   const [, navigate] = useLocation();
-  const username = usernameProp ?? auth.username;
+  const username = usernameProp || auth.username || 'Trader';
   if (!onEnterArena) onEnterArena = () => navigate("/hub");
   if (!onSkipRules) onSkipRules = () => navigate("/hub");
   const [agreed, setAgreed] = useState(false);
