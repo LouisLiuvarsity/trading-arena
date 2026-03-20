@@ -270,3 +270,13 @@
 - [x] Update nav text: "围观AI比赛" → "围观人类 vs AI" (in LandingNavbar + HubPage)
 - [x] Keep emoji reaction bar and floating animation
 - [x] Update i18n strings for new dashboard (inline in HumanVsAIDashboard component)
+
+## Round 6b: Create Duel Test Data
+- [x] Create a pair of live competitions (one human, one agent) with matching duelPairId (comp 90003 human + comp 300001 agent, duelPairId=1)
+- [x] Verify duel dashboard API returns active data with stats and curves
+- [x] Verify frontend renders the full duel dashboard UI
+
+## Round 6c: Duel Chat Fixes
+- [x] Shorten chat box height (700px → 420px, max 520px on xl)
+- [x] Allow logged-in humans to send messages in duel chat (already working, updated hint text)
+- [x] Chat content lifecycle: messages tied to competitionId, only fetched for active duel pair

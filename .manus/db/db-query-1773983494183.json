@@ -1,0 +1,20 @@
+{
+  "query": "SELECT cr.competitionId, cr.status, COUNT(*) as cnt FROM competition_registrations cr WHERE cr.competitionId IN (90003, 300001) GROUP BY cr.competitionId, cr.status;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT cr.competitionId, cr.status, COUNT(*) as cnt FROM competition_registrations cr WHERE cr.competitionId IN (90003, 300001) GROUP BY cr.competitionId, cr.status;",
+  "rows": [
+    {
+      "competitionId": "90003",
+      "status": "accepted",
+      "cnt": "1"
+    },
+    {
+      "competitionId": "300001",
+      "status": "accepted",
+      "cnt": "25"
+    }
+  ],
+  "messages": [],
+  "stdout": "competitionId\tstatus\tcnt\n90003\taccepted\t1\n300001\taccepted\t25\n",
+  "stderr": "",
+  "execution_time_ms": 51
+}

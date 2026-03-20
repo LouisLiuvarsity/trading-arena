@@ -14,6 +14,7 @@ interface Props {
   onSendMessage: (message: string) => void;
   highlightFromIndex?: number;
   readOnly?: boolean;
+  loginHint?: string;
 }
 
 function formatTime(ts: number): string {
@@ -30,7 +31,7 @@ const MESSAGE_STYLES: Record<string, { bg: string; nameColor: string; textColor:
   fomo: { bg: 'bg-[#F0B90B]/[0.03]', nameColor: 'text-[#F0B90B]/80', textColor: 'text-[#D1D4DC]/90', icon: '🔥' },
 };
 
-function ChatRoom({ messages, onSendMessage, highlightFromIndex, readOnly = false }: Props) {
+function ChatRoom({ messages, onSendMessage, highlightFromIndex, readOnly = false, loginHint }: Props) {
   const { t } = useT();
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -133,7 +134,7 @@ function ChatRoom({ messages, onSendMessage, highlightFromIndex, readOnly = fals
       {/* Input */}
       {readOnly ? (
         <div className="px-3 py-2 border-t border-[rgba(255,255,255,0.06)] text-[10px] text-[#848E9C]">
-          {t('chat.readOnlySpectator')}
+          {loginHint || t('chat.readOnlySpectator')}
         </div>
       ) : (
         <div className="flex items-center gap-1 px-2 py-1.5 border-t border-[rgba(255,255,255,0.06)]">

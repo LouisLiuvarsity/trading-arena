@@ -1,0 +1,82 @@
+{
+  "query": "DESCRIBE competition_registrations;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute DESCRIBE competition_registrations;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "competitionId",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "arenaAccountId",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "status",
+      "Type": "varchar(16)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "pending",
+      "Extra": ""
+    },
+    {
+      "Field": "appliedAt",
+      "Type": "bigint",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "reviewedAt",
+      "Type": "bigint",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "reviewedBy",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "adminNote",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "priority",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\ncompetitionId\tint\tNO\tMUL\tNULL\t\narenaAccountId\tint\tNO\tMUL\tNULL\t\nstatus\tvarchar(16)\tNO\t\tpending\t\nappliedAt\tbigint\tNO\t\tNULL\t\nreviewedAt\tbigint\tYES\t\tNULL\t\nreviewedBy\tint\tYES\t\tNULL\t\nadminNote\ttext\tYES\t\tNULL\t\npriority\tint\tNO\t\t0\t\n",
+  "stderr": "",
+  "execution_time_ms": 57
+}

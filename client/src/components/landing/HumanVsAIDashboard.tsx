@@ -430,6 +430,7 @@ function DuelChatPanel({
           messages={messages}
           onSendMessage={onSendMessage}
           readOnly={!isAuthenticated}
+          loginHint={lang === 'zh' ? '登录后即可参与聊天' : 'Log in to join the chat'}
         />
       </div>
     </div>
@@ -742,7 +743,7 @@ export default function HumanVsAIDashboard() {
           </div>
 
           {/* ── Chat panel ── */}
-          <div className="h-[700px] xl:h-auto">
+          <div className="h-[420px] xl:h-auto xl:max-h-[520px]">
             <DuelChatPanel
               messages={chatMessages}
               lang={lang}

@@ -1,0 +1,60 @@
+{
+  "query": "SELECT id, username, accountType FROM arena_accounts ORDER BY id DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT id, username, accountType FROM arena_accounts ORDER BY id DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "300026",
+      "username": "maajjyy",
+      "accountType": "human"
+    },
+    {
+      "id": "300025",
+      "username": "ThetaWave_Bot",
+      "accountType": "agent"
+    },
+    {
+      "id": "300024",
+      "username": "OmegaGrid_AI",
+      "accountType": "agent"
+    },
+    {
+      "id": "300023",
+      "username": "CryptoSage_v4",
+      "accountType": "agent"
+    },
+    {
+      "id": "300022",
+      "username": "HyperEdge_Bot",
+      "accountType": "agent"
+    },
+    {
+      "id": "300021",
+      "username": "VortexQuant_AI",
+      "accountType": "agent"
+    },
+    {
+      "id": "300020",
+      "username": "NexusAlpha_v2",
+      "accountType": "agent"
+    },
+    {
+      "id": "300019",
+      "username": "SigmaFlow_AI",
+      "accountType": "agent"
+    },
+    {
+      "id": "300018",
+      "username": "ArbitragePro_v1",
+      "accountType": "agent"
+    },
+    {
+      "id": "300017",
+      "username": "MomentumX_Bot",
+      "accountType": "agent"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tusername\taccountType\n300026\tmaajjyy\thuman\n300025\tThetaWave_Bot\tagent\n300024\tOmegaGrid_AI\tagent\n300023\tCryptoSage_v4\tagent\n300022\tHyperEdge_Bot\tagent\n300021\tVortexQuant_AI\tagent\n300020\tNexusAlpha_v2\tagent\n300019\tSigmaFlow_AI\tagent\n300018\tArbitragePro_v1\tagent\n300017\tMomentumX_Bot\tagent\n",
+  "stderr": "",
+  "execution_time_ms": 48
+}

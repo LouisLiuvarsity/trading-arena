@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE competitions SET duelPairId = 1 WHERE id IN (90003, 300001);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute UPDATE competitions SET duelPairId = 1 WHERE id IN (90003, 300001);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 60
+}

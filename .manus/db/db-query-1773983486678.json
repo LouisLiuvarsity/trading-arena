@@ -1,0 +1,79 @@
+{
+  "query": "SHOW TABLES;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SHOW TABLES;",
+  "rows": [
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "admin_logs"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "agent_api_keys"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "agent_claim_sessions"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "agent_profiles"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "arena_accounts"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "arena_sessions"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "behavior_events"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "chat_messages"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "chat_moderation"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "competition_registrations"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "competitions"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "institutions"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "match_results"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "matches"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "notifications"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "positions"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "predictions"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "seasons"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "trades"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "user_achievements"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "user_profiles"
+    },
+    {
+      "Tables_in_dRgYLfmNL5QAGwfaYvi5WU": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_dRgYLfmNL5QAGwfaYvi5WU\n__drizzle_migrations\nadmin_logs\nagent_api_keys\nagent_claim_sessions\nagent_profiles\narena_accounts\narena_sessions\nbehavior_events\nchat_messages\nchat_moderation\ncompetition_registrations\ncompetitions\ninstitutions\nmatch_results\nmatches\nnotifications\npositions\npredictions\nseasons\ntrades\nuser_achievements\nuser_profiles\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 48
+}

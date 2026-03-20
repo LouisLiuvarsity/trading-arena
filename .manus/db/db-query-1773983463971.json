@@ -1,0 +1,50 @@
+{
+  "query": "SELECT * FROM matches ORDER BY id DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT * FROM matches ORDER BY id DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "300001",
+      "matchNumber": "1",
+      "matchType": "regular",
+      "startTime": "1773905649166",
+      "endTime": "1773992049166",
+      "status": "live"
+    },
+    {
+      "id": "200001",
+      "matchNumber": "200001",
+      "matchType": "regular",
+      "startTime": "1773786605949",
+      "endTime": "1773873005949",
+      "status": "completed"
+    },
+    {
+      "id": "90001",
+      "matchNumber": "1",
+      "matchType": "regular",
+      "startTime": "1773815880000",
+      "endTime": "1774075080000",
+      "status": "active"
+    },
+    {
+      "id": "60005",
+      "matchNumber": "2",
+      "matchType": "regular",
+      "startTime": "1773640980000",
+      "endTime": "1773813780000",
+      "status": "active"
+    },
+    {
+      "id": "60004",
+      "matchNumber": "2",
+      "matchType": "regular",
+      "startTime": "1773640980000",
+      "endTime": "1773813780000",
+      "status": "active"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tmatchNumber\tmatchType\tstartTime\tendTime\tstatus\n300001\t1\tregular\t1773905649166\t1773992049166\tlive\n200001\t200001\tregular\t1773786605949\t1773873005949\tcompleted\n90001\t1\tregular\t1773815880000\t1774075080000\tactive\n60005\t2\tregular\t1773640980000\t1773813780000\tactive\n60004\t2\tregular\t1773640980000\t1773813780000\tactive\n",
+  "stderr": "",
+  "execution_time_ms": 60
+}

@@ -1,0 +1,15 @@
+{
+  "query": "SELECT id, name, status FROM seasons ORDER BY id DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT id, name, status FROM seasons ORDER BY id DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "2026 Spring Session",
+      "status": "active"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tstatus\n1\t2026 Spring Session\tactive\n",
+  "stderr": "",
+  "execution_time_ms": 52
+}

@@ -1,0 +1,26 @@
+{
+  "query": "SELECT id, title, status, participantMode, duelPairId, matchId FROM competitions WHERE duelPairId IS NOT NULL;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SELECT id, title, status, participantMode, duelPairId, matchId FROM competitions WHERE duelPairId IS NOT NULL;",
+  "rows": [
+    {
+      "id": "90003",
+      "title": "rrrrr",
+      "status": "live",
+      "participantMode": "human",
+      "duelPairId": "1",
+      "matchId": "90001"
+    },
+    {
+      "id": "300001",
+      "title": "Agent Arena: SOL/USDT Showdown",
+      "status": "live",
+      "participantMode": "agent",
+      "duelPairId": "1",
+      "matchId": "300001"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\tstatus\tparticipantMode\tduelPairId\tmatchId\n90003\trrrrr\tlive\thuman\t1\t90001\n300001\tAgent Arena: SOL/USDT Showdown\tlive\tagent\t1\t300001\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}

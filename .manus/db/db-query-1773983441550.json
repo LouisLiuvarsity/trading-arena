@@ -1,0 +1,282 @@
+{
+  "query": "DESCRIBE competitions;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute DESCRIBE competitions;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "seasonId",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "title",
+      "Type": "varchar(256)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "slug",
+      "Type": "varchar(64)",
+      "Null": "NO",
+      "Key": "UNI",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "description",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "competitionNumber",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "competitionType",
+      "Type": "varchar(16)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "regular",
+      "Extra": ""
+    },
+    {
+      "Field": "status",
+      "Type": "varchar(24)",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": "draft",
+      "Extra": ""
+    },
+    {
+      "Field": "matchId",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "maxParticipants",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "50",
+      "Extra": ""
+    },
+    {
+      "Field": "minParticipants",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "5",
+      "Extra": ""
+    },
+    {
+      "Field": "registrationOpenAt",
+      "Type": "bigint",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "registrationCloseAt",
+      "Type": "bigint",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "startTime",
+      "Type": "bigint",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "endTime",
+      "Type": "bigint",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "symbol",
+      "Type": "varchar(16)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "SOLUSDT",
+      "Extra": ""
+    },
+    {
+      "Field": "startingCapital",
+      "Type": "double",
+      "Null": "NO",
+      "Key": "",
+      "Default": "5000",
+      "Extra": ""
+    },
+    {
+      "Field": "maxTradesPerMatch",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "40",
+      "Extra": ""
+    },
+    {
+      "Field": "closeOnlySeconds",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "1800",
+      "Extra": ""
+    },
+    {
+      "Field": "feeRate",
+      "Type": "double",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0.0005",
+      "Extra": ""
+    },
+    {
+      "Field": "prizePool",
+      "Type": "double",
+      "Null": "NO",
+      "Key": "",
+      "Default": "500",
+      "Extra": ""
+    },
+    {
+      "Field": "prizeTableJson",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "pointsTableJson",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "requireMinSeasonPoints",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "requireMinTier",
+      "Type": "varchar(16)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "inviteOnly",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "createdBy",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "createdAt",
+      "Type": "bigint",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "updatedAt",
+      "Type": "bigint",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "archived",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "coverImageUrl",
+      "Type": "varchar(512)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "participantMode",
+      "Type": "varchar(16)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "human",
+      "Extra": ""
+    },
+    {
+      "Field": "rulesDetail",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "duelPairId",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\nseasonId\tint\tNO\tMUL\tNULL\t\ntitle\tvarchar(256)\tNO\t\tNULL\t\nslug\tvarchar(64)\tNO\tUNI\tNULL\t\ndescription\ttext\tYES\t\tNULL\t\ncompetitionNumber\tint\tNO\t\tNULL\t\ncompetitionType\tvarchar(16)\tNO\t\tregular\t\nstatus\tvarchar(24)\tNO\tMUL\tdraft\t\nmatchId\tint\tYES\t\tNULL\t\nmaxParticipants\tint\tNO\t\t50\t\nminParticipants\tint\tNO\t\t5\t\nregistrationOpenAt\tbigint\tYES\t\tNULL\t\nregistrationCloseAt\tbigint\tYES\t\tNULL\t\nstartTime\tbigint\tNO\tMUL\tNULL\t\nendTime\tbigint\tNO\t\tNULL\t\nsymbol\tvarchar(16)\tNO\t\tSOLUSDT\t\nstartingCapital\tdouble\tNO\t\t5000\t\nmaxTradesPerMatch\tint\tNO\t\t40\t\ncloseOnlySeconds\tint\tNO\t\t1800\t\nfeeRate\tdouble\tNO\t\t0.0005\t\nprizePool\tdouble\tNO\t\t500\t\nprizeTableJson\ttext\tYES\t\tNULL\t\npointsTableJson\ttext\tYES\t\tNULL\t\nrequireMinSeasonPoints\tint\tNO\t\t0\t\nrequireMinTier\tvarchar(16)\tYES\t\tNULL\t\ninviteOnly\tint\tNO\t\t0\t\ncreatedBy\tint\tYES\t\tNULL\t\ncreatedAt\tbigint\tNO\t\tNULL\t\nupdatedAt\tbigint\tNO\t\tNULL\t\narchived\tint\tNO\tMUL\t0\t\ncoverImageUrl\tvarchar(512)\tYES\t\tNULL\t\nparticipantMode\tvarchar(16)\tNO\t\thuman\t\nrulesDetail\ttext\tYES\t\tNULL\t\nduelPairId\tint\tYES\tMUL\tNULL\t\n",
+  "stderr": "",
+  "execution_time_ms": 70
+}
