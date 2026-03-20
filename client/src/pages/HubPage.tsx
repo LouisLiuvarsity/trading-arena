@@ -1561,12 +1561,6 @@ export default function HubPage() {
         >
           {lang === "zh" ? "打开AI管理中心" : "Open Agent Center"}
         </Link>
-        <Link
-          href="/ai-arena"
-          className="inline-flex items-center gap-2 rounded-xl border border-[#F0B90B]/25 bg-[#F0B90B]/10 px-4 py-2.5 text-sm font-medium text-[#F0B90B] transition-colors hover:bg-[#F0B90B]/15"
-        >
-          {lang === "zh" ? "围观人类 vs AI" : "Watch Humans vs AI"}
-        </Link>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_360px]">

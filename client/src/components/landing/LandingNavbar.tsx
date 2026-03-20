@@ -121,25 +121,11 @@ function MobileNav() {
             {isAuthenticated ? (
               <>
                 <Link
-                  href="/ai-arena"
-                  onClick={() => setOpen(false)}
-                  className="block w-full text-center py-2.5 border border-[#F0B90B]/30 text-[#F0B90B] rounded-lg text-[13px] font-medium"
-                >
-                  {lang === 'zh' ? '围观人类 vs AI' : 'Watch Humans vs AI'}
-                </Link>
-                <Link
                   href="/hub"
                   onClick={() => setOpen(false)}
                   className="block w-full text-center py-2.5 bg-[#F0B90B] text-[#0B0E11] rounded-lg text-[13px] font-bold"
                 >
                   {lang === 'zh' ? '进入 Hub' : 'Open Hub'}
-                </Link>
-                <Link
-                  href="/agents"
-                  onClick={() => setOpen(false)}
-                  className="block w-full text-center py-2.5 border border-white/[0.08] text-[#D1D4DC] rounded-lg text-[13px] font-medium"
-                >
-                  {lang === 'zh' ? 'AI管理中心' : 'Agent Center'}
                 </Link>
                 <button
                   type="button"
@@ -159,7 +145,7 @@ function MobileNav() {
                   onClick={() => setOpen(false)}
                   className="block w-full text-center py-2.5 border border-[#F0B90B]/30 text-[#F0B90B] rounded-lg text-[13px] font-medium"
                 >
-                  {lang === 'zh' ? '围观人类 vs AI' : 'Watch Humans vs AI'}
+                  {lang === 'zh' ? 'VS 对决' : 'VS Arena'}
                 </Link>
                 <Link
                   href="/agent-join"
@@ -217,7 +203,7 @@ export default function LandingNavbar() {
                 href="/ai-arena"
                 className="h-8 px-3 rounded-md text-[13px] font-medium text-[#F0B90B] hover:text-[#F8D57A] hover:bg-[#F0B90B]/[0.06] transition-colors flex items-center"
               >
-                {lang === 'zh' ? '围观人类 vs AI' : 'Humans vs AI'}
+                {lang === 'zh' ? 'VS 对决' : 'VS Arena'}
               </Link>
               <Link
                 href="/past-competitions"
@@ -234,15 +220,9 @@ export default function LandingNavbar() {
                 <>
                   <Link
                     href="/hub"
-                    className="px-4 py-1.5 text-[12px] font-medium text-[#D1D4DC] hover:text-white transition-colors"
+                    className="px-4 py-1.5 bg-[#F0B90B] hover:bg-[#F0B90B]/90 text-[#0B0E11] rounded-lg text-[12px] font-bold transition-colors"
                   >
                     {lang === 'zh' ? '进入 Hub' : 'Open Hub'}
-                  </Link>
-                  <Link
-                    href="/agents"
-                    className="px-4 py-1.5 text-[12px] font-medium text-[#D1D4DC] hover:text-white transition-colors"
-                  >
-                    {lang === 'zh' ? 'AI管理中心' : 'Agent Center'}
                   </Link>
                   <button
                     type="button"

@@ -546,7 +546,8 @@ export default function HumanVsAIDashboard() {
   }
 
   const { humanComp, aiComp, stats, humanTop10, aiTop10, chatMessages, refreshedAt } = dashboardQuery.data;
-  const backHref = isAuthenticated ? '/hub' : '/';
+  const showBackButton = !isAuthenticated; // Authenticated users have AppShell nav, no need for back button
+  const backHref = '/';
   const startTime = Math.min(humanComp.startTime, aiComp.startTime);
   const endTime = Math.max(humanComp.endTime, aiComp.endTime);
   const timeTicks = buildTimeTicks(startTime, endTime);
@@ -562,15 +563,17 @@ export default function HumanVsAIDashboard() {
       </div>
 
       <div className="relative mx-auto max-w-[1680px] px-3 py-4 sm:px-5 lg:px-6">
-        {/* Top bar: back + refresh */}
-        <div className="mb-3 flex items-center justify-between">
-          <Link
-            href={backHref}
-            className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#9CA5B5] transition-colors hover:text-white"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            {copy.back}
-          </Link>
+        {/* Top bar: back (unauthenticated only) + refresh */}
+        <div className={`mb-3 flex items-center ${showBackButton ? 'justify-between' : 'justify-end'}`}>
+          {showBackButton && (
+            <Link
+              href={backHref}
+              className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#9CA5B5] transition-colors hover:text-white"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              {copy.back}
+            </Link>
+          )}
           <div className="inline-flex items-center gap-1.5 text-[11px] text-[#5E6673]">
             <Radio className="h-3 w-3 text-[#0ECB81]" />
             {copy.refresh}

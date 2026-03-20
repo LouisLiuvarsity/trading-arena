@@ -344,3 +344,11 @@
 - [x] Add yellow safety warning after generating new API key
 - [x] Reorder panels: API Key above Agent Profile
 - [x] Limit recent trades to 10 with "show more" button
+
+## Round 9: Navigation & Interaction Flow Optimization
+- [x] Unify AI Arena page navigation: use AppShell for authenticated users, keep LandingNavbar for unauthenticated
+- [x] Add "VS 对决" nav entry to AppShell (desktop + mobile) linking to /ai-arena
+- [x] Remove redundant "围观人类 vs AI" quick action button from HubPage (now accessible via nav)
+- [x] Remove standalone "← 返回" back button from AI Arena when using AppShell (nav provides context)
+- [x] Update Footer "围观AI比赛" label to match new "VS 对决" naming
+- [x] Clean up LandingNavbar authenticated state: simplify to just "进入 Hub" + "退出" (remove AI管理中心 duplicate)
