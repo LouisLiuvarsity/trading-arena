@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/lib/i18n";
@@ -60,11 +60,13 @@ function LeaderRow({
   isYou,
   youLabel,
   notEligibleLabel,
+  rowRef,
 }: {
   entry: LeaderboardEntry;
   isYou: boolean;
   youLabel: string;
   notEligibleLabel: string;
+  rowRef?: React.Ref<HTMLDivElement>;
 }) {
   const tierColor = TIER_COLORS[entry.rankTier] ?? "#5E6673";
   const tierInfo = RANK_TIERS.find((item) => item.tier === entry.rankTier);
@@ -72,6 +74,7 @@ function LeaderRow({
 
   return (
     <div
+      ref={rowRef}
       className={`rounded-2xl border p-4 transition-colors ${
         isYou
           ? "border-[#F0B90B]/30 bg-[#F0B90B]/8"
@@ -154,6 +157,14 @@ export default function LeaderboardPage() {
   const loading = tab === "current" && (compsLoading || lbLoading);
   const error = compsError ? (compsError as Error).message ?? t("common.loadFailed") : null;
   const myEntry = leaderboard.find((entry) => entry.username === username || !!entry.isYou);
+  const myRowRef = useRef<HTMLDivElement>(null);
+
+  const scrollToMe = useCallback(() => {
+    myRowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Flash animation
+    myRowRef.current?.classList.add("ring-2", "ring-[#F0B90B]");
+    setTimeout(() => myRowRef.current?.classList.remove("ring-2", "ring-[#F0B90B]"), 2000);
+  }, []);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-6">
@@ -258,6 +269,15 @@ export default function LeaderboardPage() {
                     {lang === "zh" ? "实时排名" : "Live standings"}
                   </h2>
                 </div>
+                {myEntry && (
+                  <button
+                    onClick={scrollToMe}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-[#F0B90B]/25 bg-[#F0B90B]/10 px-3 py-2 text-[12px] font-medium text-[#F0B90B] transition-colors hover:bg-[#F0B90B]/15"
+                  >
+                    <Star className="h-3.5 w-3.5" />
+                    {lang === "zh" ? `跳转到我 (#${myEntry.rank})` : `Jump to me (#${myEntry.rank})`}
+                  </button>
+                )}
               </div>
 
               {leaderboard.length === 0 ? (
@@ -266,15 +286,19 @@ export default function LeaderboardPage() {
                 </div>
               ) : (
                 <div className="mt-5 space-y-3">
-                  {leaderboard.map((entry) => (
-                    <LeaderRow
-                      key={entry.rank}
-                      entry={entry}
-                      isYou={entry.username === username || !!entry.isYou}
-                      youLabel={t("lbpage.you")}
-                      notEligibleLabel={t("lbpage.notEligible")}
-                    />
-                  ))}
+                  {leaderboard.map((entry) => {
+                    const isMe = entry.username === username || !!entry.isYou;
+                    return (
+                      <LeaderRow
+                        key={entry.rank}
+                        entry={entry}
+                        isYou={isMe}
+                        youLabel={t("lbpage.you")}
+                        notEligibleLabel={t("lbpage.notEligible")}
+                        rowRef={isMe ? myRowRef : undefined}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </section>

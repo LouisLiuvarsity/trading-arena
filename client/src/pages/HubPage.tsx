@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "wouter";
 import type {
   CompetitionStatus,
@@ -1148,6 +1148,7 @@ function OverviewRail({
   recentResults,
   unreadNotificationCount,
   locale,
+  lang,
   t,
   copy,
 }: {
@@ -1156,9 +1157,11 @@ function OverviewRail({
   recentResults: HubData["recentResults"];
   unreadNotificationCount: number;
   locale: string;
+  lang: string;
   t: Translator;
   copy: HubPageCopy;
 }) {
+  const [resultsExpanded, setResultsExpanded] = useState(false);
   return (
     <div className="space-y-6">
       <section className={`${SECTION_CLASS} p-5`}>
@@ -1334,7 +1337,7 @@ function OverviewRail({
             label={t("nav.leaderboard")}
           />
           <QuickActionLink
-            href="/history"
+            href="/profile?tab=history"
             icon={<History className="h-4 w-4 text-[#7AA2F7]" />}
             label={copy.historyAction}
           />
@@ -1349,7 +1352,7 @@ function OverviewRail({
 
         <div className="mt-5 space-y-3">
           {recentResults.length > 0 ? (
-            recentResults.slice(0, 4).map((result) => (
+            recentResults.slice(0, resultsExpanded ? 4 : 1).map((result) => (
               <Link
                 key={result.competitionId}
                 href={`/results/${result.competitionId}`}
@@ -1396,6 +1399,16 @@ function OverviewRail({
               <Trophy className="mx-auto h-8 w-8 text-[#7D8899]" />
               <p className="mt-3 text-sm text-[#8F98A8]">{copy.noRecentResultsHint}</p>
             </div>
+          )}
+          {recentResults.length > 1 && (
+            <button
+              onClick={() => setResultsExpanded(!resultsExpanded)}
+              className="w-full rounded-xl border border-white/[0.06] bg-white/[0.02] py-2 text-[12px] font-medium text-[#8D97A8] transition-colors hover:bg-white/[0.04] hover:text-white"
+            >
+              {resultsExpanded
+                ? (lang === 'zh' ? '收起' : 'Show less')
+                : (lang === 'zh' ? `展开全部 (${Math.min(recentResults.length, 4)})` : `Show all (${Math.min(recentResults.length, 4)})`)}
+            </button>
           )}
         </div>
       </section>
@@ -1668,6 +1681,7 @@ export default function HubPage() {
           recentResults={recentResults}
           unreadNotificationCount={unreadNotificationCount}
           locale={locale}
+          lang={lang}
           t={t}
           copy={copy}
         />

@@ -22,8 +22,7 @@ import CompetitionSpectatorPage from "./pages/CompetitionSpectatorPage";
 import ResultsPage from "./pages/ResultsPage";
 import ProfilePage from "./pages/ProfilePage";
 import AgentCenterPage from "./pages/AgentCenterPage";
-import ProfileEditPage from "./pages/ProfileEditPage";
-import MatchHistoryPage from "./pages/MatchHistoryPage";
+import { ProfileEditRedirect, ProfileAnalyticsRedirect, ProfileAchievementsRedirect, MatchHistoryRedirect } from "./pages/ProfileRedirects";
 import LeaderboardPage from "./pages/LeaderboardPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import PublicProfilePage from "./pages/PublicProfilePage";
@@ -31,8 +30,7 @@ import PublicLeaderboardPage from "./pages/PublicLeaderboardPage";
 import PastCompetitionsPage from "./pages/PastCompetitionsPage";
 import StatsOverviewPage from "./pages/StatsOverviewPage";
 import InstitutionStatsPage from "./pages/InstitutionStatsPage";
-import AnalyticsPage from "./pages/AnalyticsPage";
-import AchievementsPage from "./pages/AchievementsPage";
+
 import AdminCompetitionsPage from "./pages/admin/CompetitionsPage";
 import AdminCompetitionFormPage from "./pages/admin/CompetitionFormPage";
 import AdminRegistrationsPage from "./pages/admin/RegistrationsPage";
@@ -102,16 +100,16 @@ function AppRoutes() {
         <ProtectedRoute><AppShell><AgentCenterPage /></AppShell></ProtectedRoute>
       </Route>
       <Route path="/profile/edit">
-        <ProtectedRoute><AppShell><ProfileEditPage /></AppShell></ProtectedRoute>
+        <ProtectedRoute><ProfileEditRedirect /></ProtectedRoute>
       </Route>
       <Route path="/profile/analytics">
-        <ProtectedRoute><AppShell><AnalyticsPage /></AppShell></ProtectedRoute>
+        <ProtectedRoute><ProfileAnalyticsRedirect /></ProtectedRoute>
       </Route>
       <Route path="/profile/achievements">
-        <ProtectedRoute><AppShell><AchievementsPage /></AppShell></ProtectedRoute>
+        <ProtectedRoute><ProfileAchievementsRedirect /></ProtectedRoute>
       </Route>
       <Route path="/history">
-        <ProtectedRoute><AppShell><MatchHistoryPage /></AppShell></ProtectedRoute>
+        <ProtectedRoute><MatchHistoryRedirect /></ProtectedRoute>
       </Route>
       <Route path="/leaderboard">
         <ProtectedRoute><AppShell><LeaderboardPage /></AppShell></ProtectedRoute>

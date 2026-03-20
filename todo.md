@@ -282,3 +282,28 @@
 - [x] Chat content lifecycle: messages tied to competitionId, only fetched for active duel pair
 - [x] Make chat panel height match chart area height (grid items-stretch)
 - [x] Fix chart+chat grid: chart area defines row height, chat stretches to match (no empty space below emoji bar)
+
+## Round 7: User Dashboard UX Refactor
+
+### Phase 1: Profile Page Refactor
+- [x] Create unified ProfilePage with secondary tab navigation (Overview / History / Analytics / Achievements / Settings)
+- [x] Merge quick-link cards into profile header as icon buttons
+- [x] Merge duplicate stats sections into one unified stats area
+- [x] Embed recent match results directly in Overview tab
+- [x] Route /profile/edit, /profile/analytics, /profile/achievements, /history into Profile tabs (with redirects)
+
+### Phase 2: Hub Page Simplification
+- [x] Merge "focus" and "joined" competition sections (already unified in current HubPage)
+- [x] Season progress bar in OverviewRail (kept in right panel, already prominent)
+- [x] Make recent results section collapsible, default show only 1 result (with expand/collapse button)
+
+### Phase 3: Match History Improvements
+- [x] Add filter bar (all/profit/loss) in HistoryTab
+- [x] Date format uses locale-aware formatting in HistoryTab
+- [x] Trade detail layout with expandable animation and clear formatting
+
+### Phase 4: Minor Improvements
+- [x] Leaderboard: add "jump to my rank" button with scroll + flash animation
+- [ ] Analytics: equity curve full-width hero (deferred - current layout is functional)
+- [x] Achievements: add NEW badge (red pulse) for achievements unlocked within 7 days
+- [ ] Navigation: Season tab cleanup and mobile nav (deferred - current nav is functional)
