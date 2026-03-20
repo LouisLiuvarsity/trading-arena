@@ -14,7 +14,6 @@ import {
   competitionRegistrations,
   matchResults,
   notifications,
-  userAchievements,
   institutions,
   userProfiles,
 } from "../drizzle/schema";

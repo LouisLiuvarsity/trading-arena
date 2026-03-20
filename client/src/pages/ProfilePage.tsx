@@ -1,6 +1,6 @@
 import { type ReactNode, useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useT } from "@/lib/i18n";
-import { useMatchHistory, useProfile, useAnalytics, useAchievementsQuery, useSaveProfile } from "@/hooks/useCompetitionData";
+import { useMatchHistory, useProfile, useAnalytics, useSaveProfile } from "@/hooks/useCompetitionData";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/api";
 import { useSearch } from "wouter";
@@ -27,7 +27,6 @@ import {
   Target,
 } from "lucide-react";
 import { getRankTier } from "@/lib/types";
-import { ACHIEVEMENT_CATALOG, type AchievementDef } from "@shared/achievements";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -102,11 +101,6 @@ interface DirStats {
   count: number; wins: number; losses: number; totalPnl: number; avgPnl: number; avgHoldDuration: number;
 }
 
-interface UserAchievement {
-  achievementKey: string;
-  unlockedAt: number;
-  competitionId: number | null;
-}
 
 interface Institution {
   id: number;
@@ -140,9 +134,8 @@ const WALLET_NETWORKS = [
   { value: "bnb", label: "BNB Smart Chain (BEP-20)" },
   { value: "trx", label: "Tron (TRC-20)" },
 ];
-const CATEGORY_ORDER = ["trading", "ranking", "tier", "milestone", "special"];
 
-type TabId = "overview" | "history" | "analytics" | "achievements" | "settings";
+type TabId = "overview" | "history" | "analytics" | "settings";
 
 // ─── Helpers ────────────────────────────────────────────────
 function countryFlag(code: string | null): string {
@@ -808,120 +801,6 @@ function AnalyticsTab({ t, lang }: {
   );
 }
 
-// ═══════════════════════════════════════════════════════════
-// TAB 4: Achievements
-// ═══════════════════════════════════════════════════════════
-function AchievementsTab({ t, lang }: {
-  t: (key: string, vars?: Record<string, string | number>) => string;
-  lang: string;
-}) {
-  const { data: achievementsData, isLoading: loading } = useAchievementsQuery();
-
-  const unlocked = new Map<string, UserAchievement>();
-  if (achievementsData) {
-    for (const a of achievementsData as UserAchievement[]) {
-      unlocked.set(a.achievementKey, a);
-    }
-  }
-
-  const unlockedCount = unlocked.size;
-  const totalCount = ACHIEVEMENT_CATALOG.length;
-  const progress = totalCount > 0 ? Math.round((unlockedCount / totalCount) * 100) : 0;
-
-  const grouped = new Map<string, AchievementDef[]>();
-  for (const cat of CATEGORY_ORDER) grouped.set(cat, []);
-  for (const ach of ACHIEVEMENT_CATALOG) {
-    const list = grouped.get(ach.category) ?? [];
-    list.push(ach);
-    grouped.set(ach.category, list);
-  }
-
-  const CATEGORY_LABELS: Record<string, string> = {
-    trading: t("achieve.cat.trading"),
-    ranking: t("achieve.cat.ranking"),
-    tier: t("achieve.cat.tier"),
-    milestone: t("achieve.cat.milestone"),
-    special: t("achieve.cat.special"),
-  };
-
-  if (loading) {
-    return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-4 animate-pulse h-24" />
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-5">
-      {/* Progress bar */}
-      <div className="bg-[#1C2030] border border-[rgba(255,255,255,0.08)] rounded-xl p-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[#D1D4DC] text-sm font-semibold">{t("achieve.progress")}</span>
-          <span className="text-[#F0B90B] font-mono text-sm font-bold">{progress}%</span>
-        </div>
-        <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-[#F0B90B] to-[#F0B90B]/60 rounded-full transition-all duration-500"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-        <p className="mt-2 text-[11px] text-[#848E9C]">
-          {t("achieve.unlocked", { done: unlockedCount, total: totalCount })}
-        </p>
-      </div>
-
-      {/* Categories */}
-      {CATEGORY_ORDER.map((cat) => {
-        const achievements = grouped.get(cat) ?? [];
-        if (achievements.length === 0) return null;
-        return (
-          <div key={cat}>
-            <h3 className="text-sm font-semibold text-[#D1D4DC] mb-3">{CATEGORY_LABELS[cat] ?? cat}</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {achievements.map((ach) => {
-                const isUnlocked = unlocked.has(ach.key);
-                const data = unlocked.get(ach.key);
-                return (
-                  <div
-                    key={ach.key}
-                    className={`relative rounded-xl border p-4 transition-all ${
-                      isUnlocked
-                        ? "bg-[#1C2030] border-[#F0B90B]/30 shadow-[0_0_12px_rgba(240,185,11,0.1)]"
-                        : "bg-[#1C2030]/50 border-[rgba(255,255,255,0.06)] opacity-50"
-                    }`}
-                  >
-                    <div className="text-2xl mb-2">
-                      {isUnlocked ? ach.icon : <Lock className="w-6 h-6 text-[#5E6673]" />}
-                    </div>
-                    <div className={`text-xs font-semibold mb-0.5 ${isUnlocked ? "text-[#D1D4DC]" : "text-[#5E6673]"}`}>
-                      {ach.name}
-                    </div>
-                    <div className={`text-[10px] ${isUnlocked ? "text-[#848E9C]" : "text-[#5E6673]"}`}>
-                      {ach.description}
-                    </div>
-                    {isUnlocked && data && (
-                      <div className="mt-2 text-[9px] text-[#F0B90B]">
-                        {t("achieve.unlockedAt", { date: new Date(data.unlockedAt).toLocaleDateString("zh-CN") })}
-                      </div>
-                    )}
-                    {isUnlocked && data && Date.now() - data.unlockedAt < 7 * 24 * 60 * 60 * 1000 && (
-                      <span className="absolute top-2 right-2 rounded-full bg-[#F6465D] px-1.5 py-0.5 text-[8px] font-bold text-white animate-pulse">
-                        NEW
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 // ═══════════════════════════════════════════════════════════
 // TAB 5: Settings (Profile Edit)
@@ -1216,7 +1095,6 @@ const TABS: { id: TabId; icon: typeof User; labelZh: string; labelEn: string }[]
   { id: "overview", icon: User, labelZh: "概览", labelEn: "Overview" },
   { id: "history", icon: History, labelZh: "比赛历史", labelEn: "History" },
   { id: "analytics", icon: BarChart3, labelZh: "交易分析", labelEn: "Analytics" },
-  { id: "achievements", icon: Award, labelZh: "成就", labelEn: "Achievements" },
   { id: "settings", icon: Settings, labelZh: "设置", labelEn: "Settings" },
 ];
 
@@ -1327,9 +1205,6 @@ export default function ProfilePage() {
         )}
         {activeTab === "analytics" && (
           <AnalyticsTab t={t} lang={lang} />
-        )}
-        {activeTab === "achievements" && (
-          <AchievementsTab t={t} lang={lang} />
         )}
         {activeTab === "settings" && (
           <SettingsTab t={t} lang={lang} />

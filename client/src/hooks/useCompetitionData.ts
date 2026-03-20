@@ -103,14 +103,6 @@ export function useProfile() {
   });
 }
 
-export function useAchievementsQuery() {
-  const { token } = useAuth();
-  return useQuery({
-    queryKey: ["achievements", token],
-    queryFn: () => apiRequest<any[]>("/api/me/achievements", { token: token! }),
-    enabled: !!token,
-  });
-}
 
 export function useAnalytics() {
   const { token } = useAuth();

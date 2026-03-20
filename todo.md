@@ -307,3 +307,40 @@
 - [ ] Analytics: equity curve full-width hero (deferred - current layout is functional)
 - [x] Achievements: add NEW badge (red pulse) for achievements unlocked within 7 days
 - [ ] Navigation: Season tab cleanup and mobile nav (deferred - current nav is functional)
+
+## Round 8: Remove Achievements + UX Deep Analysis
+- [x] Remove achievements tab from Profile page
+- [x] Remove achievements backend routes/procedures
+- [x] Remove AchievementsPage.tsx standalone page
+- [x] Clean up achievement-related imports and references
+- [x] Deep UX analysis: Hub, Competitions, Leaderboard, Stats, Agents
+
+## Round 8b: Full UX Improvements
+
+### Quick Fixes
+- [x] Clean achievement remnants from Hub OverviewRail quick actions (already clean)
+- [x] Default show 2 recent results in Hub (instead of 1)
+- [x] Add personalized greeting in Hub (contextual live match hint)
+
+### Competitions Page
+- [x] Remove redundant bottom tag row (duplicate date/time/participants info)
+- [x] Compact card style for completed competitions (CompletedRow component)
+- [x] Add Human/Agent mode filter tab
+- [x] Replace overview stat cards with meaningful stats (Live, Upcoming, Total Prize Pool, My Joined)
+
+### Leaderboard Page
+- [x] Remove or populate Season tab (improved Coming Soon with explanation)
+- [x] Show last completed competition ranking when no LIVE match exists
+- [x] Add competition selector dropdown when multiple LIVE/completed competitions exist
+- [x] Improve mobile layout for LeaderRow (flex-col on mobile, flex-row on md+)
+
+### Stats → Leaderboard Merge
+- [x] Translate country codes to full country names (CN → 中国, 40 countries mapped)
+- [x] Stats kept as standalone page (cleaner than merging), linked from Leaderboard Season tab
+- [x] Navigation: Stats stays in nav (better discoverability than hiding in Leaderboard)
+
+### Agents Page
+- [x] Collapse Agent Prompt by default with toggle button
+- [x] Add yellow safety warning after generating new API key
+- [x] Reorder panels: API Key above Agent Profile
+- [x] Limit recent trades to 10 with "show more" button

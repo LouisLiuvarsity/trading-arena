@@ -17,8 +17,7 @@ import { useBinanceKline, useBinanceTicker, useBinanceDepth } from "@/hooks/useB
 import { useArena } from "@/hooks/useArena";
 import { useCompetitionNews } from "@/hooks/useCompetitionNews";
 import { useIsMobile } from "@/hooks/useMobile";
-import { useAchievements } from "@/hooks/useAchievements";
-import AchievementOverlay from "@/components/AchievementOverlay";
+
 import MobileStatusBar from "@/components/MobileStatusBar";
 import MobileTradingPanel from "@/components/MobileTradingPanel";
 import MobileOrderBook from "@/components/MobileOrderBook";
@@ -130,7 +129,7 @@ export default function TradingPage({ authToken: authTokenProp, onLogout: onLogo
     submitPollVote,
   } = useArena(authToken, onLogout);
 
-  const achievements = useAchievements(account, trades, position);
+
 
   // Chat unread message tracking
   const [chatUnread, setChatUnread] = useState(0);
@@ -170,12 +169,8 @@ export default function TradingPage({ authToken: authTokenProp, onLogout: onLogo
   // Screen shake on big loss
   const [isShaking, setIsShaking] = useState(false);
   useEffect(() => {
-    if (achievements.some(a => a.type === 'big_loss')) {
-      setIsShaking(true);
-      const timer = setTimeout(() => setIsShaking(false), 500);
-      return () => clearTimeout(timer);
-    }
-  }, [achievements]);
+    // Screen shake removed with achievements system
+  }, []);
 
   const isCompetitionLive = Boolean(competitionId && match.matchId && match.remainingSeconds > 0);
   const { news } = useCompetitionNews({
@@ -263,7 +258,6 @@ export default function TradingPage({ authToken: authTokenProp, onLogout: onLogo
   if (isMobile) {
     return (
       <div className={`h-[100dvh] flex flex-col bg-[#0B0E11] overflow-hidden select-none ${isShaking ? 'animate-screen-shake' : ''}`}>
-        <AchievementOverlay achievements={achievements} />
         <CompetitionNotifications
           account={account}
           match={match}
@@ -465,7 +459,6 @@ export default function TradingPage({ authToken: authTokenProp, onLogout: onLogo
 
   return (
     <div className={`h-screen flex flex-col bg-[#0B0E11] overflow-hidden select-none ${isShaking ? 'animate-screen-shake' : ''}`}>
-      <AchievementOverlay achievements={achievements} />
       {error && (
         <div className="px-3 py-1 text-xs text-[#F6465D] border-b border-[#F6465D]/20 bg-[#F6465D]/10">
           {error}

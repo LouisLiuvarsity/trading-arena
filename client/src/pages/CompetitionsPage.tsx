@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import {
   AlertCircle,
   ArrowUpRight,
-  Calendar,
   CheckCircle2,
   ChevronRight,
   CircleDot,
@@ -18,9 +17,12 @@ import {
   Sparkles,
   Trophy,
   Users,
+  Bot,
+  User,
 } from "lucide-react";
 
 type FilterTab = "all" | "registration_open" | "live" | "completed";
+type ModeFilter = "all" | "human" | "agent";
 type Translator = (key: string, vars?: Record<string, string | number>) => string;
 
 const FILTER_KEYS: FilterTab[] = ["all", "registration_open", "live", "completed"];
@@ -80,6 +82,7 @@ type ScheduleCopy = {
   overviewLive: string;
   overviewDone: string;
   filterLabels: Record<FilterTab, string>;
+  modeFilterLabels: Record<ModeFilter, string>;
   sectionLabels: {
     live: string;
     open: string;
@@ -99,6 +102,8 @@ type ScheduleCopy = {
   typeLabels: Record<CompetitionType, string>;
   participantLabels: Record<ParticipantMode, string>;
   agentApiAction: string;
+  totalPrizePool: string;
+  myJoined: string;
 };
 
 const SCHEDULE_COPY: Record<"zh" | "en", ScheduleCopy> = {
@@ -114,6 +119,11 @@ const SCHEDULE_COPY: Record<"zh" | "en", ScheduleCopy> = {
       registration_open: "待开赛",
       live: "进行中",
       completed: "已结束",
+    },
+    modeFilterLabels: {
+      all: "全部模式",
+      human: "Human",
+      agent: "Agent",
     },
     sectionLabels: {
       live: "进行中的比赛",
@@ -142,6 +152,8 @@ const SCHEDULE_COPY: Record<"zh" | "en", ScheduleCopy> = {
       agent: "Agent vs Agent",
     },
     agentApiAction: "通过 Agent API 报名",
+    totalPrizePool: "总奖金池",
+    myJoined: "我已参加",
   },
   en: {
     title: "Schedule",
@@ -155,6 +167,11 @@ const SCHEDULE_COPY: Record<"zh" | "en", ScheduleCopy> = {
       registration_open: "Upcoming",
       live: "Live",
       completed: "Completed",
+    },
+    modeFilterLabels: {
+      all: "All modes",
+      human: "Human",
+      agent: "Agent",
     },
     sectionLabels: {
       live: "Live matches",
@@ -183,6 +200,8 @@ const SCHEDULE_COPY: Record<"zh" | "en", ScheduleCopy> = {
       agent: "Agent vs Agent",
     },
     agentApiAction: "Register via Agent API",
+    totalPrizePool: "Total prize pool",
+    myJoined: "My joined",
   },
 };
 
@@ -204,6 +223,11 @@ function matchesFilter(comp: CompetitionSummary, filter: FilterTab): boolean {
     );
   }
   return comp.status === filter;
+}
+
+function matchesMode(comp: CompetitionSummary, mode: ModeFilter): boolean {
+  if (mode === "all") return true;
+  return comp.participantMode === mode;
 }
 
 function formatTime(ts: number, locale: string): string {
@@ -270,23 +294,6 @@ function SectionHeader({
       <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[10px] text-[#9BA5B5]">
         {count}
       </span>
-    </div>
-  );
-}
-
-function OverviewCard({
-  label,
-  value,
-  accentClass,
-}: {
-  label: string;
-  value: number;
-  accentClass: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-white/[0.08] bg-[#171B29] px-4 py-4">
-      <p className="text-[11px] text-[#7D8798]">{label}</p>
-      <p className={`mt-2 text-2xl font-display font-bold ${accentClass}`}>{value}</p>
     </div>
   );
 }
@@ -370,6 +377,13 @@ function groupByStatus(
   return groups;
 }
 
+function isCompletedStatus(status: CompetitionStatus): boolean {
+  return status === "completed" || status === "ended_early" || status === "cancelled";
+}
+
+// ═══════════════════════════════════════════════════════
+// Full card for live / upcoming competitions
+// ═══════════════════════════════════════════════════════
 function CompetitionCard({
   comp,
   t,
@@ -400,15 +414,6 @@ function CompetitionCard({
   const countdown = formatCountdown(comp.startTime, comp.endTime, now, t);
   const primaryActionLabel = getPrimaryActionLabel(comp, t, copy);
   const participantsValue = `${comp.registeredCount}/${comp.maxParticipants}`;
-  const participationHint =
-    comp.acceptedCount > 0
-      ? `${comp.acceptedCount} ${copy.acceptedLabel}`
-      : `${comp.registeredCount} ${copy.registeredLabel}`;
-  const accessHint = isAgentCompetition
-    ? copy.agentApiAction
-    : comp.status === "live" && comp.myRegistrationStatus === "accepted"
-      ? t("comp.enterArena")
-      : t("comp.details");
 
   return (
     <div className="relative overflow-hidden rounded-[24px] border border-white/[0.08] bg-[#161B29]">
@@ -464,25 +469,6 @@ function CompetitionCard({
               value={`${comp.prizePool.toLocaleString(locale)} USDT`}
               toneClass="text-[#F0B90B]"
             />
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-[#AEB7C6]">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.04] px-3 py-1.5">
-              <Calendar className="h-3.5 w-3.5" />
-              {formatTime(comp.startTime, locale)}
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.04] px-3 py-1.5">
-              <Clock className="h-3.5 w-3.5" />
-              {accessHint}
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.04] px-3 py-1.5">
-              <Users className="h-3.5 w-3.5" />
-              {participationHint}
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.04] px-3 py-1.5">
-              <Trophy className="h-3.5 w-3.5" />
-              {getParticipantLabel(comp.participantMode, copy)}
-            </span>
           </div>
         </div>
 
@@ -551,9 +537,64 @@ function CompetitionCard({
   );
 }
 
+// ═══════════════════════════════════════════════════════
+// Compact row for completed competitions
+// ═══════════════════════════════════════════════════════
+function CompletedRow({
+  comp,
+  t,
+  copy,
+  locale,
+}: {
+  comp: CompetitionSummary;
+  t: Translator;
+  copy: ScheduleCopy;
+  locale: string;
+}) {
+  const statusCfg = STATUS_STYLE[comp.status] ?? STATUS_STYLE.completed;
+  const typeCfg = TYPE_STYLE[comp.competitionType] ?? TYPE_STYLE.regular;
+  const regColor = comp.myRegistrationStatus ? REG_STATUS_COLOR[comp.myRegistrationStatus] : null;
+
+  return (
+    <Link
+      href={`/results/${comp.id}`}
+      className="flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-[#161B29] p-4 transition-colors hover:border-white/[0.12] hover:bg-[#1B2132] sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${typeCfg.badgeClass}`}>
+            {getTypeLabel(comp.competitionType, copy)}
+          </span>
+          <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] font-semibold text-[#D1D4DC]">
+            {getParticipantLabel(comp.participantMode, copy)}
+          </span>
+          {renderBadge(t(`common.compStatus.${comp.status}`), statusCfg)}
+          {regColor && comp.myRegistrationStatus && (
+            <span
+              className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
+              style={{ color: regColor, backgroundColor: `${regColor}20` }}
+            >
+              {t("comp.myStatus")}{t(`common.status.${comp.myRegistrationStatus}`)}
+            </span>
+          )}
+        </div>
+        <h3 className="mt-1.5 truncate text-sm font-display font-bold text-white">{comp.title}</h3>
+        <p className="mt-0.5 text-xs text-[#8E98A8]">
+          {formatTime(comp.startTime, locale)} · {comp.symbol} · {comp.registeredCount} {locale === "zh-CN" ? "人参赛" : "participants"} · {comp.prizePool.toLocaleString(locale)} USDT
+        </p>
+      </div>
+      <div className="flex items-center gap-2 text-[#8E98A8]">
+        <span className="text-xs">{t("comp.viewResults")}</span>
+        <ArrowUpRight className="h-3.5 w-3.5" />
+      </div>
+    </Link>
+  );
+}
+
 export default function CompetitionsPage() {
   const { t, lang } = useT();
   const [filter, setFilter] = useState<FilterTab>("all");
+  const [modeFilter, setModeFilter] = useState<ModeFilter>("all");
   const { data: compData, isLoading: loading, error: queryError } = useCompetitions();
   const registerMutation = useRegister();
   const withdrawMutation = useWithdraw();
@@ -577,13 +618,17 @@ export default function CompetitionsPage() {
     });
   };
 
-  const filtered = competitions.filter((competition) => matchesFilter(competition, filter));
+  const filtered = competitions
+    .filter((competition) => matchesFilter(competition, filter))
+    .filter((competition) => matchesMode(competition, modeFilter));
   const groups = groupByStatus(filtered, copy);
+
+  // More meaningful overview stats
+  const totalPrizePool = competitions.reduce((sum, c) => sum + c.prizePool, 0);
+  const myJoinedCount = competitions.filter((c) => c.myRegistrationStatus && c.myRegistrationStatus !== "withdrawn").length;
   const overview = {
-    all: competitions.length,
-    upcoming: competitions.filter((competition) => matchesFilter(competition, "registration_open")).length,
     live: competitions.filter((competition) => matchesFilter(competition, "live")).length,
-    done: competitions.filter((competition) => matchesFilter(competition, "completed")).length,
+    upcoming: competitions.filter((competition) => matchesFilter(competition, "registration_open")).length,
   };
 
   if (loading) {
@@ -614,32 +659,63 @@ export default function CompetitionsPage() {
             <p className="text-sm text-[#8F98A8]">{copy.subtitle}</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-1.5">
-            {FILTER_KEYS.map((key) => (
-              <button
-                key={key}
-                onClick={() => setFilter(key)}
-                className={`rounded-xl px-4 py-2 text-[12px] font-semibold transition-colors ${
-                  filter === key
-                    ? "bg-[#F0B90B] text-[#0B0E11]"
-                    : "text-[#9CA6B7] hover:text-white"
-                }`}
-              >
-                {copy.filterLabels[key]}
-              </button>
-            ))}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            {/* Mode filter */}
+            <div className="flex items-center gap-1 rounded-xl border border-white/[0.08] bg-white/[0.03] p-1">
+              {(["all", "human", "agent"] as ModeFilter[]).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setModeFilter(mode)}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                    modeFilter === mode
+                      ? "bg-white/[0.08] text-white"
+                      : "text-[#9CA6B7] hover:text-white"
+                  }`}
+                >
+                  {mode === "human" && <User className="h-3 w-3" />}
+                  {mode === "agent" && <Bot className="h-3 w-3" />}
+                  {copy.modeFilterLabels[mode]}
+                </button>
+              ))}
+            </div>
+
+            {/* Status filter */}
+            <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-1.5">
+              {FILTER_KEYS.map((key) => (
+                <button
+                  key={key}
+                  onClick={() => setFilter(key)}
+                  className={`rounded-xl px-4 py-2 text-[12px] font-semibold transition-colors ${
+                    filter === key
+                      ? "bg-[#F0B90B] text-[#0B0E11]"
+                      : "text-[#9CA6B7] hover:text-white"
+                  }`}
+                >
+                  {copy.filterLabels[key]}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
+        {/* Meaningful overview stats */}
         <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <OverviewCard label={copy.overviewAll} value={overview.all} accentClass="text-white" />
-          <OverviewCard
-            label={copy.overviewUpcoming}
-            value={overview.upcoming}
-            accentClass="text-[#F0B90B]"
-          />
-          <OverviewCard label={copy.overviewLive} value={overview.live} accentClass="text-[#0ECB81]" />
-          <OverviewCard label={copy.overviewDone} value={overview.done} accentClass="text-[#AAB4C3]" />
+          <div className="rounded-2xl border border-white/[0.08] bg-[#171B29] px-4 py-4">
+            <p className="text-[11px] text-[#7D8798]">{copy.overviewLive}</p>
+            <p className="mt-2 text-2xl font-display font-bold text-[#0ECB81]">{overview.live}</p>
+          </div>
+          <div className="rounded-2xl border border-white/[0.08] bg-[#171B29] px-4 py-4">
+            <p className="text-[11px] text-[#7D8798]">{copy.overviewUpcoming}</p>
+            <p className="mt-2 text-2xl font-display font-bold text-[#F0B90B]">{overview.upcoming}</p>
+          </div>
+          <div className="rounded-2xl border border-white/[0.08] bg-[#171B29] px-4 py-4">
+            <p className="text-[11px] text-[#7D8798]">{copy.totalPrizePool}</p>
+            <p className="mt-2 text-2xl font-display font-bold text-[#F0B90B]">{totalPrizePool.toLocaleString(locale)} <span className="text-sm text-[#8D97A8]">USDT</span></p>
+          </div>
+          <div className="rounded-2xl border border-white/[0.08] bg-[#171B29] px-4 py-4">
+            <p className="text-[11px] text-[#7D8798]">{copy.myJoined}</p>
+            <p className="mt-2 text-2xl font-display font-bold text-white">{myJoinedCount}</p>
+          </div>
         </div>
       </section>
 
@@ -655,6 +731,7 @@ export default function CompetitionsPage() {
         <div className="space-y-6">
           {groups.map((group) => {
             const GroupIcon = group.icon;
+            const isCompletedGroup = group.key === "done";
             return (
               <section key={group.key} className={`${PAGE_CLASS} p-6 md:p-7`}>
                 <SectionHeader
@@ -662,26 +739,40 @@ export default function CompetitionsPage() {
                   title={group.label}
                   count={group.items.length}
                 />
-                <div className="space-y-4">
-                  {group.items.map((competition) => (
-                    <CompetitionCard
-                      key={competition.id}
-                      comp={competition}
-                      t={t}
-                      copy={copy}
-                      locale={locale}
-                      now={now}
-                      onRegister={handleRegister}
-                      registeringSlug={
-                        registerMutation.isPending ? (registerMutation.variables as string) : null
-                      }
-                      onWithdraw={handleWithdraw}
-                      withdrawingSlug={
-                        withdrawMutation.isPending ? (withdrawMutation.variables as string) : null
-                      }
-                    />
-                  ))}
-                </div>
+                {isCompletedGroup ? (
+                  <div className="space-y-2">
+                    {group.items.map((competition) => (
+                      <CompletedRow
+                        key={competition.id}
+                        comp={competition}
+                        t={t}
+                        copy={copy}
+                        locale={locale}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {group.items.map((competition) => (
+                      <CompetitionCard
+                        key={competition.id}
+                        comp={competition}
+                        t={t}
+                        copy={copy}
+                        locale={locale}
+                        now={now}
+                        onRegister={handleRegister}
+                        registeringSlug={
+                          registerMutation.isPending ? (registerMutation.variables as string) : null
+                        }
+                        onWithdraw={handleWithdraw}
+                        withdrawingSlug={
+                          withdrawMutation.isPending ? (withdrawMutation.variables as string) : null
+                        }
+                      />
+                    ))}
+                  </div>
+                )}
               </section>
             );
           })}

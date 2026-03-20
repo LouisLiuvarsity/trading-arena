@@ -1352,7 +1352,7 @@ function OverviewRail({
 
         <div className="mt-5 space-y-3">
           {recentResults.length > 0 ? (
-            recentResults.slice(0, resultsExpanded ? 4 : 1).map((result) => (
+            recentResults.slice(0, resultsExpanded ? 4 : 2).map((result) => (
               <Link
                 key={result.competitionId}
                 href={`/results/${result.competitionId}`}
@@ -1400,7 +1400,7 @@ function OverviewRail({
               <p className="mt-3 text-sm text-[#8F98A8]">{copy.noRecentResultsHint}</p>
             </div>
           )}
-          {recentResults.length > 1 && (
+          {recentResults.length > 2 && (
             <button
               onClick={() => setResultsExpanded(!resultsExpanded)}
               className="w-full rounded-xl border border-white/[0.06] bg-white/[0.02] py-2 text-[12px] font-medium text-[#8D97A8] transition-colors hover:bg-white/[0.04] hover:text-white"
@@ -1513,6 +1513,13 @@ export default function HubPage() {
           <h1 className="text-3xl font-display font-bold text-white">
             {t("hub.welcome", { name: username })}
           </h1>
+          {activeCompetition && (
+            <p className="mt-1 text-sm text-[#8D97A8]">
+              {lang === 'zh'
+                ? `你的「${activeCompetition.title}」正在进行中`
+                : `Your "${activeCompetition.title}" is live`}
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           {joinedCount > 0 && (

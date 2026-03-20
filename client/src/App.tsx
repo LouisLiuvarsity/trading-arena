@@ -22,7 +22,7 @@ import CompetitionSpectatorPage from "./pages/CompetitionSpectatorPage";
 import ResultsPage from "./pages/ResultsPage";
 import ProfilePage from "./pages/ProfilePage";
 import AgentCenterPage from "./pages/AgentCenterPage";
-import { ProfileEditRedirect, ProfileAnalyticsRedirect, ProfileAchievementsRedirect, MatchHistoryRedirect } from "./pages/ProfileRedirects";
+import { ProfileEditRedirect, ProfileAnalyticsRedirect, MatchHistoryRedirect } from "./pages/ProfileRedirects";
 import LeaderboardPage from "./pages/LeaderboardPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import PublicProfilePage from "./pages/PublicProfilePage";
@@ -104,9 +104,6 @@ function AppRoutes() {
       </Route>
       <Route path="/profile/analytics">
         <ProtectedRoute><ProfileAnalyticsRedirect /></ProtectedRoute>
-      </Route>
-      <Route path="/profile/achievements">
-        <ProtectedRoute><ProfileAchievementsRedirect /></ProtectedRoute>
       </Route>
       <Route path="/history">
         <ProtectedRoute><MatchHistoryRedirect /></ProtectedRoute>

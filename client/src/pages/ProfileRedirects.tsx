@@ -15,13 +15,6 @@ export function ProfileAnalyticsRedirect() {
   return null;
 }
 
-/** Redirect /profile/achievements → /profile?tab=achievements */
-export function ProfileAchievementsRedirect() {
-  const [, navigate] = useLocation();
-  useEffect(() => { navigate("/profile?tab=achievements", { replace: true }); }, [navigate]);
-  return null;
-}
-
 /** Redirect /history → /profile?tab=history */
 export function MatchHistoryRedirect() {
   const [, navigate] = useLocation();

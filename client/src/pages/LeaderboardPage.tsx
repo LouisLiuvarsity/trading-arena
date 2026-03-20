@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/lib/i18n";
@@ -9,12 +9,12 @@ import { RANK_TIERS } from "@/lib/types";
 import {
   AlertCircle,
   ArrowUpRight,
+  ChevronDown,
   Crown,
   Loader2,
   Medal,
   Star,
   Trophy,
-  Users,
 } from "lucide-react";
 
 type TabKey = "current" | "season";
@@ -75,7 +75,7 @@ function LeaderRow({
   return (
     <div
       ref={rowRef}
-      className={`rounded-2xl border p-4 transition-colors ${
+      className={`rounded-2xl border p-4 transition-all ${
         isYou
           ? "border-[#F0B90B]/30 bg-[#F0B90B]/8"
           : "border-white/[0.08] bg-black/20"
@@ -141,16 +141,50 @@ export default function LeaderboardPage() {
   const { username } = useAuth();
   const { t, lang } = useT();
   const [tab, setTab] = useState<TabKey>("current");
+  const [selectorOpen, setSelectorOpen] = useState(false);
 
   const { data: compsData, isLoading: compsLoading, error: compsError } = useCompetitions();
-  const liveComp =
-    ((compsData as { items?: CompetitionSummary[] } | undefined)?.items ?? []).find(
-      (item) => item.status === "live" || item.status === "settling",
-    ) ?? null;
+  const allComps = (compsData as { items?: CompetitionSummary[] } | undefined)?.items ?? [];
+
+  // Find live competitions (may be multiple)
+  const liveComps = useMemo(
+    () => allComps.filter((item) => item.status === "live" || item.status === "settling"),
+    [allComps],
+  );
+
+  // Find last completed competition as fallback
+  const lastCompleted = useMemo(
+    () =>
+      allComps
+        .filter((item) => item.status === "completed" || item.status === "ended_early")
+        .sort((a, b) => b.endTime - a.endTime)[0] ?? null,
+    [allComps],
+  );
+
+  // Selected competition: default to first live, or fallback to last completed
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+  const activeComp = useMemo(() => {
+    if (selectedSlug) {
+      return allComps.find((c) => c.slug === selectedSlug) ?? liveComps[0] ?? lastCompleted;
+    }
+    return liveComps[0] ?? lastCompleted;
+  }, [selectedSlug, allComps, liveComps, lastCompleted]);
+
+  const isLive = activeComp ? (activeComp.status === "live" || activeComp.status === "settling") : false;
+  const hasMultipleOptions = liveComps.length > 1 || (liveComps.length >= 1 && lastCompleted);
+
+  // Selectable competitions for the dropdown
+  const selectableComps = useMemo(() => {
+    const comps: CompetitionSummary[] = [...liveComps];
+    if (lastCompleted && !liveComps.find((c) => c.id === lastCompleted.id)) {
+      comps.push(lastCompleted);
+    }
+    return comps;
+  }, [liveComps, lastCompleted]);
 
   const { data: leaderboardData = [], isLoading: lbLoading } = useCompetitionLeaderboard(
-    liveComp?.slug ?? "",
-    tab === "current" && !!liveComp,
+    activeComp?.slug ?? "",
+    tab === "current" && !!activeComp,
   );
 
   const leaderboard = leaderboardData as LeaderboardEntry[];
@@ -161,7 +195,6 @@ export default function LeaderboardPage() {
 
   const scrollToMe = useCallback(() => {
     myRowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    // Flash animation
     myRowRef.current?.classList.add("ring-2", "ring-[#F0B90B]");
     setTimeout(() => myRowRef.current?.classList.remove("ring-2", "ring-[#F0B90B]"), 2000);
   }, []);
@@ -208,7 +241,7 @@ export default function LeaderboardPage() {
             <AlertCircle className="mx-auto mb-3 h-8 w-8 text-[#F6465D]" />
             <p className="text-sm text-[#D1D4DC]">{error}</p>
           </div>
-        ) : !liveComp ? (
+        ) : !activeComp ? (
           <div className={`${PAGE_CLASS} p-8 text-center`}>
             <Trophy className="mx-auto mb-3 h-8 w-8 text-[#848E9C]" />
             <p className="text-sm font-semibold text-[#D1D4DC]">{t("lbpage.noLive")}</p>
@@ -219,19 +252,84 @@ export default function LeaderboardPage() {
             <section className={`${PAGE_CLASS} p-6`}>
               <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                  <div className="inline-flex items-center gap-2 rounded-full bg-[#0ECB81]/12 px-3 py-1 text-xs font-semibold text-[#0ECB81]">
-                    <span className="h-2 w-2 animate-pulse rounded-full bg-current" />
-                    LIVE
+                  <div className="flex items-center gap-2">
+                    {isLive ? (
+                      <div className="inline-flex items-center gap-2 rounded-full bg-[#0ECB81]/12 px-3 py-1 text-xs font-semibold text-[#0ECB81]">
+                        <span className="h-2 w-2 animate-pulse rounded-full bg-current" />
+                        LIVE
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center gap-2 rounded-full bg-[#848E9C]/12 px-3 py-1 text-xs font-semibold text-[#848E9C]">
+                        {lang === "zh" ? "已结束" : "Completed"}
+                      </div>
+                    )}
+                    {!isLive && (
+                      <span className="text-xs text-[#8E98A8]">
+                        {lang === "zh" ? "（最近一场比赛的最终排名）" : "(Final standings from last match)"}
+                      </span>
+                    )}
                   </div>
-                  <h2 className="mt-4 text-2xl font-display font-bold text-white">{liveComp.title}</h2>
+
+                  {/* Competition selector */}
+                  {hasMultipleOptions ? (
+                    <div className="relative mt-4">
+                      <button
+                        onClick={() => setSelectorOpen(!selectorOpen)}
+                        className="inline-flex items-center gap-2 text-2xl font-display font-bold text-white hover:text-[#F0B90B] transition-colors"
+                      >
+                        {activeComp.title}
+                        <ChevronDown className={`h-5 w-5 transition-transform ${selectorOpen ? "rotate-180" : ""}`} />
+                      </button>
+                      {selectorOpen && (
+                        <div className="absolute left-0 top-full z-20 mt-2 w-80 rounded-2xl border border-white/[0.08] bg-[#1C2030] p-2 shadow-xl">
+                          {selectableComps.map((comp) => {
+                            const isActive = comp.slug === activeComp.slug;
+                            const compIsLive = comp.status === "live" || comp.status === "settling";
+                            return (
+                              <button
+                                key={comp.slug}
+                                onClick={() => {
+                                  setSelectedSlug(comp.slug);
+                                  setSelectorOpen(false);
+                                }}
+                                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
+                                  isActive ? "bg-[#F0B90B]/10" : "hover:bg-white/[0.04]"
+                                }`}
+                              >
+                                <span className={`h-2 w-2 rounded-full ${compIsLive ? "bg-[#0ECB81] animate-pulse" : "bg-[#848E9C]"}`} />
+                                <div className="min-w-0 flex-1">
+                                  <p className={`truncate text-sm font-semibold ${isActive ? "text-[#F0B90B]" : "text-white"}`}>
+                                    {comp.title}
+                                  </p>
+                                  <p className="text-xs text-[#8E98A8]">
+                                    {comp.symbol} · {comp.registeredCount} {lang === "zh" ? "人" : "players"}
+                                  </p>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <h2 className="mt-4 text-2xl font-display font-bold text-white">{activeComp.title}</h2>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap gap-3">
                   <Link
-                    href={liveComp.participantMode === "agent" ? `/watch/${liveComp.slug}` : `/competitions/${liveComp.slug}`}
+                    href={
+                      isLive
+                        ? activeComp.participantMode === "agent"
+                          ? `/watch/${activeComp.slug}`
+                          : `/competitions/${activeComp.slug}`
+                        : `/results/${activeComp.id}`
+                    }
                     className="inline-flex items-center gap-2 rounded-xl bg-[#F0B90B] px-4 py-2.5 text-sm font-semibold text-[#0B0E11] hover:bg-[#F0B90B]/90"
                   >
-                    {lang === "zh" ? "查看比赛" : "Open match"}
+                    {isLive
+                      ? lang === "zh" ? "查看比赛" : "Open match"
+                      : lang === "zh" ? "查看结果" : "View results"}
                     <ArrowUpRight className="h-4 w-4" />
                   </Link>
                 </div>
@@ -239,20 +337,20 @@ export default function LeaderboardPage() {
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <SummaryTile
-                  label={lang === "zh" ? "参赛人数" : "Accepted"}
-                  value={String(liveComp.acceptedCount)}
+                  label={lang === "zh" ? "参赛人数" : "Participants"}
+                  value={String(activeComp.acceptedCount || activeComp.registeredCount)}
                 />
                 <SummaryTile
                   label={lang === "zh" ? "奖金池" : "Prize pool"}
-                  value={`${liveComp.prizePool}U`}
+                  value={`${activeComp.prizePool}U`}
                   toneClass="text-[#F0B90B]"
                 />
                 <SummaryTile
                   label={lang === "zh" ? "交易对" : "Trading pair"}
-                  value={liveComp.symbol}
+                  value={activeComp.symbol}
                 />
                 <SummaryTile
-                  label={lang === "zh" ? "我的当前名次" : "Your live rank"}
+                  label={lang === "zh" ? "我的当前名次" : "Your rank"}
                   value={myEntry ? `#${myEntry.rank}` : "--"}
                   toneClass={myEntry ? "text-[#0ECB81]" : "text-white"}
                 />
@@ -266,7 +364,9 @@ export default function LeaderboardPage() {
                     {lang === "zh" ? "完整榜单" : "Full standings"}
                   </p>
                   <h2 className="mt-2 text-xl font-display font-bold text-white">
-                    {lang === "zh" ? "实时排名" : "Live standings"}
+                    {isLive
+                      ? lang === "zh" ? "实时排名" : "Live standings"
+                      : lang === "zh" ? "最终排名" : "Final standings"}
                   </h2>
                 </div>
                 {myEntry && (
@@ -305,23 +405,24 @@ export default function LeaderboardPage() {
           </div>
         )
       ) : (
+        /* Season tab — Coming soon with better messaging */
         <section className={`${PAGE_CLASS} p-8 text-center`}>
-          <Star className="mx-auto h-8 w-8 text-[#848E9C]" />
-          <h2 className="mt-4 text-xl font-display font-bold text-white">{t("lbpage.seasonTitle")}</h2>
-          <p className="mx-auto mt-2 max-w-xl text-sm text-[#8E98A8]">{t("lbpage.seasonComingSoon")}</p>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#F0B90B]/20 bg-[#F0B90B]/8">
+            <Trophy className="h-7 w-7 text-[#F0B90B]" />
+          </div>
+          <h2 className="mt-5 text-xl font-display font-bold text-white">{t("lbpage.seasonTitle")}</h2>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[#8E98A8]">
+            {lang === "zh"
+              ? "赛季积分排名正在开发中。每场比赛的积分将累计到赛季总分，赛季结束时根据总积分发放额外奖励。"
+              : "Season rankings are under development. Points from each match will accumulate into a season total, with bonus rewards distributed at the end of each season."}
+          </p>
+          <div className="mt-6">
             <Link
               href="/competitions"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm text-[#D1D4DC] hover:bg-white/[0.04]"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#F0B90B] px-5 py-2.5 text-sm font-semibold text-[#0B0E11] hover:bg-[#F0B90B]/90"
             >
-              <Users className="h-4 w-4" />
-              {lang === "zh" ? "查看当前比赛" : "See current competitions"}
-            </Link>
-            <Link
-              href="/stats"
-              className="inline-flex items-center gap-2 rounded-xl bg-[#F0B90B] px-4 py-2 text-sm font-semibold text-[#0B0E11] hover:bg-[#F0B90B]/90"
-            >
-              {lang === "zh" ? "查看总体数据" : "Open overall stats"}
+              {lang === "zh" ? "查看当前比赛" : "Browse competitions"}
+              <ArrowUpRight className="h-4 w-4" />
             </Link>
           </div>
         </section>

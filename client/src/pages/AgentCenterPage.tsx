@@ -181,6 +181,10 @@ export default function AgentCenterPage() {
     setDescription(agent?.description ?? "");
   }, [agent?.arenaAccountId, agent?.name, agent?.description]);
 
+  const [promptExpanded, setPromptExpanded] = useState(false);
+  const [tradesExpanded, setTradesExpanded] = useState(false);
+  const TRADES_LIMIT = 10;
+
   const prompt = useMemo(() => {
     if (typeof window === "undefined") return "";
     return `Read ${window.location.origin}/agent-skill.md and follow the instructions to join Trading Arena Agent League.`;
@@ -296,18 +300,28 @@ export default function AgentCenterPage() {
               <p className="text-[11px] uppercase tracking-[0.18em] text-[#8E98A8]">
                 {lang === "zh" ? "Agent Prompt" : "Agent Prompt"}
               </p>
-              <button
-                onClick={async () => {
-                  await navigator.clipboard.writeText(prompt);
-                  toast.success(lang === "zh" ? "Agent Prompt 已复制" : "Agent prompt copied");
-                }}
-                className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2.5 py-1 text-[11px] text-[#D1D4DC] hover:bg-white/[0.04]"
-              >
-                <Copy className="h-3.5 w-3.5" />
-                {lang === "zh" ? "复制" : "Copy"}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(prompt);
+                    toast.success(lang === "zh" ? "Agent Prompt 已复制" : "Agent prompt copied");
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2.5 py-1 text-[11px] text-[#D1D4DC] hover:bg-white/[0.04]"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  {lang === "zh" ? "复制" : "Copy"}
+                </button>
+                <button
+                  onClick={() => setPromptExpanded(!promptExpanded)}
+                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2.5 py-1 text-[11px] text-[#D1D4DC] hover:bg-white/[0.04]"
+                >
+                  {promptExpanded ? (lang === "zh" ? "收起" : "Collapse") : (lang === "zh" ? "展开" : "Expand")}
+                </button>
+              </div>
             </div>
-            <pre className="mt-3 whitespace-pre-wrap break-words font-mono text-sm text-white">{prompt}</pre>
+            {promptExpanded && (
+              <pre className="mt-3 whitespace-pre-wrap break-words font-mono text-sm text-white">{prompt}</pre>
+            )}
           </div>
 
           <div className="mt-6 grid gap-3 md:grid-cols-3">
@@ -434,49 +448,7 @@ export default function AgentCenterPage() {
         </div>
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <section className={`${PAGE_CLASS} p-6`}>
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.18em] text-[#8E98A8]">
-              {lang === "zh" ? "Agent 资料" : "Agent profile"}
-            </p>
-            <h2 className="mt-2 text-xl font-display font-bold text-white">{lang === "zh" ? "Agent 资料" : "Agent Profile"}</h2>
-          </div>
-
-          <div className="mt-5 space-y-4">
-            <label className="block space-y-2">
-              <span className="text-[11px] uppercase tracking-[0.18em] text-[#8E98A8]">
-                {lang === "zh" ? "名称" : "Name"}
-              </span>
-              <input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-[#111723] px-4 py-3 text-sm text-white outline-none focus:border-[#F0B90B]/50"
-              />
-            </label>
-
-            <label className="block space-y-2">
-              <span className="text-[11px] uppercase tracking-[0.18em] text-[#8E98A8]">
-                {lang === "zh" ? "策略说明" : "Strategy notes"}
-              </span>
-              <textarea
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                className="min-h-32 w-full rounded-xl border border-white/10 bg-[#111723] px-4 py-3 text-sm text-white outline-none focus:border-[#F0B90B]/50"
-              />
-            </label>
-
-            <button
-              onClick={handleSave}
-              disabled={updateMutation.isPending}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#F0B90B] px-5 py-3 text-sm font-bold text-[#0B0E11] hover:bg-[#F0B90B]/90 disabled:opacity-70"
-            >
-              {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {lang === "zh" ? "保存资料" : "Save profile"}
-            </button>
-          </div>
-        </section>
-
+      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
         <section className={`${PAGE_CLASS} p-6`}>
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -539,6 +511,16 @@ export default function AgentCenterPage() {
             </div>
           </div>
 
+          {plainKey && (
+            <div className="mt-4 rounded-xl border border-[#F0B90B]/30 bg-[#F0B90B]/8 p-3">
+              <p className="text-xs font-semibold text-[#F0B90B]">
+                {lang === "zh"
+                  ? "⚠️ 请立即复制并安全保存此 API Key！关闭页面后将无法再次查看。"
+                  : "⚠️ Copy and securely save this API key now! It will not be shown again after you leave this page."}
+              </p>
+            </div>
+          )}
+
           <div className="mt-5 flex flex-wrap gap-3">
             <button
               onClick={handleRotate}
@@ -555,6 +537,48 @@ export default function AgentCenterPage() {
             >
               {revokeKeyMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldX className="h-4 w-4" />}
               {lang === "zh" ? "吊销 key" : "Revoke key"}
+            </button>
+          </div>
+        </section>
+
+        <section className={`${PAGE_CLASS} p-6`}>
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-[#8E98A8]">
+              {lang === "zh" ? "Agent 资料" : "Agent profile"}
+            </p>
+            <h2 className="mt-2 text-xl font-display font-bold text-white">{lang === "zh" ? "Agent 资料" : "Agent Profile"}</h2>
+          </div>
+
+          <div className="mt-5 space-y-4">
+            <label className="block space-y-2">
+              <span className="text-[11px] uppercase tracking-[0.18em] text-[#8E98A8]">
+                {lang === "zh" ? "名称" : "Name"}
+              </span>
+              <input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-[#111723] px-4 py-3 text-sm text-white outline-none focus:border-[#F0B90B]/50"
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-[11px] uppercase tracking-[0.18em] text-[#8E98A8]">
+                {lang === "zh" ? "策略说明" : "Strategy notes"}
+              </span>
+              <textarea
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                className="min-h-32 w-full rounded-xl border border-white/10 bg-[#111723] px-4 py-3 text-sm text-white outline-none focus:border-[#F0B90B]/50"
+              />
+            </label>
+
+            <button
+              onClick={handleSave}
+              disabled={updateMutation.isPending}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#F0B90B] px-5 py-3 text-sm font-bold text-[#0B0E11] hover:bg-[#F0B90B]/90 disabled:opacity-70"
+            >
+              {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {lang === "zh" ? "保存资料" : "Save profile"}
             </button>
           </div>
         </section>
@@ -637,47 +661,59 @@ export default function AgentCenterPage() {
             {lang === "zh" ? "还没有成交记录" : "No trades yet"}
           </div>
         ) : (
-          <div className="mt-5 grid gap-3 lg:grid-cols-2">
-            {agent.recentTrades.map((trade) => (
-              <div
-                key={trade.id}
-                className="rounded-2xl border border-white/[0.08] bg-black/20 p-4"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-white">{trade.competitionTitle ?? "--"}</p>
-                    <p className="mt-1 text-xs text-[#8E98A8]">
-                      {trade.direction} · {trade.closeReason}
-                    </p>
+          <>
+            <div className="mt-5 grid gap-3 lg:grid-cols-2">
+              {(tradesExpanded ? agent.recentTrades : agent.recentTrades.slice(0, TRADES_LIMIT)).map((trade) => (
+                <div
+                  key={trade.id}
+                  className="rounded-2xl border border-white/[0.08] bg-black/20 p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-white">{trade.competitionTitle ?? "--"}</p>
+                      <p className="mt-1 text-xs text-[#8E98A8]">
+                        {trade.direction} · {trade.closeReason}
+                      </p>
+                    </div>
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        trade.pnlPct >= 0 ? "bg-[#0ECB81]/12 text-[#0ECB81]" : "bg-[#F6465D]/12 text-[#F6465D]"
+                      }`}
+                    >
+                      {trade.pnlPct >= 0 ? "+" : ""}
+                      {trade.pnlPct.toFixed(2)}%
+                    </span>
                   </div>
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                      trade.pnlPct >= 0 ? "bg-[#0ECB81]/12 text-[#0ECB81]" : "bg-[#F6465D]/12 text-[#F6465D]"
-                    }`}
-                  >
-                    {trade.pnlPct >= 0 ? "+" : ""}
-                    {trade.pnlPct.toFixed(2)}%
-                  </span>
-                </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.16em] text-[#7E899B]">PnL</p>
-                    <p className={`mt-2 font-mono font-semibold ${trade.pnl >= 0 ? "text-[#0ECB81]" : "text-[#F6465D]"}`}>
-                      {trade.pnl >= 0 ? "+" : ""}
-                      {trade.pnl.toFixed(2)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.16em] text-[#7E899B]">
-                      {lang === "zh" ? "时间" : "Time"}
-                    </p>
-                    <p className="mt-2 text-sm text-white">{formatTime(trade.closeTime, locale)}</p>
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-[0.16em] text-[#7E899B]">PnL</p>
+                      <p className={`mt-2 font-mono font-semibold ${trade.pnl >= 0 ? "text-[#0ECB81]" : "text-[#F6465D]"}`}>
+                        {trade.pnl >= 0 ? "+" : ""}
+                        {trade.pnl.toFixed(2)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase tracking-[0.16em] text-[#7E899B]">
+                        {lang === "zh" ? "时间" : "Time"}
+                      </p>
+                      <p className="mt-2 text-sm text-white">{formatTime(trade.closeTime, locale)}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            {agent.recentTrades.length > TRADES_LIMIT && (
+              <button
+                onClick={() => setTradesExpanded(!tradesExpanded)}
+                className="mt-4 w-full rounded-xl border border-white/10 py-2.5 text-sm text-[#D1D4DC] hover:bg-white/[0.04]"
+              >
+                {tradesExpanded
+                  ? (lang === "zh" ? "收起" : "Show less")
+                  : (lang === "zh" ? `查看全部 ${agent.recentTrades.length} 条` : `Show all ${agent.recentTrades.length} trades`)}
+              </button>
+            )}
+          </>
         )}
       </section>
     </div>

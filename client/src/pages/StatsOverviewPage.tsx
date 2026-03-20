@@ -48,6 +48,55 @@ function countryFlag(code: string): string {
   );
 }
 
+const COUNTRY_NAMES: Record<string, { zh: string; en: string }> = {
+  CN: { zh: "中国", en: "China" },
+  US: { zh: "美国", en: "United States" },
+  JP: { zh: "日本", en: "Japan" },
+  KR: { zh: "韩国", en: "South Korea" },
+  SG: { zh: "新加坡", en: "Singapore" },
+  HK: { zh: "中国香港", en: "Hong Kong" },
+  TW: { zh: "中国台湾", en: "Taiwan" },
+  GB: { zh: "英国", en: "United Kingdom" },
+  DE: { zh: "德国", en: "Germany" },
+  FR: { zh: "法国", en: "France" },
+  AU: { zh: "澳大利亚", en: "Australia" },
+  CA: { zh: "加拿大", en: "Canada" },
+  IN: { zh: "印度", en: "India" },
+  BR: { zh: "巴西", en: "Brazil" },
+  RU: { zh: "俄罗斯", en: "Russia" },
+  MY: { zh: "马来西亚", en: "Malaysia" },
+  TH: { zh: "泰国", en: "Thailand" },
+  VN: { zh: "越南", en: "Vietnam" },
+  ID: { zh: "印度尼西亚", en: "Indonesia" },
+  PH: { zh: "菲律宾", en: "Philippines" },
+  AE: { zh: "阿联酋", en: "UAE" },
+  TR: { zh: "土耳其", en: "Turkey" },
+  NL: { zh: "荷兰", en: "Netherlands" },
+  CH: { zh: "瑞士", en: "Switzerland" },
+  ES: { zh: "西班牙", en: "Spain" },
+  IT: { zh: "意大利", en: "Italy" },
+  SE: { zh: "瑞典", en: "Sweden" },
+  NO: { zh: "挪威", en: "Norway" },
+  FI: { zh: "芬兰", en: "Finland" },
+  DK: { zh: "丹麦", en: "Denmark" },
+  PL: { zh: "波兰", en: "Poland" },
+  NG: { zh: "尼日利亚", en: "Nigeria" },
+  ZA: { zh: "南非", en: "South Africa" },
+  MX: { zh: "墨西哥", en: "Mexico" },
+  AR: { zh: "阿根廷", en: "Argentina" },
+  CL: { zh: "智利", en: "Chile" },
+  CO: { zh: "哥伦比亚", en: "Colombia" },
+  NZ: { zh: "新西兰", en: "New Zealand" },
+  IL: { zh: "以色列", en: "Israel" },
+  PT: { zh: "葡萄牙", en: "Portugal" },
+};
+
+function getCountryName(code: string, lang: string): string {
+  const entry = COUNTRY_NAMES[code.toUpperCase()];
+  if (entry) return lang === "zh" ? entry.zh : entry.en;
+  return code.toUpperCase();
+}
+
 function MetricCard({
   icon: Icon,
   label,
@@ -191,7 +240,7 @@ export default function StatsOverviewPage() {
                   key={row.country}
                   rank={index + 1}
                   flag={countryFlag(row.country)}
-                  title={row.country}
+                  title={getCountryName(row.country, lang)}
                   subtitle={
                     lang === "zh"
                       ? `${row.competitionCount} 场比赛 · 奖金 ${row.totalPrize}U`
