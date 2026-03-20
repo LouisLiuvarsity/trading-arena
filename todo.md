@@ -219,3 +219,6 @@
 - [x] Audit and optimize FAQ: fix invite code → registration, fix trade count references
 - [x] Audit and optimize Rules/HighlightsSection: updated trade rules text
 - [x] Fix Footer: broken #faq and #rules anchors → /rules route links
+
+## Bug Fix: recharts LineEndpointDot key prop spread warning
+- [x] Fix React key prop spread warning from recharts LineEndpointDot on landing page (/)

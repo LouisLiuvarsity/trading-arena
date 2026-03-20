@@ -873,9 +873,10 @@ export default function AgentSpectatorSection() {
                         key={series.key}
                         type="linear"
                         dataKey={series.key}
-                        dot={(props: { cx?: number; cy?: number; index?: number }) => (
-                          <LineEndpointDot {...props} seriesKey={series.key} labelMap={endpointMap} />
-                        )}
+                        dot={(props: { cx?: number; cy?: number; index?: number; key?: string }) => {
+                          const { cx, cy, index: idx } = props;
+                          return <LineEndpointDot cx={cx} cy={cy} index={idx} seriesKey={series.key} labelMap={endpointMap} />;
+                        }}
                         activeDot={false}
                         strokeWidth={series.strokeWidth}
                         stroke={series.color}
