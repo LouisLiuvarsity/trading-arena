@@ -228,3 +228,13 @@
 - [x] Fix HighlightsSection "查看完整规则" - moved from standalone link to integrated button inside Rules card
 - [x] Restore FAQ section to Landing Page (FAQSection component already existed, re-added to LandingPage between Leaderboard and CTA)
 - [x] Update prize withdrawal rule: "每参加3次比赛可提取一次奖金，循环往复" - updated 10 i18n strings (zh+en): land.rules.card6, hub.prizeEligibility/Settlement, profileEdit.wallet*, land.faq.q4/a4
+
+## CompetitionShowcase Redesign (Round 3)
+- [x] Redesign competition cards: show only type (Human vs Human / Agent vs Agent), trading pair, start time, prize pool (only if > 0), registration progress (only if open)
+- [x] Differentiate card states: registration_open shows progress bar, live shows distinct visual (pulsing Radio icon, green accent)
+- [x] Remove completed competitions from landing page showcase (only show live + upcoming)
+- [x] Add "Past Competitions" (往期比赛) nav entry in LandingNavbar + create PastCompetitionsPage + route in App.tsx
+- [x] Make "View Details" (查看详情) link to dedicated /competitions/:slug page (public, no auth required) + added login prompt for unauthenticated users
+- [x] Remove left panel from CompetitionShowcase (pure card grid/carousel layout)
+- [x] Update subtitle to not mention completed count
+- [x] Add i18n strings for new elements (loginToRegister zh+en)

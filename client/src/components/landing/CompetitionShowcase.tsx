@@ -7,9 +7,12 @@ import {
   Clock3,
   Coins,
   Sparkles,
-  Star,
   Users,
   Zap,
+  Swords,
+  Bot,
+  ArrowRight,
+  Radio,
 } from 'lucide-react';
 
 import {
@@ -20,11 +23,13 @@ import {
 } from '@/components/ui/carousel';
 import { useT } from '@/lib/i18n';
 
+/* ── Types ── */
 interface CompetitionCard {
   id: number;
   slug: string;
   title: string;
   competitionType: string;
+  participantMode?: string;
   status: string;
   prizePool: number;
   symbol: string;
@@ -42,43 +47,7 @@ interface ShowcaseData {
   completed: CompetitionCard[];
 }
 
-const STATUS_CONFIG: Record<string, { label: string; labelEn: string; color: string; bg: string }> = {
-  live: { label: '进行中', labelEn: 'LIVE', color: '#0ECB81', bg: 'rgba(14,203,129,0.15)' },
-  announced: { label: '已公布', labelEn: 'Announced', color: '#F0B90B', bg: 'rgba(240,185,11,0.15)' },
-  registration_open: { label: '报名中', labelEn: 'Open', color: '#F0B90B', bg: 'rgba(240,185,11,0.15)' },
-  registration_closed: { label: '报名截止', labelEn: 'Closed', color: '#848E9C', bg: 'rgba(132,142,156,0.15)' },
-  completed: { label: '已结束', labelEn: 'Done', color: '#5E6673', bg: 'rgba(94,102,115,0.15)' },
-  ended_early: { label: '提前结束', labelEn: 'Ended Early', color: '#FF6B35', bg: 'rgba(255,107,53,0.15)' },
-  settling: { label: '结算中', labelEn: 'Settling', color: '#848E9C', bg: 'rgba(132,142,156,0.15)' },
-};
-
-const TYPE_META: Record<string, { label: string; eyebrow: string; gradient: string; accent: string }> = {
-  grand_final: {
-    label: 'Grand Final',
-    eyebrow: 'Season Finale',
-    gradient: 'from-[#F0B90B]/45 via-[#FF7A00]/24 to-[#131A2B]',
-    accent: '#F0B90B',
-  },
-  special: {
-    label: 'Special Event',
-    eyebrow: 'Limited Event',
-    gradient: 'from-[#5EEAD4]/28 via-[#2563EB]/22 to-[#121A2A]',
-    accent: '#5EEAD4',
-  },
-  regular: {
-    label: 'Regular Match',
-    eyebrow: 'Campus Series',
-    gradient: 'from-[#25C2A0]/28 via-[#0D5BFF]/18 to-[#121A2A]',
-    accent: '#25C2A0',
-  },
-  practice: {
-    label: 'Practice',
-    eyebrow: 'Warmup Session',
-    gradient: 'from-[#94A3B8]/20 via-[#475569]/18 to-[#101725]',
-    accent: '#94A3B8',
-  },
-};
-
+/* ── Helpers ── */
 function formatTime(ts: number): string {
   return new Date(ts).toLocaleString('zh-CN', {
     month: 'numeric',
@@ -98,112 +67,139 @@ function getRegistrationPct(card: CompetitionCard): number {
   return Math.min(100, Math.round((card.registeredCount / card.maxParticipants) * 100));
 }
 
-/* ── Right-side carousel card (compact) ── */
-function CompetitionCardView({ card }: { card: CompetitionCard }) {
+function getParticipantModeLabel(mode: string | undefined, lang: string): string {
+  if (mode === 'agent') return lang === 'zh' ? 'Agent vs Agent' : 'Agent vs Agent';
+  return lang === 'zh' ? 'Human vs Human' : 'Human vs Human';
+}
+
+function getParticipantModeIcon(mode: string | undefined) {
+  if (mode === 'agent') return <Bot className="h-3.5 w-3.5" />;
+  return <Swords className="h-3.5 w-3.5" />;
+}
+
+/* ── Single competition card ── */
+function CompetitionCardSimple({ card }: { card: CompetitionCard }) {
   const { lang } = useT();
-  const statusConf = STATUS_CONFIG[card.status] ?? STATUS_CONFIG.completed;
-  const typeMeta = TYPE_META[card.competitionType] ?? TYPE_META.regular;
+  const isLive = card.status === 'live';
+  const isOpen = card.status === 'registration_open';
   const baseAsset = getBaseAsset(card.symbol);
-  const registrationPct = getRegistrationPct(card);
+  const regPct = getRegistrationPct(card);
+
+  // Live cards get a green accent, open cards get yellow accent
+  const accentColor = isLive ? '#0ECB81' : '#F0B90B';
+  const statusLabel = isLive
+    ? (lang === 'zh' ? '进行中' : 'LIVE')
+    : isOpen
+      ? (lang === 'zh' ? '报名中' : 'OPEN')
+      : (lang === 'zh' ? '即将开始' : 'UPCOMING');
 
   return (
-    <article className="relative overflow-hidden rounded-[28px] border border-white/[0.1] bg-[#0E1422] shadow-[0_28px_90px_rgba(0,0,0,0.4)]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0))]" />
-
-      <div className={`relative h-[280px] overflow-hidden bg-gradient-to-br ${typeMeta.gradient}`}>
-        {card.coverImageUrl ? (
-          <>
-            <img src={card.coverImageUrl} alt={card.title} className="h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,10,18,0.08),rgba(6,10,18,0.88))]" />
-          </>
-        ) : (
-          <>
-            <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(13,17,28,0.08),rgba(13,17,28,0.85))]" />
-            <div
-              className="absolute -right-6 top-5 text-[82px] font-black uppercase tracking-[0.18em] text-white/[0.06] sm:text-[110px]"
-              aria-hidden="true"
-            >
-              {baseAsset}
-            </div>
-            <div
-              className="absolute -left-14 bottom-5 h-32 w-32 rounded-full blur-3xl"
-              style={{ backgroundColor: `${typeMeta.accent}55` }}
-              aria-hidden="true"
-            />
-          </>
-        )}
-
-        <div className="absolute inset-x-5 top-5 flex items-start justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold backdrop-blur-sm"
-              style={{ backgroundColor: statusConf.bg, color: statusConf.color }}
-            >
-              {card.status === 'live' && <span className="h-2 w-2 rounded-full bg-current animate-pulse" />}
-              {statusConf.label}
-            </span>
-            <span className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[11px] font-medium text-white/72 backdrop-blur-sm">
-              {typeMeta.label}
-            </span>
+    <Link href={`/competitions/${card.slug}`} className="block group">
+      <article
+        className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0E1422] transition-all duration-300 group-hover:border-[#F0B90B]/40 group-hover:shadow-[0_0_40px_rgba(240,185,11,0.08)]"
+      >
+        {/* Top gradient area with coin watermark */}
+        <div className={`relative px-5 pt-5 pb-4 ${isLive ? 'bg-gradient-to-br from-[#0ECB81]/12 via-transparent to-transparent' : 'bg-gradient-to-br from-[#F0B90B]/8 via-transparent to-transparent'}`}>
+          {/* Watermark */}
+          <div
+            className="absolute -right-4 -top-2 text-[72px] font-black uppercase tracking-[0.15em] text-white/[0.03] select-none pointer-events-none"
+            aria-hidden="true"
+          >
+            {baseAsset}
           </div>
 
-          {card.prizePool > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-[#F0B90B]/25 bg-black/45 px-3 py-1 text-[11px] font-bold text-[#F0B90B] backdrop-blur-sm">
-              <Coins className="h-3 w-3" />
-              {card.prizePool}U
-            </span>
+          {/* Row 1: Status badge + participant mode */}
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold"
+                style={{
+                  backgroundColor: isLive ? 'rgba(14,203,129,0.15)' : 'rgba(240,185,11,0.15)',
+                  color: accentColor,
+                }}
+              >
+                {isLive && <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />}
+                {statusLabel}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-white/8 bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-white/55">
+                {getParticipantModeIcon(card.participantMode)}
+                {getParticipantModeLabel(card.participantMode, lang)}
+              </span>
+            </div>
+
+            {card.prizePool > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-[#F0B90B]/20 bg-[#F0B90B]/8 px-2.5 py-1 text-[11px] font-bold text-[#F0B90B]">
+                <Coins className="h-3 w-3" />
+                {card.prizePool}U
+              </span>
+            )}
+          </div>
+
+          {/* Row 2: Trading pair + start time */}
+          <div className="flex items-center gap-4 text-[13px]">
+            <div className="flex items-center gap-1.5">
+              <Zap className="h-4 w-4 text-[#25C2A0]" />
+              <span className="font-semibold text-white">{baseAsset}/USDT</span>
+            </div>
+            <div className="h-4 w-px bg-white/10" />
+            <div className="flex items-center gap-1.5">
+              <Clock3 className="h-4 w-4" style={{ color: accentColor }} />
+              <span className="text-white/60">{formatTime(card.startTime)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom section: state-specific content */}
+        <div className="border-t border-white/[0.06] px-5 py-3.5">
+          {isOpen ? (
+            /* Registration open: show progress bar */
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5 text-[12px] text-white/50">
+                  <Users className="h-3.5 w-3.5" />
+                  <span>{lang === 'zh' ? '报名进度' : 'Registration'}</span>
+                </div>
+                <span className="text-[12px] font-mono font-semibold text-white/80">
+                  {card.registeredCount}/{card.maxParticipants}
+                </span>
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#F0B90B] to-[#F0B90B]/70 transition-all duration-500"
+                  style={{ width: `${regPct}%` }}
+                />
+              </div>
+            </div>
+          ) : isLive ? (
+            /* Live: show live indicator + participant count */
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Radio className="h-4 w-4 text-[#0ECB81] animate-pulse" />
+                <span className="text-[12px] font-medium text-[#0ECB81]">
+                  {lang === 'zh' ? '比赛进行中' : 'Match in Progress'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[12px] text-white/50">
+                <Users className="h-3.5 w-3.5" />
+                <span>{card.registeredCount} {lang === 'zh' ? '名选手' : 'players'}</span>
+              </div>
+            </div>
+          ) : (
+            /* Upcoming (announced, registration_closed): show participant count + arrow */
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-[12px] text-white/50">
+                <Users className="h-3.5 w-3.5" />
+                <span>{card.registeredCount}/{card.maxParticipants}</span>
+              </div>
+              <div className="flex items-center gap-1 text-[12px] text-white/40 group-hover:text-[#F0B90B] transition-colors">
+                <span>{lang === 'zh' ? '查看详情' : 'Details'}</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </div>
+            </div>
           )}
         </div>
-
-        <div className="absolute inset-x-5 bottom-5">
-          <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-white/55">
-            <span>{typeMeta.eyebrow}</span>
-            <span className="h-1 w-1 rounded-full bg-white/35" />
-            <span>{statusConf.labelEn}</span>
-          </div>
-
-          <h3 className="mt-3 max-w-[12ch] text-3xl font-display font-black leading-[0.95] text-white sm:text-[42px]">
-            {card.title}
-          </h3>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className="rounded-full border border-white/12 bg-white/[0.08] px-3 py-1 text-[11px] font-mono font-bold text-white/85">
-              {baseAsset}/USDT
-            </span>
-            <span className="rounded-full border border-white/12 bg-white/[0.08] px-3 py-1 text-[11px] font-medium text-white/72">
-              #{card.id.toString().padStart(2, '0')}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Compact bottom info: 1 row with key stats */}
-      <div className="flex items-center gap-4 border-t border-white/[0.06] bg-[#0B111D]/92 px-5 py-3.5">
-        <div className="flex items-center gap-1.5 text-[12px] text-[#9CA5B5]">
-          <Clock3 className="h-3.5 w-3.5 text-[#F0B90B]" />
-          <span className="font-medium text-white/80">{formatTime(card.startTime)}</span>
-        </div>
-        <div className="h-3 w-px bg-white/10" />
-        <div className="flex items-center gap-1.5 text-[12px] text-[#9CA5B5]">
-          <Zap className="h-3.5 w-3.5 text-[#25C2A0]" />
-          <span className="font-medium text-white/80">{card.symbol}</span>
-        </div>
-        <div className="h-3 w-px bg-white/10" />
-        <div className="flex items-center gap-1.5 text-[12px] text-[#9CA5B5]">
-          <Users className="h-3.5 w-3.5 text-[#25C2A0]" />
-          <span className="font-medium text-white/80">{card.registeredCount}/{card.maxParticipants}</span>
-        </div>
-        {card.prizePool > 0 && (
-          <>
-            <div className="h-3 w-px bg-white/10" />
-            <div className="flex items-center gap-1.5 text-[12px] text-[#9CA5B5]">
-              <Star className="h-3.5 w-3.5 text-[#F0B90B]" />
-              <span className="font-medium text-white/80">{card.prizePool}U</span>
-            </div>
-          </>
-        )}
-      </div>
-    </article>
+      </article>
+    </Link>
   );
 }
 
@@ -225,20 +221,15 @@ export default function CompetitionShowcase() {
       .catch(() => setLoading(false));
   }, []);
 
-  const allCards = data ? [...data.live, ...data.upcoming, ...data.completed] : [];
-  const activeCard = allCards[currentIndex] ?? allCards[0];
+  // Only show live + upcoming (no completed)
+  const activeCards = data ? [...data.live, ...data.upcoming] : [];
 
   useEffect(() => {
     if (!api) return;
-
-    const syncIndex = () => {
-      setCurrentIndex(api.selectedScrollSnap());
-    };
-
+    const syncIndex = () => setCurrentIndex(api.selectedScrollSnap());
     syncIndex();
     api.on('select', syncIndex);
     api.on('reInit', syncIndex);
-
     return () => {
       api.off('select', syncIndex);
       api.off('reInit', syncIndex);
@@ -246,10 +237,10 @@ export default function CompetitionShowcase() {
   }, [api]);
 
   useEffect(() => {
-    if (currentIndex < allCards.length) return;
+    if (currentIndex < activeCards.length) return;
     setCurrentIndex(0);
     api?.scrollTo(0);
-  }, [api, allCards.length, currentIndex]);
+  }, [api, activeCards.length, currentIndex]);
 
   if (loading) {
     return (
@@ -261,7 +252,7 @@ export default function CompetitionShowcase() {
     );
   }
 
-  if (!data || allCards.length === 0) {
+  if (!data || activeCards.length === 0) {
     return (
       <section id="competitions" className="py-20">
         <div className="mx-auto max-w-7xl px-6">
@@ -281,19 +272,18 @@ export default function CompetitionShowcase() {
     );
   }
 
-  const activeStatus = STATUS_CONFIG[activeCard.status] ?? STATUS_CONFIG.completed;
-  const activeType = TYPE_META[activeCard.competitionType] ?? TYPE_META.regular;
+  const liveCount = data.live.length;
+  const upcomingCount = data.upcoming.length;
 
   return (
-    <section id="competitions" className="relative overflow-hidden bg-[#090D14] py-24">
+    <section id="competitions" className="relative overflow-hidden py-20">
+      {/* Background effects */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-1/2 top-12 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[#F0B90B]/[0.05] blur-[140px]" />
-        <div className="absolute -left-24 bottom-0 h-[260px] w-[260px] rounded-full bg-[#25C2A0]/[0.07] blur-[120px]" />
-        <div className="absolute -right-28 top-1/3 h-[280px] w-[280px] rounded-full bg-[#0D5BFF]/[0.08] blur-[120px]" />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:44px_44px] opacity-[0.06]" />
+        <div className="absolute left-1/2 top-12 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[#F0B90B]/[0.04] blur-[140px]" />
+        <div className="absolute -left-24 bottom-0 h-[260px] w-[260px] rounded-full bg-[#25C2A0]/[0.05] blur-[120px]" />
       </div>
 
-      <div className="relative mx-auto max-w-6xl px-6">
+      <div className="relative mx-auto max-w-5xl px-6">
         {/* Section header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -311,154 +301,101 @@ export default function CompetitionShowcase() {
             {t('land.comp.title')}
           </h2>
           <p className="mt-4 text-sm leading-7 text-[#8E97A8] sm:text-[15px]">
-            {t('land.comp.subtitle', {
-              live: data.live.length,
-              upcoming: data.upcoming.length,
-              completed: data.completed.length,
-            })}
+            {lang === 'zh'
+              ? `${liveCount} 场进行中 · ${upcomingCount} 场即将开始`
+              : `${liveCount} Live · ${upcomingCount} Upcoming`}
           </p>
         </motion.div>
 
-        {/* Main content: slimmed left panel + right carousel */}
+        {/* Cards grid / carousel */}
         <motion.div
           initial={{ opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.45 }}
-          className="relative mt-12 overflow-hidden rounded-[36px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(17,24,39,0.92),rgba(10,14,23,0.96))] p-5 shadow-[0_40px_120px_rgba(0,0,0,0.45)] sm:p-6 lg:p-8"
+          className="mt-12"
         >
-          <div
-            className="pointer-events-none absolute inset-x-10 top-0 h-40 rounded-full blur-3xl"
-            style={{ backgroundColor: `${activeStatus.color}26` }}
-          />
-
-          <div className="relative grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_420px]">
-            {/* ── Left panel: slimmed down ── */}
-            <div className="space-y-6">
-              {/* Status badges */}
-              <div className="flex flex-wrap items-center gap-3">
-                <span
-                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold"
-                  style={{ backgroundColor: activeStatus.bg, color: activeStatus.color }}
-                >
-                  {activeCard.status === 'live' && <span className="h-2 w-2 rounded-full bg-current animate-pulse" />}
-                  {activeStatus.label}
-                </span>
-                <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-white/60">
-                  {activeType.label}
-                </span>
-              </div>
-
-              {/* Title */}
-              <div>
-                <h3 className="max-w-[16ch] text-4xl font-display font-black leading-[0.92] text-white sm:text-5xl">
-                  {activeCard.title}
-                </h3>
-              </div>
-
-              {/* Key stats in one compact row */}
-              <div className="flex flex-wrap items-center gap-4 text-[13px]">
-                <div className="flex items-center gap-1.5">
-                  <Zap className="h-4 w-4 text-[#25C2A0]" />
-                  <span className="font-semibold text-white">{activeCard.symbol}</span>
-                </div>
-                <div className="h-4 w-px bg-white/10" />
-                <div className="flex items-center gap-1.5">
-                  <Clock3 className="h-4 w-4 text-[#F0B90B]" />
-                  <span className="text-[#9CA5B5]">{formatTime(activeCard.startTime)}</span>
-                </div>
-                <div className="h-4 w-px bg-white/10" />
-                <div className="flex items-center gap-1.5">
-                  <Coins className="h-4 w-4 text-[#F0B90B]" />
-                  <span className="font-semibold text-white">{activeCard.prizePool}U</span>
-                </div>
-                <div className="h-4 w-px bg-white/10" />
-                <div className="flex items-center gap-1.5">
-                  <Users className="h-4 w-4 text-[#25C2A0]" />
-                  <span className="text-[#9CA5B5]">{activeCard.registeredCount}/{activeCard.maxParticipants}</span>
-                </div>
-              </div>
-
-              {/* CTA buttons */}
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <Link
-                  href="/login?mode=register"
-                  className="inline-flex items-center gap-2 rounded-2xl bg-[#F0B90B] px-6 py-3 text-sm font-bold text-[#0B0E11] transition-colors hover:bg-[#F0B90B]/90"
-                >
-                  {t('land.comp.joinNow')}
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
-                <Link
-                  href={`/competitions/${activeCard.slug}`}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-5 py-3 text-sm font-medium text-white/78 transition-colors hover:bg-white/[0.06] hover:text-white"
-                >
-                  {lang === 'zh' ? '查看详情' : 'Details'}
-                </Link>
-              </div>
+          {activeCards.length <= 3 ? (
+            /* Grid layout for 1-3 cards */
+            <div className={`grid gap-5 ${activeCards.length === 1 ? 'max-w-md mx-auto' : activeCards.length === 2 ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
+              {activeCards.map((card) => (
+                <CompetitionCardSimple key={card.id} card={card} />
+              ))}
             </div>
-
-            {/* ── Right panel: carousel ── */}
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-4 rounded-[32px] bg-white/[0.03]" />
-              <div
-                className="pointer-events-none absolute inset-6 rounded-[32px] blur-3xl"
-                style={{ backgroundColor: `${activeType.accent}22` }}
-              />
-
+          ) : (
+            /* Carousel for 4+ cards */
+            <div>
               <Carousel
                 setApi={setApi}
-                opts={{ align: 'center', loop: allCards.length > 1 }}
+                opts={{ align: 'start', loop: activeCards.length > 2 }}
                 className="relative"
               >
-                <CarouselContent className="-ml-0">
-                  {allCards.map((card) => (
-                    <CarouselItem key={card.id} className="pl-0">
-                      <CompetitionCardView card={card} />
+                <CarouselContent className="-ml-4">
+                  {activeCards.map((card) => (
+                    <CarouselItem key={card.id} className="pl-4 basis-full sm:basis-1/2 lg:basis-1/3">
+                      <CompetitionCardSimple card={card} />
                     </CarouselItem>
                   ))}
                 </CarouselContent>
               </Carousel>
 
-              {allCards.length > 1 && (
-                <div className="mt-5 flex items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    onClick={() => api?.scrollPrev()}
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-[#8E97A8] transition-colors hover:bg-white/[0.08] hover:text-white"
-                    aria-label="上一张赛事卡片"
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </button>
+              {/* Carousel navigation */}
+              <div className="mt-6 flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => api?.scrollPrev()}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-[#8E97A8] transition-colors hover:bg-white/[0.08] hover:text-white"
+                  aria-label={lang === 'zh' ? '上一张' : 'Previous'}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
 
-                  <div className="flex items-center gap-2">
-                    {allCards.map((card, index) => (
-                      <button
-                        key={card.id}
-                        type="button"
-                        onClick={() => api?.scrollTo(index)}
-                        aria-label={`切换到第 ${index + 1} 张赛事卡片`}
-                        className={`h-2.5 rounded-full transition-all ${
-                          index === currentIndex
-                            ? 'w-8 bg-[#F0B90B]'
-                            : 'w-2.5 bg-white/20 hover:bg-white/38'
-                        }`}
-                      />
-                    ))}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => api?.scrollNext()}
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-[#8E97A8] transition-colors hover:bg-white/[0.08] hover:text-white"
-                    aria-label="下一张赛事卡片"
-                  >
-                    <ChevronRight className="h-5 w-5" />
-                  </button>
+                <div className="flex items-center gap-1.5">
+                  {activeCards.map((card, index) => (
+                    <button
+                      key={card.id}
+                      type="button"
+                      onClick={() => api?.scrollTo(index)}
+                      aria-label={`${index + 1}`}
+                      className={`h-2 rounded-full transition-all ${
+                        index === currentIndex
+                          ? 'w-6 bg-[#F0B90B]'
+                          : 'w-2 bg-white/20 hover:bg-white/35'
+                      }`}
+                    />
+                  ))}
                 </div>
-              )}
+
+                <button
+                  type="button"
+                  onClick={() => api?.scrollNext()}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-[#8E97A8] transition-colors hover:bg-white/[0.08] hover:text-white"
+                  aria-label={lang === 'zh' ? '下一张' : 'Next'}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </motion.div>
+
+        {/* Past competitions link */}
+        {data.completed.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="mt-8 text-center"
+          >
+            <Link
+              href="/past-competitions"
+              className="inline-flex items-center gap-1.5 text-[13px] text-white/40 hover:text-[#F0B90B] transition-colors"
+            >
+              {lang === 'zh' ? `查看 ${data.completed.length} 场往期比赛` : `View ${data.completed.length} past competitions`}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </motion.div>
+        )}
       </div>
     </section>
   );

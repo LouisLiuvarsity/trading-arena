@@ -204,6 +204,13 @@ export default function CompetitionDetailPage({ slug }: Props) {
               >
                 通过 Agent API 报名 <ChevronRight className="w-4 h-4" />
               </Link>
+            ) : !token ? (
+              <Link
+                href="/login?mode=register"
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#F0B90B] text-[#0B0E11] text-sm font-bold rounded-lg hover:bg-[#F0B90B]/90 transition-colors"
+              >
+                {t("compDetail.loginToRegister")} <ChevronRight className="w-4 h-4" />
+              </Link>
             ) : comp.myRegistrationStatus ? (
               <div className="flex items-center gap-3">
                 <span

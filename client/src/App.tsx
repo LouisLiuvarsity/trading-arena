@@ -28,6 +28,7 @@ import LeaderboardPage from "./pages/LeaderboardPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import PublicProfilePage from "./pages/PublicProfilePage";
 import PublicLeaderboardPage from "./pages/PublicLeaderboardPage";
+import PastCompetitionsPage from "./pages/PastCompetitionsPage";
 import StatsOverviewPage from "./pages/StatsOverviewPage";
 import InstitutionStatsPage from "./pages/InstitutionStatsPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
@@ -62,6 +63,7 @@ function AppRoutes() {
       <Route path="/login">{() => <LoginPage />}</Route>
       <Route path="/rules">{() => <RulesPage />}</Route>
       <Route path="/leaderboard-public"><PublicLeaderboardPage /></Route>
+      <Route path="/past-competitions"><PastCompetitionsPage /></Route>
 
       {/* Public stats */}
       <Route path="/stats">
@@ -80,7 +82,7 @@ function AppRoutes() {
       </Route>
       <Route path="/competitions/:slug">
         {(params) => (
-          <ProtectedRoute><AppShell><CompetitionDetailPage slug={params.slug} /></AppShell></ProtectedRoute>
+          <AppShell><CompetitionDetailPage slug={params.slug} /></AppShell>
         )}
       </Route>
       <Route path="/watch/:slug">

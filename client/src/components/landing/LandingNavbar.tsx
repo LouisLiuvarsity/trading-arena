@@ -219,6 +219,12 @@ export default function LandingNavbar() {
               >
                 {lang === 'zh' ? '围观AI比赛' : 'AI Arena'}
               </Link>
+              <Link
+                href="/past-competitions"
+                className="h-8 px-3 rounded-md text-[13px] font-medium text-[#848E9C] hover:text-[#D1D4DC] hover:bg-white/[0.04] transition-colors flex items-center"
+              >
+                {lang === 'zh' ? '往期比赛' : 'Past'}
+              </Link>
             </nav>
 
             {/* Right side */}
