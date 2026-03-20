@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { motion } from 'framer-motion';
 import {
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Clock3,
@@ -99,6 +98,7 @@ function getRegistrationPct(card: CompetitionCard): number {
   return Math.min(100, Math.round((card.registeredCount / card.maxParticipants) * 100));
 }
 
+/* ── Right-side carousel card (compact) ── */
 function CompetitionCardView({ card }: { card: CompetitionCard }) {
   const { lang } = useT();
   const statusConf = STATUS_CONFIG[card.status] ?? STATUS_CONFIG.completed;
@@ -177,52 +177,37 @@ function CompetitionCardView({ card }: { card: CompetitionCard }) {
         </div>
       </div>
 
-      <div className="grid gap-3 border-t border-white/[0.06] bg-[#0B111D]/92 p-5 sm:grid-cols-2">
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-3">
-          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-[#7E8798]">
-            <Clock3 className="h-3.5 w-3.5 text-[#F0B90B]" />
-            开赛时间
-          </div>
-          <p className="mt-2 text-sm font-semibold text-white">{formatTime(card.startTime)}</p>
+      {/* Compact bottom info: 1 row with key stats */}
+      <div className="flex items-center gap-4 border-t border-white/[0.06] bg-[#0B111D]/92 px-5 py-3.5">
+        <div className="flex items-center gap-1.5 text-[12px] text-[#9CA5B5]">
+          <Clock3 className="h-3.5 w-3.5 text-[#F0B90B]" />
+          <span className="font-medium text-white/80">{formatTime(card.startTime)}</span>
         </div>
-
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-3">
-          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-[#7E8798]">
-            <Zap className="h-3.5 w-3.5 text-[#25C2A0]" />
-            交易对
-          </div>
-          <p className="mt-2 text-sm font-semibold text-white">{card.symbol}</p>
+        <div className="h-3 w-px bg-white/10" />
+        <div className="flex items-center gap-1.5 text-[12px] text-[#9CA5B5]">
+          <Zap className="h-3.5 w-3.5 text-[#25C2A0]" />
+          <span className="font-medium text-white/80">{card.symbol}</span>
         </div>
-
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-3">
-          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-[#7E8798]">
-            <Users className="h-3.5 w-3.5 text-[#25C2A0]" />
-            报名进度
-          </div>
-          <div className="mt-2 flex items-center justify-between gap-3 text-sm font-semibold text-white">
-            <span>{card.registeredCount}/{card.maxParticipants}</span>
-            <span className="text-xs text-[#9CA5B5]">{registrationPct}%</span>
-          </div>
-          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
-            <div
-              className="h-full rounded-full"
-              style={{ width: `${registrationPct}%`, backgroundColor: typeMeta.accent }}
-            />
-          </div>
+        <div className="h-3 w-px bg-white/10" />
+        <div className="flex items-center gap-1.5 text-[12px] text-[#9CA5B5]">
+          <Users className="h-3.5 w-3.5 text-[#25C2A0]" />
+          <span className="font-medium text-white/80">{card.registeredCount}/{card.maxParticipants}</span>
         </div>
-
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-3">
-          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-[#7E8798]">
-            <Star className="h-3.5 w-3.5 text-[#F0B90B]" />
-            奖励说明
-          </div>
-          <p className="mt-2 text-sm font-semibold text-white">{lang === 'zh' ? '赛季积分 + 奖金池' : 'Season Points + Prize Pool'}</p>
-        </div>
+        {card.prizePool > 0 && (
+          <>
+            <div className="h-3 w-px bg-white/10" />
+            <div className="flex items-center gap-1.5 text-[12px] text-[#9CA5B5]">
+              <Star className="h-3.5 w-3.5 text-[#F0B90B]" />
+              <span className="font-medium text-white/80">{card.prizePool}U</span>
+            </div>
+          </>
+        )}
       </div>
     </article>
   );
 }
 
+/* ── Main Section ── */
 export default function CompetitionShowcase() {
   const { t, lang } = useT();
   const [data, setData] = useState<ShowcaseData | null>(null);
@@ -298,7 +283,6 @@ export default function CompetitionShowcase() {
 
   const activeStatus = STATUS_CONFIG[activeCard.status] ?? STATUS_CONFIG.completed;
   const activeType = TYPE_META[activeCard.competitionType] ?? TYPE_META.regular;
-  const activeRegistrationPct = getRegistrationPct(activeCard);
 
   return (
     <section id="competitions" className="relative overflow-hidden bg-[#090D14] py-24">
@@ -310,6 +294,7 @@ export default function CompetitionShowcase() {
       </div>
 
       <div className="relative mx-auto max-w-6xl px-6">
+        {/* Section header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -334,6 +319,7 @@ export default function CompetitionShowcase() {
           </p>
         </motion.div>
 
+        {/* Main content: slimmed left panel + right carousel */}
         <motion.div
           initial={{ opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -346,13 +332,11 @@ export default function CompetitionShowcase() {
             style={{ backgroundColor: `${activeStatus.color}26` }}
           />
 
-          <div className="relative grid items-center gap-8 lg:grid-cols-[minmax(0,1.05fr)_390px]">
+          <div className="relative grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_420px]">
+            {/* ── Left panel: slimmed down ── */}
             <div className="space-y-6">
+              {/* Status badges */}
               <div className="flex flex-wrap items-center gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-[#B9C2D3]">
-                  <CalendarDays className="h-3.5 w-3.5 text-[#F0B90B]" />
-                  焦点赛事
-                </span>
                 <span
                   className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold"
                   style={{ backgroundColor: activeStatus.bg, color: activeStatus.color }}
@@ -360,66 +344,43 @@ export default function CompetitionShowcase() {
                   {activeCard.status === 'live' && <span className="h-2 w-2 rounded-full bg-current animate-pulse" />}
                   {activeStatus.label}
                 </span>
+                <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-white/60">
+                  {activeType.label}
+                </span>
               </div>
 
+              {/* Title */}
               <div>
-                <p className="text-[11px] uppercase tracking-[0.3em] text-[#7E8798]">{activeType.eyebrow}</p>
-                <h3 className="mt-3 max-w-[14ch] text-4xl font-display font-black leading-[0.92] text-white sm:text-5xl">
+                <h3 className="max-w-[16ch] text-4xl font-display font-black leading-[0.92] text-white sm:text-5xl">
                   {activeCard.title}
                 </h3>
-                <p className="mt-4 max-w-xl text-sm leading-7 text-[#9CA5B5] sm:text-[15px]">
-                  {lang === 'zh' ? (
-                    <>交易对 <span className="font-semibold text-white">{activeCard.symbol}</span>，开赛时间 <span className="font-semibold text-white">{formatTime(activeCard.startTime)}</span>。报名参赛，与全球交易者同场竞技。</>
-                  ) : (
-                    <>Trading <span className="font-semibold text-white">{activeCard.symbol}</span>, starts at <span className="font-semibold text-white">{formatTime(activeCard.startTime)}</span>. Join and compete with traders worldwide.</>
-                  )}
-                </p>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-3xl border border-white/[0.06] bg-white/[0.03] p-4">
-                  <div className="text-[11px] uppercase tracking-[0.18em] text-[#7E8798]">{lang === 'zh' ? '奖金池' : 'Prize Pool'}</div>
-                  <div className="mt-3 flex items-end gap-2">
-                    <span className="text-3xl font-display font-black text-white">{activeCard.prizePool}U</span>
-                    <span className="pb-1 text-[11px] text-[#8E97A8]">{lang === 'zh' ? '固定奖金池' : 'Fixed Pool'}</span>
-                  </div>
+              {/* Key stats in one compact row */}
+              <div className="flex flex-wrap items-center gap-4 text-[13px]">
+                <div className="flex items-center gap-1.5">
+                  <Zap className="h-4 w-4 text-[#25C2A0]" />
+                  <span className="font-semibold text-white">{activeCard.symbol}</span>
                 </div>
-
-                <div className="rounded-3xl border border-white/[0.06] bg-white/[0.03] p-4">
-                  <div className="text-[11px] uppercase tracking-[0.18em] text-[#7E8798]">{lang === 'zh' ? '参赛人数' : 'Participants'}</div>
-                  <div className="mt-3 flex items-end gap-2">
-                    <span className="text-3xl font-display font-black text-white">
-                      {activeCard.registeredCount}
-                    </span>
-                    <span className="pb-1 text-[11px] text-[#8E97A8]">/ {activeCard.maxParticipants}</span>
-                  </div>
+                <div className="h-4 w-px bg-white/10" />
+                <div className="flex items-center gap-1.5">
+                  <Clock3 className="h-4 w-4 text-[#F0B90B]" />
+                  <span className="text-[#9CA5B5]">{formatTime(activeCard.startTime)}</span>
+                </div>
+                <div className="h-4 w-px bg-white/10" />
+                <div className="flex items-center gap-1.5">
+                  <Coins className="h-4 w-4 text-[#F0B90B]" />
+                  <span className="font-semibold text-white">{activeCard.prizePool}U</span>
+                </div>
+                <div className="h-4 w-px bg-white/10" />
+                <div className="flex items-center gap-1.5">
+                  <Users className="h-4 w-4 text-[#25C2A0]" />
+                  <span className="text-[#9CA5B5]">{activeCard.registeredCount}/{activeCard.maxParticipants}</span>
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-white/[0.06] bg-[#0A111E]/90 p-4">
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-[#D8DEEA]">席位进度</span>
-                  <span className="font-mono font-bold text-white">{activeRegistrationPct}%</span>
-                </div>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.06]">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{ width: `${activeRegistrationPct}%`, backgroundColor: activeType.accent }}
-                  />
-                </div>
-                <div className="mt-3 flex flex-wrap items-center gap-3 text-[12px] text-[#8E97A8]">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Zap className="h-3.5 w-3.5 text-[#F0B90B]" />
-                    {getBaseAsset(activeCard.symbol)}/USDT
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <Star className="h-3.5 w-3.5 text-[#25C2A0]" />
-                    {lang === 'zh' ? '赛季积分' : 'Season Points'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
+              {/* CTA buttons */}
+              <div className="flex flex-wrap items-center gap-3 pt-2">
                 <Link
                   href="/login?mode=register"
                   className="inline-flex items-center gap-2 rounded-2xl bg-[#F0B90B] px-6 py-3 text-sm font-bold text-[#0B0E11] transition-colors hover:bg-[#F0B90B]/90"
@@ -431,11 +392,12 @@ export default function CompetitionShowcase() {
                   href={`/competitions/${activeCard.slug}`}
                   className="inline-flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-5 py-3 text-sm font-medium text-white/78 transition-colors hover:bg-white/[0.06] hover:text-white"
                 >
-                  查看详情
+                  {lang === 'zh' ? '查看详情' : 'Details'}
                 </Link>
               </div>
             </div>
 
+            {/* ── Right panel: carousel ── */}
             <div className="relative">
               <div className="pointer-events-none absolute inset-4 rounded-[32px] bg-white/[0.03]" />
               <div

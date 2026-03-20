@@ -222,3 +222,9 @@
 
 ## Bug Fix: recharts LineEndpointDot key prop spread warning
 - [x] Fix React key prop spread warning from recharts LineEndpointDot on landing page (/)
+
+## Landing Page Round 2 Fixes
+- [x] Slim down CompetitionShowcase left card: removed 2x2 info grid + progress bar, replaced with single-row key stats
+- [x] Fix HighlightsSection "查看完整规则" - moved from standalone link to integrated button inside Rules card
+- [x] Restore FAQ section to Landing Page (FAQSection component already existed, re-added to LandingPage between Leaderboard and CTA)
+- [x] Update prize withdrawal rule: "每参加3次比赛可提取一次奖金，循环往复" - updated 10 i18n strings (zh+en): land.rules.card6, hub.prizeEligibility/Settlement, profileEdit.wallet*, land.faq.q4/a4

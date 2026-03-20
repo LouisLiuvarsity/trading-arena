@@ -9,6 +9,7 @@ import {
   Zap,
   DollarSign,
   Crown,
+  ArrowRight,
 } from 'lucide-react';
 import { RANK_TIERS } from '@/lib/types';
 
@@ -98,6 +99,14 @@ export default function HighlightsSection() {
                 </div>
               ))}
             </div>
+            {/* View Full Rules button integrated into card */}
+            <Link
+              href="/rules"
+              className="mt-5 flex items-center justify-center gap-2 rounded-xl border border-[#F0B90B]/20 bg-[#F0B90B]/[0.06] px-4 py-2.5 text-[13px] font-medium text-[#F0B90B] transition-all hover:bg-[#F0B90B]/[0.12] hover:border-[#F0B90B]/35"
+            >
+              {copy.viewAll}
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </motion.div>
 
           {/* Prize Card */}
@@ -163,22 +172,7 @@ export default function HighlightsSection() {
           </motion.div>
         </div>
 
-        {/* View Full Rules Link */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.2 }}
-          className="mt-8 text-center"
-        >
-          <Link
-            href="/rules"
-            className="inline-flex items-center gap-2 text-[13px] font-medium text-[#F0B90B] hover:text-[#F0B90B]/80 transition-colors"
-          >
-            {copy.viewAll}
-            <ChevronRight className="w-4 h-4" />
-          </Link>
-        </motion.div>
+
       </div>
     </section>
   );

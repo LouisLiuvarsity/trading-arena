@@ -4,6 +4,7 @@ import CompetitionShowcase from '@/components/landing/CompetitionShowcase';
 import HowItWorks from '@/components/landing/HowItWorks';
 import HighlightsSection from '@/components/landing/HighlightsSection';
 import LeaderboardSection from '@/components/landing/LeaderboardSection';
+import FAQSection from '@/components/landing/FAQSection';
 import BottomCTA from '@/components/landing/BottomCTA';
 import Footer from '@/components/landing/Footer';
 
@@ -20,6 +21,7 @@ export default function LandingPage(_props: LandingPageProps) {
       <HowItWorks />
       <HighlightsSection />
       <LeaderboardSection />
+      <FAQSection />
       <BottomCTA />
       <Footer />
     </div>
