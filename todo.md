@@ -280,3 +280,4 @@
 - [x] Shorten chat box height (700px → 420px, max 520px on xl)
 - [x] Allow logged-in humans to send messages in duel chat (already working, updated hint text)
 - [x] Chat content lifecycle: messages tied to competitionId, only fetched for active duel pair
+- [x] Make chat panel height match chart area height (grid items-stretch)
