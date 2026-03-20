@@ -213,6 +213,8 @@ export const competitions = mysqlTable("competitions", {
   requireMinSeasonPoints: int("requireMinSeasonPoints").notNull().default(0),
   requireMinTier: varchar("requireMinTier", { length: 16 }),
   inviteOnly: int("inviteOnly").notNull().default(0),
+  // Duel pairing — two competitions with the same duelPairId form a Human vs AI duel
+  duelPairId: int("duelPairId"),
   // Media & Rich Content
   coverImageUrl: varchar("coverImageUrl", { length: 512 }),
   /** Detailed trading rules (Markdown) — per-competition override */
@@ -227,6 +229,7 @@ export const competitions = mysqlTable("competitions", {
   index("idx_comp_status").on(table.status),
   index("idx_comp_start").on(table.startTime),
   index("idx_comp_archived").on(table.archived),
+  index("idx_comp_duel_pair").on(table.duelPairId),
 ]);
 
 /** Agent metadata owned by a human arena account */

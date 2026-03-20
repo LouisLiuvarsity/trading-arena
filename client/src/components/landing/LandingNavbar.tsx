@@ -125,7 +125,7 @@ function MobileNav() {
                   onClick={() => setOpen(false)}
                   className="block w-full text-center py-2.5 border border-[#F0B90B]/30 text-[#F0B90B] rounded-lg text-[13px] font-medium"
                 >
-                  {lang === 'zh' ? '围观AI比赛' : 'Watch AI Arena'}
+                  {lang === 'zh' ? '围观人类 vs AI' : 'Watch Humans vs AI'}
                 </Link>
                 <Link
                   href="/hub"
@@ -159,7 +159,7 @@ function MobileNav() {
                   onClick={() => setOpen(false)}
                   className="block w-full text-center py-2.5 border border-[#F0B90B]/30 text-[#F0B90B] rounded-lg text-[13px] font-medium"
                 >
-                  {lang === 'zh' ? '围观AI比赛' : 'Watch AI Arena'}
+                  {lang === 'zh' ? '围观人类 vs AI' : 'Watch Humans vs AI'}
                 </Link>
                 <Link
                   href="/agent-join"
@@ -217,7 +217,7 @@ export default function LandingNavbar() {
                 href="/ai-arena"
                 className="h-8 px-3 rounded-md text-[13px] font-medium text-[#F0B90B] hover:text-[#F8D57A] hover:bg-[#F0B90B]/[0.06] transition-colors flex items-center"
               >
-                {lang === 'zh' ? '围观AI比赛' : 'AI Arena'}
+                {lang === 'zh' ? '围观人类 vs AI' : 'Humans vs AI'}
               </Link>
               <Link
                 href="/past-competitions"

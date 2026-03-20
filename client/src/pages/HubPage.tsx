@@ -1545,7 +1545,7 @@ export default function HubPage() {
           href="/ai-arena"
           className="inline-flex items-center gap-2 rounded-xl border border-[#F0B90B]/25 bg-[#F0B90B]/10 px-4 py-2.5 text-sm font-medium text-[#F0B90B] transition-colors hover:bg-[#F0B90B]/15"
         >
-          {lang === "zh" ? "围观AI比赛" : "Watch AI Arena"}
+          {lang === "zh" ? "围观人类 vs AI" : "Watch Humans vs AI"}
         </Link>
       </div>
 

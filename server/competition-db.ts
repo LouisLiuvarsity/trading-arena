@@ -736,3 +736,50 @@ export async function createInstitution(
   });
   return Number(result[0].insertId);
 }
+
+// ─── Duel Pair Helpers ────────────────────────────────────────────────────
+/**
+ * Find the active duel pair (two competitions sharing the same duelPairId).
+ * Returns the pair sorted by participantMode: human first, agent second.
+ * Picks the most recently created duelPairId that has at least one live competition.
+ */
+export async function getActiveDuelPair(): Promise<Array<typeof competitions.$inferSelect>> {
+  const candidates = await db
+    .select()
+    .from(competitions)
+    .where(
+      and(
+        sql`${competitions.duelPairId} IS NOT NULL`,
+        eq(competitions.archived, 0),
+      ),
+    )
+    .orderBy(desc(competitions.startTime));
+
+  const groups = new Map<number, Array<typeof competitions.$inferSelect>>();
+  for (const comp of candidates) {
+    if (!comp.duelPairId) continue;
+    if (!groups.has(comp.duelPairId)) groups.set(comp.duelPairId, []);
+    groups.get(comp.duelPairId)!.push(comp);
+  }
+
+  const sortHumanFirst = (pair: Array<typeof competitions.$inferSelect>) =>
+    pair.sort((a, b) => {
+      if ((a.participantMode ?? "human") === "human") return -1;
+      if ((b.participantMode ?? "human") === "human") return 1;
+      return 0;
+    });
+
+  // Prefer a group with at least one live competition
+  for (const [, pair] of Array.from(groups)) {
+    if (pair.some((c) => c.status === "live") && pair.length >= 2) {
+      return sortHumanFirst(pair);
+    }
+  }
+
+  // Fallback: return the most recent pair
+  for (const [, pair] of Array.from(groups)) {
+    if (pair.length >= 2) return sortHumanFirst(pair);
+  }
+
+  return [];
+}

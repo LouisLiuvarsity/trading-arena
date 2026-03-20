@@ -55,6 +55,7 @@ const createCompetitionSchema = z.object({
   requireMinSeasonPoints: z.number().int().nonnegative().default(0),
   requireMinTier: z.string().optional(),
   inviteOnly: z.boolean().default(false),
+  duelPairId: z.number().int().positive().optional(),
 });
 
 const updateCompetitionSchema = createCompetitionSchema.partial();
@@ -1321,6 +1322,224 @@ export function registerCompetitionRoutes(
         createdBy: adminId,
       });
       res.json({ id });
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+    }
+  });
+
+  // ─── Duel Dashboard (Human vs AI) ─────────────────────────────
+  app.get("/api/public/duel-dashboard", async (req: Request, res: Response) => {
+    try {
+      const pair = await compDb.getActiveDuelPair();
+      if (pair.length < 2) {
+        res.json({
+          active: false,
+          humanComp: null,
+          aiComp: null,
+          humanAvgCurve: [],
+          aiAvgCurve: [],
+          curveLabels: [],
+          stats: null,
+          humanTop10: [],
+          aiTop10: [],
+          chatMessages: [],
+        });
+        return;
+      }
+
+      const humanComp = pair.find(c => (c.participantMode ?? "human") === "human") ?? pair[0];
+      const aiComp = pair.find(c => isAgentCompetition(c.participantMode)) ?? pair[1];
+
+      // Build leaderboards for both sides
+      const [humanRows, aiRows] = await Promise.all([
+        buildLiveLeaderboardRows(humanComp),
+        buildLiveLeaderboardRows(aiComp),
+      ]);
+
+      // Build equity curves for both sides
+      const startTime = Math.min(humanComp.startTime, aiComp.startTime);
+      const endTime = Math.max(humanComp.endTime, aiComp.endTime);
+      const sampleTimes = buildSampleTimes(startTime, endTime);
+      const currentTime = Math.min(Date.now(), endTime);
+
+      const buildAvgCurve = async (
+        comp: typeof humanComp,
+        rows: RawLeaderboardRow[],
+      ) => {
+        if (!comp.matchId || rows.length === 0) return sampleTimes.map(() => null);
+        const participantIds = rows.map(r => r.arenaAccountId);
+        const currentEquityMap = new Map(
+          rows.map(r => [r.arenaAccountId, round2(comp.startingCapital + r.pnl)]),
+        );
+        const trades = await dbHelpers.getTradesForMatch(comp.matchId, participantIds);
+        const seriesMap = buildEquitySeriesForAccounts({
+          accountIds: participantIds,
+          sampleTimes,
+          startingCapital: comp.startingCapital,
+          trades,
+          currentEquityMap,
+          currentTime: Math.min(Date.now(), comp.endTime),
+        });
+        // Compute average across all participants at each sample point
+        return sampleTimes.map((_, idx) => {
+          const values = participantIds
+            .map(id => seriesMap.get(id)?.[idx])
+            .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+          if (values.length === 0) return null;
+          return round2(values.reduce((s, v) => s + v, 0) / values.length);
+        });
+      };
+
+      const [humanAvgCurve, aiAvgCurve] = await Promise.all([
+        buildAvgCurve(humanComp, humanRows),
+        buildAvgCurve(aiComp, aiRows),
+      ]);
+
+      // Compute comparison stats
+      const computeGroupStats = async (
+        comp: typeof humanComp,
+        rows: RawLeaderboardRow[],
+      ) => {
+        if (!comp.matchId || rows.length === 0) {
+          return { avgPnlPct: 0, avgTrades: 0, avgWinRate: 0, avgMaxDrawdown: 0, participantCount: 0 };
+        }
+        const participantIds = rows.map(r => r.arenaAccountId);
+        const tradeStats = await dbHelpers.getTradeStatsForMatch(comp.matchId, participantIds);
+        const statsMap = new Map(tradeStats.map(s => [s.arenaAccountId, s]));
+
+        let totalPnlPct = 0;
+        let totalTrades = 0;
+        let totalWinRate = 0;
+        let totalMaxDrawdown = 0;
+        let countWithTrades = 0;
+
+        for (const row of rows) {
+          totalPnlPct += row.pnlPct;
+          const ts = statsMap.get(row.arenaAccountId);
+          if (ts && ts.tradeCount > 0) {
+            totalTrades += ts.tradeCount;
+            totalWinRate += ts.winCount / ts.tradeCount;
+            countWithTrades++;
+          }
+          // Max drawdown approximation: use pnlPct if negative
+          if (row.pnlPct < 0) totalMaxDrawdown += row.pnlPct;
+        }
+
+        const n = rows.length;
+        return {
+          avgPnlPct: round2(totalPnlPct / n),
+          avgTrades: round2(totalTrades / n),
+          avgWinRate: round2(countWithTrades > 0 ? (totalWinRate / countWithTrades) * 100 : 0),
+          avgMaxDrawdown: round2(n > 0 ? totalMaxDrawdown / n : 0),
+          participantCount: n,
+        };
+      };
+
+      const [humanStats, aiStats] = await Promise.all([
+        computeGroupStats(humanComp, humanRows),
+        computeGroupStats(aiComp, aiRows),
+      ]);
+
+      // Get chat messages from both competitions merged
+      const [humanChat, aiChat] = await Promise.all([
+        dbHelpers.getRecentChatMessages(60, humanComp.id),
+        dbHelpers.getRecentChatMessages(60, aiComp.id),
+      ]);
+      const mergedChat = [...humanChat, ...aiChat]
+        .sort((a, b) => a.timestamp - b.timestamp)
+        .slice(-80);
+
+      const mapCompInfo = (comp: typeof humanComp) => ({
+        id: comp.id,
+        slug: comp.slug,
+        title: comp.title,
+        symbol: comp.symbol,
+        prizePool: comp.prizePool,
+        startTime: comp.startTime,
+        endTime: comp.endTime,
+        status: comp.status,
+        participantMode: comp.participantMode ?? "human",
+        startingCapital: comp.startingCapital,
+      });
+
+      const humanTop10 = humanRows.slice(0, 10).map(r => ({
+        rank: r.rank,
+        username: r.username,
+        pnlPct: r.pnlPct,
+        pnl: r.pnl,
+        matchPoints: r.matchPoints,
+        rankTier: r.rankTier,
+      }));
+
+      const aiTop10 = aiRows.slice(0, 10).map(r => ({
+        rank: r.rank,
+        username: r.username,
+        pnlPct: r.pnlPct,
+        pnl: r.pnl,
+        matchPoints: r.matchPoints,
+        rankTier: r.rankTier,
+      }));
+
+      res.json({
+        active: true,
+        humanComp: mapCompInfo(humanComp),
+        aiComp: mapCompInfo(aiComp),
+        humanAvgCurve,
+        aiAvgCurve,
+        curveLabels: sampleTimes.map(t => formatCurveLabel(t)),
+        curveTimestamps: sampleTimes,
+        stats: {
+          human: humanStats,
+          ai: aiStats,
+        },
+        humanTop10,
+        aiTop10,
+        chatMessages: mergedChat,
+        refreshedAt: Date.now(),
+      });
+    } catch (error) {
+      console.error("[duel-dashboard] Error:", error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Duel chat post endpoint
+  app.post("/api/public/duel-chat", async (req: Request, res: Response) => {
+    const token = getAuthToken(req);
+    if (!token) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    const account = await arenaEngine.getAccountByToken(token);
+    if (!account) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    const { message } = req.body;
+    if (!message || typeof message !== "string" || message.trim().length === 0 || message.length > 500) {
+      res.status(400).json({ error: "Invalid message" });
+      return;
+    }
+    try {
+      // Find which duel competition this user belongs to
+      const pair = await compDb.getActiveDuelPair();
+      let competitionId: number | null = null;
+      if (pair.length >= 2) {
+        // Check if user is registered in either competition
+        for (const comp of pair) {
+          const acceptedIds = await compDb.getAcceptedAccountIds(comp.id);
+          if (acceptedIds.includes(account.id)) {
+            competitionId = comp.id;
+            break;
+          }
+        }
+        // If not registered in either, use the human competition as default
+        if (competitionId === null) {
+          competitionId = pair[0].id;
+        }
+      }
+      await arenaEngine.sendChatMessage(account.id, message.trim(), competitionId);
+      res.json({ ok: true });
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
     }

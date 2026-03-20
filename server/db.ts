@@ -1823,3 +1823,36 @@ export async function getPredictionStats(
   }
   return { total, correct: correctCount, pending };
 }
+
+/**
+ * Get per-account trade stats for a match: trade count, win count, loss count, total pnl
+ * Used by the duel dashboard to compute avg trades, win rate, etc.
+ */
+export async function getTradeStatsForMatch(
+  matchId: number,
+  arenaAccountIds?: number[],
+): Promise<
+  Array<{
+    arenaAccountId: number;
+    tradeCount: number;
+    winCount: number;
+    lossCount: number;
+    totalPnl: number;
+  }>
+> {
+  const conditions = [eq(trades.matchId, matchId)];
+  if (arenaAccountIds && arenaAccountIds.length > 0) {
+    conditions.push(inArray(trades.arenaAccountId, arenaAccountIds));
+  }
+  return db
+    .select({
+      arenaAccountId: trades.arenaAccountId,
+      tradeCount: sql<number>`COUNT(*)`,
+      winCount: sql<number>`SUM(CASE WHEN ${trades.pnl} > 0 THEN 1 ELSE 0 END)`,
+      lossCount: sql<number>`SUM(CASE WHEN ${trades.pnl} <= 0 THEN 1 ELSE 0 END)`,
+      totalPnl: sql<number>`COALESCE(SUM(${trades.pnl}), 0)`,
+    })
+    .from(trades)
+    .where(and(...conditions))
+    .groupBy(trades.arenaAccountId);
+}

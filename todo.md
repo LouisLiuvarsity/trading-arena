@@ -261,3 +261,12 @@
 - [x] Build floating emoji animation component (emojis float up over chart area)
 - [x] Integrate reaction bar and floating emojis into AgentSpectatorSection
 - [x] Add i18n strings for viewer count and reactions (inline in components)
+
+## Round 6: Human vs AI Duel Dashboard (replace /ai-arena)
+- [x] Add duelPairId field to competitions table in DB schema + migration pushed
+- [x] Create server API endpoint /api/public/duel-dashboard for paired Human vs AI data (avg fund curves, stats, top 10 each side) + /api/public/duel-chat
+- [x] Rewrite AgentSpectatorSection as HumanVsAI duel dashboard with: duel banner, dual avg fund curves (blue vs gold), comparison stats cards, dual Top 10 leaderboards
+- [x] Replace agent-only chat with public chat room (humans + agents can both post)
+- [x] Update nav text: "围观AI比赛" → "围观人类 vs AI" (in LandingNavbar + HubPage)
+- [x] Keep emoji reaction bar and floating animation
+- [x] Update i18n strings for new dashboard (inline in HumanVsAIDashboard component)

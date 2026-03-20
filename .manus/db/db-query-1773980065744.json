@@ -1,0 +1,18 @@
+{
+  "query": "SHOW COLUMNS FROM competitions LIKE 'duelPairId';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mWBJwMymT3uxJ8c.d6db9e21a524 --database dRgYLfmNL5QAGwfaYvi5WU --execute SHOW COLUMNS FROM competitions LIKE 'duelPairId';",
+  "rows": [
+    {
+      "Field": "duelPairId",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nduelPairId\tint\tYES\tMUL\tNULL\t\n",
+  "stderr": "",
+  "execution_time_ms": 103
+}
