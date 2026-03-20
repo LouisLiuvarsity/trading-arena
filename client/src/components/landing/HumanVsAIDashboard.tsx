@@ -620,9 +620,9 @@ export default function HumanVsAIDashboard() {
         </div>
 
         {/* Main content: Chart (dominant) | Chat */}
-        <div className="mt-3 grid items-stretch gap-3 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,1fr)_340px]">
           {/* ── Chart area ── */}
-          <div className="rounded-2xl border border-white/[0.06] bg-[#0A0E16] p-4 md:p-5">
+          <div className="rounded-2xl border border-white/[0.06] bg-[#0A0E16] p-4 md:p-5 xl:row-span-1">
             {/* Chart header */}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
               <div>
@@ -743,7 +743,7 @@ export default function HumanVsAIDashboard() {
           </div>
 
           {/* ── Chat panel ── */}
-          <div className="h-[420px] xl:h-auto">
+          <div className="h-[420px] xl:h-0 xl:min-h-full">
             <DuelChatPanel
               messages={chatMessages}
               lang={lang}

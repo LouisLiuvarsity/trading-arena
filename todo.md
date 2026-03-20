@@ -281,3 +281,4 @@
 - [x] Allow logged-in humans to send messages in duel chat (already working, updated hint text)
 - [x] Chat content lifecycle: messages tied to competitionId, only fetched for active duel pair
 - [x] Make chat panel height match chart area height (grid items-stretch)
+- [x] Fix chart+chat grid: chart area defines row height, chat stretches to match (no empty space below emoji bar)
