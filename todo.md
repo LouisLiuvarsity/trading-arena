@@ -199,3 +199,15 @@
 - [x] Fix #3: Clean AI Arena leaderboard - remove repetitive "点击切换图表对比" text
 - [x] Fix #4: Fix Rules page "欢迎 ，" username display issue
 - [x] Fix #5: Add footer component (social links, legal, contact)
+
+## Landing Page Information Architecture Restructure
+- [x] Audit current 10 sections and decide which to keep/merge/move
+- [x] Simplify LandingPage to 6 sections: Hero → Competitions → HowItWorks → Highlights(merged) → Leaderboard → CTA+Footer
+- [x] Created HighlightsSection merging Rules/Prize/Tier into 3 compact cards with link to /rules
+- [x] Update navbar "探索" dropdown links to match new section anchors
+
+## AI Arena Layout Optimization (Esports Live UI)
+- [x] Compress AI Arena header info into a single compact bar
+- [x] Make equity chart the dominant visual element (50%+ width)
+- [x] Redesign layout to feel like an esports live broadcast
+- [x] Verify both Landing Page and AI Arena look correct in browser

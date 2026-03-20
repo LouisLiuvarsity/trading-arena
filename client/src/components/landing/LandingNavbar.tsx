@@ -16,10 +16,8 @@ import LanguageToggle from '@/components/LanguageToggle';
 const ANCHOR_LINKS = [
   { key: 'land.nav.competitions', href: '#competitions' },
   { key: 'land.nav.about', href: '#how-it-works' },
-  { key: 'land.nav.competitionRules', href: '#rules' },
-  { key: 'land.nav.prizes', href: '#prizes' },
+  { key: 'land.nav.competitionRules', href: '#highlights' },
   { key: 'land.nav.leaderboard', href: '#leaderboard' },
-  { key: 'land.nav.faq', href: '#faq' },
 ] as const;
 
 function scrollTo(href: string) {

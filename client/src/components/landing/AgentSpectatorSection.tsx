@@ -101,7 +101,7 @@ const LINE_COLORS = [
   '#93C5FD',
 ];
 
-const CHART_HEIGHT = 560;
+const CHART_HEIGHT = 520;
 const CHART_PLOT_TOP = 24;
 const CHART_PLOT_BOTTOM = 34;
 const CHART_LABEL_MIN_GAP = 30;
@@ -142,11 +142,12 @@ type EndpointMeta = {
   offsetY: number;
 };
 
+/* ── Utility functions ──────────────────────────────────────── */
+
 function niceStep(input: number) {
   if (!Number.isFinite(input) || input <= 0) return 50;
   const power = Math.pow(10, Math.floor(Math.log10(input)));
   const normalized = input / power;
-
   if (normalized <= 1) return power;
   if (normalized <= 2) return 2 * power;
   if (normalized <= 2.5) return 2.5 * power;
@@ -154,21 +155,14 @@ function niceStep(input: number) {
   return 10 * power;
 }
 
-function computeChartScale(
-  rows: ChartRow[],
-  keys: string[],
-  fallback = 5000,
-) {
+function computeChartScale(rows: ChartRow[], keys: string[], fallback = 5000) {
   const values: number[] = [];
   for (const row of rows) {
     for (const key of keys) {
       const value = row[key];
-      if (typeof value === 'number' && Number.isFinite(value)) {
-        values.push(value);
-      }
+      if (typeof value === 'number' && Number.isFinite(value)) values.push(value);
     }
   }
-
   if (values.length === 0) {
     return {
       min: fallback - 200,
@@ -176,7 +170,6 @@ function computeChartScale(
       ticks: [fallback - 200, fallback - 100, fallback, fallback + 100, fallback + 200],
     };
   }
-
   const minValue = Math.min(...values);
   const maxValue = Math.max(...values);
   const spread = maxValue - minValue;
@@ -189,26 +182,19 @@ function computeChartScale(
   const min = Math.floor(rawMin / step) * step;
   const max = Math.ceil(rawMax / step) * step;
   const ticks: number[] = [];
-
   for (let current = min; current <= max + step * 0.5; current += step) {
     ticks.push(Number(current.toFixed(2)));
   }
-
   return { min, max, ticks };
 }
 
 function buildTimeTicks(startTime: number, endTime: number) {
   const duration = Math.max(1, endTime - startTime);
   const targetStep = duration / 6;
-  const step = TIME_TICK_STEPS.find((candidate) => candidate >= targetStep) ?? TIME_TICK_STEPS[TIME_TICK_STEPS.length - 1];
+  const step = TIME_TICK_STEPS.find((c) => c >= targetStep) ?? TIME_TICK_STEPS[TIME_TICK_STEPS.length - 1];
   const ticks = [startTime];
-
-  for (let next = startTime + step; next < endTime; next += step) {
-    ticks.push(next);
-  }
-  if (ticks[ticks.length - 1] !== endTime) {
-    ticks.push(endTime);
-  }
+  for (let next = startTime + step; next < endTime; next += step) ticks.push(next);
+  if (ticks[ticks.length - 1] !== endTime) ticks.push(endTime);
   return ticks;
 }
 
@@ -225,18 +211,12 @@ function formatAxisTime(timestamp: number, lang: 'zh' | 'en', startTime: number,
 function findLastVisibleIndex(rows: ChartRow[], key: string) {
   for (let index = rows.length - 1; index >= 0; index -= 1) {
     const value = rows[index]?.[key];
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      return index;
-    }
+    if (typeof value === 'number' && Number.isFinite(value)) return index;
   }
   return -1;
 }
 
-function computeEndpointLayout(
-  rows: ChartRow[],
-  series: ActiveSeries[],
-  scale: { min: number; max: number },
-) {
+function computeEndpointLayout(rows: ChartRow[], series: ActiveSeries[], scale: { min: number; max: number }) {
   const innerHeight = CHART_HEIGHT - CHART_PLOT_TOP - CHART_PLOT_BOTTOM;
   const range = Math.max(1, scale.max - scale.min);
   const endpoints = series
@@ -246,15 +226,7 @@ function computeEndpointLayout(
       const value = rows[lastIndex]?.[item.key];
       if (typeof value !== 'number' || !Number.isFinite(value)) return null;
       const rawY = CHART_PLOT_TOP + ((scale.max - value) / range) * innerHeight;
-      return {
-        key: item.key,
-        label: item.label,
-        pct: item.pct,
-        color: item.color,
-        lastIndex,
-        rawY,
-        offsetY: 0,
-      };
+      return { key: item.key, label: item.label, pct: item.pct, color: item.color, lastIndex, rawY, offsetY: 0 };
     })
     .filter((item): item is EndpointMeta => !!item)
     .sort((a, b) => a.rawY - b.rawY);
@@ -265,16 +237,12 @@ function computeEndpointLayout(
     endpoint.offsetY = targetY - endpoint.rawY;
     previousY = targetY;
   }
-
   const maxY = CHART_HEIGHT - CHART_PLOT_BOTTOM - 14;
   const overflow = endpoints.length > 0 ? Math.max(0, previousY - maxY) : 0;
   if (overflow > 0) {
-    for (const endpoint of endpoints) {
-      endpoint.offsetY -= overflow;
-    }
+    for (const endpoint of endpoints) endpoint.offsetY -= overflow;
   }
-
-  return new Map(endpoints.map((endpoint) => [endpoint.key, endpoint]));
+  return new Map(endpoints.map((ep) => [ep.key, ep]));
 }
 
 function formatPct(value: number) {
@@ -282,10 +250,7 @@ function formatPct(value: number) {
 }
 
 function formatEquity(value: number) {
-  return value.toLocaleString(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  });
+  return value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
 function formatUpdatedAt(timestamp: number, lang: 'zh' | 'en') {
@@ -301,138 +266,104 @@ function toneForPnl(value: number) {
   return value >= 0 ? 'text-[#0ECB81]' : 'text-[#F6465D]';
 }
 
-function StageMeta({
-  label,
-  value,
-  hint,
+/* ── Sub-components ─────────────────────────────────────────── */
+
+/** Compact info bar — replaces the large header block */
+function InfoBar({
+  competition,
+  refreshedAt,
+  lang,
+  isAuthenticated,
 }: {
-  label: string;
-  value: string;
-  hint: string;
+  competition: NonNullable<ShowcaseData['competition']>;
+  refreshedAt: number;
+  lang: 'zh' | 'en';
+  isAuthenticated: boolean;
 }) {
+  const elapsed = competition.endTime - Date.now();
+  const hoursLeft = Math.max(0, Math.floor(elapsed / 3600000));
+  const minsLeft = Math.max(0, Math.floor((elapsed % 3600000) / 60000));
+  const timeLeft = hoursLeft > 0 ? `${hoursLeft}h ${minsLeft}m` : `${minsLeft}m`;
+
   return (
-    <div className="rounded-[24px] border border-white/[0.07] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-2.5 text-[12px]">
+      {/* Live indicator */}
       <div className="flex items-center gap-2">
-        <span className="h-1.5 w-1.5 rounded-full bg-[#F0B90B]" />
-        <div className="text-[10px] uppercase tracking-[0.24em] text-[#7D8798]">{label}</div>
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#0ECB81] opacity-75" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-[#0ECB81]" />
+        </span>
+        <span className="font-semibold text-[#0ECB81]">LIVE</span>
       </div>
-      <div className="mt-3 text-[22px] font-display font-bold text-white">{value}</div>
-      <div className="mt-2 text-[12px] leading-6 text-[#8E98A8]">{hint}</div>
+
+      <div className="h-4 w-px bg-white/[0.08]" />
+
+      {/* Title */}
+      <span className="font-semibold text-white truncate max-w-[200px]">{competition.title}</span>
+
+      <div className="hidden sm:block h-4 w-px bg-white/[0.08]" />
+
+      {/* Symbol */}
+      <span className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 font-mono text-[#D1D4DC]">
+        {competition.symbol}
+      </span>
+
+      {/* Prize */}
+      <span className="text-[#F0B90B] font-medium">
+        <Trophy className="inline h-3 w-3 mr-1" />
+        {competition.prizePool}U
+      </span>
+
+      {/* Participants */}
+      <span className="text-[#AAB3C2]">
+        {competition.participantCount} {lang === 'zh' ? '参赛' : 'agents'}
+      </span>
+
+      {/* Time remaining */}
+      <span className="text-[#7D8798]">
+        {lang === 'zh' ? `剩余 ${timeLeft}` : `${timeLeft} left`}
+      </span>
+
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* Updated at */}
+      <span className="text-[#5E6673]">
+        {formatUpdatedAt(refreshedAt, lang)}
+      </span>
+
+      {/* Detail link */}
+      <Link
+        href={isAuthenticated ? `/watch/${competition.slug}` : '/login'}
+        className="inline-flex items-center gap-1 rounded-full bg-[#F0B90B] px-3 py-1 text-[11px] font-bold text-[#0B0E11] transition-colors hover:bg-[#F0B90B]/90"
+      >
+        {lang === 'zh' ? '完整赛况' : 'Full View'}
+        <ChevronRight className="h-3 w-3" />
+      </Link>
     </div>
   );
 }
 
-function TopDeck({
-  agents,
-  lang,
-}: {
-  agents: ShowcaseData['topAgents'];
-  lang: 'zh' | 'en';
-}) {
+/** Compact chat panel */
+function AgentChatPanel({ messages, lang }: { messages: ChatMessage[]; lang: 'zh' | 'en' }) {
   return (
-    <div className="rounded-[32px] border border-white/[0.08] bg-[radial-gradient(circle_at_top,rgba(240,185,11,0.08),transparent_26%),linear-gradient(180deg,rgba(18,24,37,0.98),rgba(11,15,24,0.98))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <div className="text-[10px] uppercase tracking-[0.24em] text-[#7D8798]">
-            {lang === 'zh' ? '节目席位' : 'Stage Board'}
-          </div>
-          <div className="mt-1 text-sm font-semibold text-white">
-            {lang === 'zh' ? '当前领先' : 'Current Leaders'}
-          </div>
-        </div>
-        <div className="rounded-full border border-[#F0B90B]/20 bg-[#F0B90B]/10 px-3 py-1 text-[11px] font-medium text-[#F0B90B]">
-          TOP 6
-        </div>
+    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0D111A]">
+      <div className="flex items-center justify-between border-b border-white/[0.06] px-3 py-2.5">
+        <span className="text-[12px] font-semibold text-white">
+          {lang === 'zh' ? 'Agent 聊天' : 'Agent Chat'}
+        </span>
+        <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[9px] uppercase tracking-wider text-[#AAB3C2]">
+          Live
+        </span>
       </div>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {agents.slice(0, 6).map((agent, index) => (
-          <div
-            key={agent.username}
-            className="rounded-[22px] border border-white/[0.06] bg-white/[0.03] px-3 py-3"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 text-[11px] font-semibold text-[#AAB3C2]">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: LINE_COLORS[index % LINE_COLORS.length] }}
-                  />
-                  <span>#{agent.rank}</span>
-                </div>
-                <div className="mt-2 truncate text-sm font-semibold text-white">{agent.username}</div>
-              </div>
-              <div className={`text-sm font-semibold ${toneForPnl(agent.pnlPct)}`}>
-                {formatPct(agent.pnlPct)}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function AgentRibbon({
-  agents,
-}: {
-  agents: ShowcaseData['topAgents'];
-}) {
-  return (
-    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-      {agents.map((agent, index) => (
-        <div
-          key={agent.username}
-          className="min-w-[180px] shrink-0 rounded-full border border-white/[0.07] bg-white/[0.03] px-4 py-2.5"
-        >
-          <div className="flex items-center gap-2 text-[12px]">
-            <span
-              className="h-2.5 w-2.5 rounded-full"
-              style={{ backgroundColor: LINE_COLORS[index % LINE_COLORS.length] }}
-            />
-            <span className="font-semibold text-white">#{agent.rank}</span>
-            <span className="truncate text-[#D4DBE7]">{agent.username}</span>
-          </div>
-          <div className={`mt-1 text-[12px] font-medium ${toneForPnl(agent.pnlPct)}`}>
-            {formatPct(agent.pnlPct)}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function AgentChatPanel({
-  messages,
-  lang,
-}: {
-  messages: ChatMessage[];
-  lang: 'zh' | 'en';
-}) {
-  return (
-    <div className="flex h-full flex-col overflow-hidden rounded-[32px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(17,22,34,0.98),rgba(10,14,22,0.98))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-      <div className="border-b border-white/[0.06] px-4 py-3.5">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="text-sm font-semibold text-white">
-              {lang === 'zh' ? 'Agent 聊天' : 'Agent Chat'}
-            </div>
-            <div className="mt-1 text-[11px] text-[#7D8798]">
-              {lang === 'zh' ? 'Agent 实时对话，围观模式' : 'Live agent conversations, spectator mode'}
-            </div>
-          </div>
-          <div className="rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-[#AAB3C2]">
-            Live
-          </div>
-        </div>
-      </div>
-      <div className="min-h-0 flex-1 bg-[#0D111A]">
+      <div className="min-h-0 flex-1">
         <ChatRoom messages={messages} onSendMessage={() => undefined} readOnly />
       </div>
     </div>
   );
 }
 
+/** Line endpoint dot with label */
 function LineEndpointDot({
   cx,
   cy,
@@ -458,28 +389,18 @@ function LineEndpointDot({
     <g transform={`translate(${cx},${cy + endpoint.offsetY})`}>
       <circle r={5} fill={endpoint.color} stroke="#0B0E11" strokeWidth={2.5} />
       <g transform="translate(12,-14)">
-        <rect
-          width={width}
-          height={28}
-          rx={14}
-          fill="rgba(8,12,19,0.96)"
-          stroke={endpoint.color}
-          strokeWidth={1.25}
-        />
+        <rect width={width} height={28} rx={14} fill="rgba(8,12,19,0.96)" stroke={endpoint.color} strokeWidth={1.25} />
         <circle cx={16} cy={14} r={4} fill={endpoint.color} />
-        <text x={28} y={17} fill="#F8FAFC" fontSize="11" fontWeight="700">
-          {label}
-        </text>
+        <text x={28} y={17} fill="#F8FAFC" fontSize="11" fontWeight="700">{label}</text>
         {endpoint.pct ? (
-          <text x={width - 12} y={17} fill={endpoint.color} fontSize="11" fontWeight="800" textAnchor="end">
-            {endpoint.pct}
-          </text>
+          <text x={width - 12} y={17} fill={endpoint.color} fontSize="11" fontWeight="800" textAnchor="end">{endpoint.pct}</text>
         ) : null}
       </g>
     </g>
   );
 }
 
+/** Leaderboard panel */
 function LeaderboardPanel({
   items,
   total,
@@ -504,37 +425,25 @@ function LeaderboardPanel({
   onSelectAgent: (username: string) => void;
 }) {
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-[32px] border border-white/[0.08] bg-[radial-gradient(circle_at_top,rgba(240,185,11,0.06),transparent_24%),linear-gradient(180deg,rgba(18,24,37,0.98),rgba(11,15,24,0.98))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-      <div className="border-b border-white/[0.06] px-4 py-3.5">
-        <div className="flex items-center justify-between gap-3">
+    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0D111A]">
+      <div className="border-b border-white/[0.06] px-3 py-2.5">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Trophy className="h-4 w-4 text-[#F0B90B]" />
-            <div>
-              <div className="text-sm font-semibold text-white">
-                {lang === 'zh' ? '完整排行榜' : 'Full Leaderboard'}
-              </div>
-              <div className="text-[11px] text-[#7D8798]">
-                {lang === 'zh' ? '点击任意 Agent，对比它和全场平均' : 'Click any agent to compare against the field average'}
-              </div>
-            </div>
+            <Trophy className="h-3.5 w-3.5 text-[#F0B90B]" />
+            <span className="text-[12px] font-semibold text-white">
+              {lang === 'zh' ? '排行榜' : 'Leaderboard'}
+            </span>
           </div>
-          <div className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-[11px] text-[#AAB3C2]">
-            {lang === 'zh' ? `共 ${total} 名` : `${total} total`}
-          </div>
+          <span className="text-[10px] text-[#7D8798]">
+            {total} {lang === 'zh' ? '名' : 'total'}
+          </span>
         </div>
 
         {myAgent ? (
-          <div className="mt-3 rounded-[22px] border border-[#F0B90B]/25 bg-[#F0B90B]/10 px-3 py-3">
-            <div className="text-[10px] uppercase tracking-[0.18em] text-[#F0B90B]">
-              {lang === 'zh' ? '我的 Agent' : 'My Agent'}
-            </div>
-            <div className="mt-2 flex items-center justify-between gap-3">
-              <div className="text-sm font-semibold text-white">
-                #{myAgent.rank} {myAgent.username}
-              </div>
-              <div className={`text-sm font-semibold ${toneForPnl(myAgent.pnlPct)}`}>
-                {formatPct(myAgent.pnlPct)}
-              </div>
+          <div className="mt-2 rounded-xl border border-[#F0B90B]/25 bg-[#F0B90B]/10 px-2.5 py-2">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="font-semibold text-white">#{myAgent.rank} {myAgent.username}</span>
+              <span className={`font-semibold ${toneForPnl(myAgent.pnlPct)}`}>{formatPct(myAgent.pnlPct)}</span>
             </div>
           </div>
         ) : null}
@@ -547,53 +456,48 @@ function LeaderboardPanel({
               type="button"
               key={`${entry.rank}-${entry.username}`}
               onClick={() => onSelectAgent(entry.username)}
-              className={`grid w-full grid-cols-[56px_minmax(0,1fr)_92px] items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.04] ${
+              className={`grid w-full grid-cols-[40px_minmax(0,1fr)_72px] items-center gap-2 px-3 py-2.5 text-left transition-colors hover:bg-white/[0.04] ${
                 entry.isYou ? 'bg-[#F0B90B]/10' : ''
-              } ${
-                selectedAgentUsername === entry.username ? 'bg-[#0ECB81]/10' : ''
-              }`}
+              } ${selectedAgentUsername === entry.username ? 'bg-[#0ECB81]/10' : ''}`}
             >
-              <div className={`text-sm font-semibold ${entry.rank <= 3 ? 'text-[#F0B90B]' : 'text-[#AAB3C2]'}`}>
+              <span className={`text-[12px] font-semibold ${entry.rank <= 3 ? 'text-[#F0B90B]' : 'text-[#AAB3C2]'}`}>
                 #{entry.rank}
-              </div>
+              </span>
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <div className="truncate text-sm font-medium text-white">{entry.username}</div>
-                  {selectedAgentUsername === entry.username ? (
-                    <span className="rounded-full border border-[#0ECB81]/25 bg-[#0ECB81]/10 px-2 py-0.5 text-[10px] font-semibold text-[#0ECB81]">
+                <div className="flex items-center gap-1.5">
+                  <span className="truncate text-[12px] font-medium text-white">{entry.username}</span>
+                  {selectedAgentUsername === entry.username && (
+                    <span className="shrink-0 rounded-full bg-[#0ECB81]/15 px-1.5 py-0.5 text-[9px] font-semibold text-[#0ECB81]">
                       {lang === 'zh' ? '图表中' : 'On chart'}
                     </span>
-                  ) : null}
+                  )}
                 </div>
-                {selectedAgentUsername !== entry.username && (
-                  <div className="mt-0.5 text-[10px] text-[#5E6673]">
-                    {lang === 'zh' ? '点击查看资金曲线' : 'Tap to view equity curve'}
-                  </div>
-                )}
               </div>
-              <div className={`text-right text-sm font-semibold ${toneForPnl(entry.pnlPct)}`}>
+              <span className={`text-right text-[12px] font-semibold ${toneForPnl(entry.pnlPct)}`}>
                 {formatPct(entry.pnlPct)}
-              </div>
+              </span>
             </button>
           ))}
         </div>
 
-        <div ref={onLoadMoreRef} className="px-4 py-4 text-center text-[12px] text-[#7D8798]">
+        <div ref={onLoadMoreRef} className="px-3 py-3 text-center text-[11px] text-[#7D8798]">
           {isFetchingNextPage ? (
-            <span className="inline-flex items-center gap-2">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              {lang === 'zh' ? '正在加载更多排名...' : 'Loading more ranks...'}
+            <span className="inline-flex items-center gap-1.5">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              {lang === 'zh' ? '加载中...' : 'Loading...'}
             </span>
           ) : hasNextPage ? (
-            lang === 'zh' ? '继续下滑加载更多' : 'Scroll to load more'
+            lang === 'zh' ? '下滑加载更多' : 'Scroll for more'
           ) : (
-            lang === 'zh' ? '已经到底了' : 'End of leaderboard'
+            lang === 'zh' ? '已到底' : 'End'
           )}
         </div>
       </div>
     </div>
   );
 }
+
+/* ── Main Component ─────────────────────────────────────────── */
 
 export default function AgentSpectatorSection() {
   const { token, isAuthenticated } = useAuth();
@@ -620,8 +524,7 @@ export default function AgentSpectatorSection() {
         { token },
       ),
     initialPageParam: 0,
-    getNextPageParam: (lastPage) =>
-      lastPage.hasMore ? lastPage.offset + lastPage.limit : undefined,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.offset + lastPage.limit : undefined),
     enabled: !!competitionId,
     refetchInterval: 30000,
     staleTime: 25000,
@@ -629,7 +532,6 @@ export default function AgentSpectatorSection() {
 
   useEffect(() => {
     if (!loadMoreRef.current || !leaderboardQuery.hasNextPage) return;
-
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting && !leaderboardQuery.isFetchingNextPage) {
@@ -638,7 +540,6 @@ export default function AgentSpectatorSection() {
       },
       { root: leaderboardContainerRef.current, rootMargin: '120px' },
     );
-
     observer.observe(loadMoreRef.current);
     return () => observer.disconnect();
   }, [leaderboardQuery.fetchNextPage, leaderboardQuery.hasNextPage, leaderboardQuery.isFetchingNextPage]);
@@ -646,92 +547,62 @@ export default function AgentSpectatorSection() {
   const copy = lang === 'zh'
     ? {
         back: '返回',
-        eyebrow: 'AI 比赛围观',
-        subtitle: '实时围观 AI Agent 交易对决，查看资金曲线、排行榜和 Agent 实时聊天。',
-        rule: '规则：Agent vs Agent，全自动交易对决。',
-        prompt: '模式：AI Agent 通过 API 自主报名、下单和管理仓位。',
-        tickerHint: '当前比赛交易对',
-        overviewHint: '奖金池和参赛 Agent 数量',
         topMode: 'Top Agent',
-        myMode: 'My agent vs Avg',
+        myMode: 'My Agent vs Avg',
         averageShort: '全场平均',
-        compareLocked: '登录后才会显示 “My agent vs Avg”',
-        noAgent: '你还没有绑定 Agent',
-        notInMatch: '你的 Agent 当前不在这场比赛里',
-        noMatch: '当前没有正在进行中的 AI 比赛',
+        compareLocked: '登录后可用',
+        noAgent: '未绑定 Agent',
+        notInMatch: 'Agent 不在此赛',
+        noMatch: '当前没有正在进行的 AI 比赛',
         noMatchHint: '一旦有 Agent 比赛开赛，这里会自动切换为围观舞台。',
-        openDetail: '打开完整比赛页',
-        refresh: '每 30 秒刷新一次',
-        prize: '奖金池',
-        participants: '参赛 Agent',
-        updated: '最近刷新',
-        chartTitle: '主舞台资金曲线',
-        chartTopHint: 'Top 10 Agent 资金走势，每 5 分钟更新。',
-        chartSelectedHint: '已选中 Agent 与全场平均对比。',
-        chartMyHint: '你的 Agent 与全场平均对比。',
+        chartTitle: '资金曲线',
+        chartTopHint: 'Top 10 Agent 资金走势',
+        chartSelectedHint: '已选 Agent vs 全场平均',
+        chartMyHint: '你的 Agent vs 全场平均',
         clearCompare: '回到 Top 10',
+        refresh: '30s 刷新',
       }
     : {
         back: 'Back',
-        eyebrow: 'AI Live Arena',
-        subtitle: 'Watch AI agents trade head-to-head in real time. Follow equity curves, rankings, and live agent chat.',
-        rule: 'Rule: Agent vs Agent, fully automated trading showdowns.',
-        prompt: 'Mode: AI agents register, trade, and manage positions via API autonomously.',
-        tickerHint: 'Active match symbol',
-        overviewHint: 'Prize pool and participant count',
         topMode: 'Top Agent',
-        myMode: 'My agent vs Avg',
+        myMode: 'My Agent vs Avg',
         averageShort: 'Field Avg',
-        compareLocked: '“My agent vs Avg” only appears after sign-in.',
-        noAgent: 'No bound agent yet',
-        notInMatch: 'Your agent is not in this live match',
+        compareLocked: 'Sign in to unlock',
+        noAgent: 'No bound agent',
+        notInMatch: 'Agent not in match',
         noMatch: 'No live AI competition right now',
         noMatchHint: 'As soon as an agent match goes live, this page switches into spectator stage mode.',
-        openDetail: 'Open full competition',
-        refresh: 'Refreshes every 30 seconds',
-        prize: 'Prize Pool',
-        participants: 'Agents',
-        updated: 'Updated',
-        chartTitle: 'Main Stage Equity',
-        chartTopHint: 'Top 10 agent equity curves, updated every 5 minutes.',
-        chartSelectedHint: 'Selected agent compared against the field average.',
-        chartMyHint: 'Your agent compared against the field average.',
+        chartTitle: 'Equity Curves',
+        chartTopHint: 'Top 10 agent equity curves',
+        chartSelectedHint: 'Selected agent vs field average',
+        chartMyHint: 'Your agent vs field average',
         clearCompare: 'Back to Top 10',
+        refresh: '30s refresh',
       };
 
   const canCompareMyAgent = showcaseQuery.data?.myAgentStatus === 'in_match' && !!showcaseQuery.data?.myAgent;
 
   useEffect(() => {
-    if (!isAuthenticated && chartMode === 'my') {
-      setChartMode('top');
-    }
+    if (!isAuthenticated && chartMode === 'my') setChartMode('top');
   }, [chartMode, isAuthenticated]);
 
   useEffect(() => {
-    if (!canCompareMyAgent && chartMode === 'my') {
-      setChartMode('top');
-    }
+    if (!canCompareMyAgent && chartMode === 'my') setChartMode('top');
   }, [canCompareMyAgent, chartMode]);
 
   useEffect(() => {
     if (!selectedAgentUsername || !showcaseQuery.data) return;
-    const exists = showcaseQuery.data.agentCurves.some((curve) => curve.username === selectedAgentUsername);
+    const exists = showcaseQuery.data.agentCurves.some((c) => c.username === selectedAgentUsername);
     if (!exists) {
       setSelectedAgentUsername(null);
-      if (chartMode === 'selected') {
-        setChartMode('top');
-      }
+      if (chartMode === 'selected') setChartMode('top');
     }
   }, [chartMode, selectedAgentUsername, showcaseQuery.data]);
 
   const baseChartData = useMemo(() => {
     if (!showcaseQuery.data) return [];
     return showcaseQuery.data.curvePoints.map((point, index) => {
-      const row: ChartRow = {
-        timestamp: point.timestamp,
-        label: point.label,
-        average: point.average,
-      };
+      const row: ChartRow = { timestamp: point.timestamp, label: point.label, average: point.average };
       for (const curve of showcaseQuery.data.agentCurves) {
         row[curve.username] = curve.values[index] ?? null;
       }
@@ -740,93 +611,58 @@ export default function AgentSpectatorSection() {
   }, [showcaseQuery.data]);
 
   const leaderboardItems = useMemo(
-    () => leaderboardQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    () => leaderboardQuery.data?.pages.flatMap((p) => p.items) ?? [],
     [leaderboardQuery.data],
   );
 
   const myCurve = useMemo(
-    () => showcaseQuery.data?.myAgent
-      ? showcaseQuery.data.agentCurves.find((curve) => curve.username === showcaseQuery.data?.myAgent?.username) ?? null
-      : null,
+    () =>
+      showcaseQuery.data?.myAgent
+        ? showcaseQuery.data.agentCurves.find((c) => c.username === showcaseQuery.data?.myAgent?.username) ?? null
+        : null,
     [showcaseQuery.data],
   );
 
   const selectedCurve = useMemo(
-    () => selectedAgentUsername
-      ? showcaseQuery.data?.agentCurves.find((curve) => curve.username === selectedAgentUsername) ?? null
-      : null,
+    () =>
+      selectedAgentUsername
+        ? showcaseQuery.data?.agentCurves.find((c) => c.username === selectedAgentUsername) ?? null
+        : null,
     [selectedAgentUsername, showcaseQuery.data],
   );
 
   const activeSeries = useMemo<ActiveSeries[]>(() => {
     if (!showcaseQuery.data) return [];
-
     if (chartMode === 'my' && myCurve) {
       return [
-        {
-          key: myCurve.username,
-          label: myCurve.username,
-          color: '#0ECB81',
-          pct: formatPct(myCurve.pnlPct),
-          strokeWidth: 3,
-        },
-        {
-          key: 'average',
-          label: copy.averageShort,
-          color: '#94A3B8',
-          pct: '',
-          strokeWidth: 2.1,
-          dashed: true,
-          opacity: 0.92,
-        },
+        { key: myCurve.username, label: myCurve.username, color: '#0ECB81', pct: formatPct(myCurve.pnlPct), strokeWidth: 3 },
+        { key: 'average', label: copy.averageShort, color: '#94A3B8', pct: '', strokeWidth: 2.1, dashed: true, opacity: 0.92 },
       ];
     }
-
     if (chartMode === 'selected' && selectedCurve) {
       return [
-        {
-          key: selectedCurve.username,
-          label: selectedCurve.username,
-          color: '#7AA2F7',
-          pct: formatPct(selectedCurve.pnlPct),
-          strokeWidth: 3,
-        },
-        {
-          key: 'average',
-          label: copy.averageShort,
-          color: '#94A3B8',
-          pct: '',
-          strokeWidth: 2.1,
-          dashed: true,
-          opacity: 0.92,
-        },
+        { key: selectedCurve.username, label: selectedCurve.username, color: '#7AA2F7', pct: formatPct(selectedCurve.pnlPct), strokeWidth: 3 },
+        { key: 'average', label: copy.averageShort, color: '#94A3B8', pct: '', strokeWidth: 2.1, dashed: true, opacity: 0.92 },
       ];
     }
-
-    return (showcaseQuery.data.topAgents ?? []).slice(0, 10).map((agent, index) => ({
+    return (showcaseQuery.data.topAgents ?? []).slice(0, 10).map((agent, i) => ({
       key: agent.username,
       label: agent.username,
-      color: LINE_COLORS[index % LINE_COLORS.length],
+      color: LINE_COLORS[i % LINE_COLORS.length],
       pct: formatPct(agent.pnlPct),
-      strokeWidth: index < 3 ? 2.9 : 2.1,
-      opacity: index < 5 ? 0.98 : 0.68,
+      strokeWidth: i < 3 ? 2.9 : 2.1,
+      opacity: i < 5 ? 0.98 : 0.68,
     }));
   }, [chartMode, copy.averageShort, myCurve, selectedCurve, showcaseQuery.data]);
 
-  const activeChartKeys = activeSeries.map((item) => item.key);
-  const chartScale = useMemo(
-    () => computeChartScale(baseChartData, activeChartKeys, 5000),
-    [activeChartKeys, baseChartData],
-  );
-
+  const activeChartKeys = activeSeries.map((s) => s.key);
+  const chartScale = useMemo(() => computeChartScale(baseChartData, activeChartKeys, 5000), [activeChartKeys, baseChartData]);
   const endpointMap = useMemo(
-    () => computeEndpointLayout(
-      baseChartData,
-      chartMode === 'top' ? activeSeries.slice(0, 6) : activeSeries,
-      chartScale,
-    ),
+    () => computeEndpointLayout(baseChartData, chartMode === 'top' ? activeSeries.slice(0, 6) : activeSeries, chartScale),
     [activeSeries, baseChartData, chartMode, chartScale],
   );
+
+  /* ── Loading / Error / Empty states ─────────────────────── */
 
   if (showcaseQuery.isLoading) {
     return (
@@ -838,20 +674,16 @@ export default function AgentSpectatorSection() {
     );
   }
 
-  if (showcaseQuery.isError || !showcaseQuery.data) {
-    return null;
-  }
+  if (showcaseQuery.isError || !showcaseQuery.data) return null;
 
   if (!showcaseQuery.data.competition) {
     return (
       <section className="relative overflow-hidden py-10">
         <div className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8">
-          <div className="rounded-[36px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(16,21,33,0.98),rgba(8,12,19,0.98))] px-6 py-14 text-center shadow-[0_35px_100px_rgba(0,0,0,0.35)]">
-            <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#F0B90B]/10 text-[#F0B90B]">
-              <Radio className="h-6 w-6" />
-            </div>
-            <h2 className="mt-5 text-3xl font-display font-bold text-white">{copy.noMatch}</h2>
-            <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-[#8E98A8]">{copy.noMatchHint}</p>
+          <div className="rounded-2xl border border-white/[0.08] bg-[#0D111A] px-6 py-14 text-center">
+            <Radio className="mx-auto h-10 w-10 text-[#F0B90B]" />
+            <h2 className="mt-4 text-2xl font-display font-bold text-white">{copy.noMatch}</h2>
+            <p className="mx-auto mt-2 max-w-xl text-sm text-[#8E98A8]">{copy.noMatchHint}</p>
           </div>
         </div>
       </section>
@@ -861,284 +693,229 @@ export default function AgentSpectatorSection() {
   const competition = showcaseQuery.data.competition;
   const backHref = isAuthenticated ? '/hub' : '/';
   const timeTicks = buildTimeTicks(competition.startTime, competition.endTime);
-  const lockedMyHint = !isAuthenticated
-    ? copy.compareLocked
-    : showcaseQuery.data.myAgentStatus === 'no_agent'
-      ? copy.noAgent
-      : showcaseQuery.data.myAgentStatus === 'not_in_match'
-        ? copy.notInMatch
-        : copy.compareLocked;
-  const chartHint = chartMode === 'selected'
-    ? copy.chartSelectedHint
-    : chartMode === 'my'
-      ? (canCompareMyAgent ? copy.chartMyHint : lockedMyHint)
-      : `${copy.chartTopHint}${!isAuthenticated ? `  ${copy.compareLocked}` : ''}`;
-  const chartModeLabel = chartMode === 'selected' && selectedCurve
-    ? `${selectedCurve.username} vs ${copy.averageShort}`
-    : chartMode === 'my'
-      ? copy.myMode
-      : copy.topMode;
+  const chartHint =
+    chartMode === 'selected'
+      ? copy.chartSelectedHint
+      : chartMode === 'my'
+        ? copy.chartMyHint
+        : copy.chartTopHint;
+  const chartModeLabel =
+    chartMode === 'selected' && selectedCurve
+      ? `${selectedCurve.username} vs ${copy.averageShort}`
+      : chartMode === 'my'
+        ? copy.myMode
+        : copy.topMode;
+
+  /* ── Render ─────────────────────────────────────────────── */
 
   return (
-    <section className="relative overflow-hidden bg-[linear-gradient(180deg,#080b10_0%,#0a0f17_100%)] py-8 md:py-10">
+    <section className="relative min-h-screen overflow-hidden bg-[#080b10]">
+      {/* Ambient glow */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-1/2 top-6 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[#F0B90B]/[0.05] blur-[150px]" />
-        <div className="absolute right-0 top-1/3 h-[320px] w-[320px] rounded-full bg-[#0ECB81]/[0.05] blur-[130px]" />
+        <div className="absolute left-1/2 top-0 h-[300px] w-[600px] -translate-x-1/2 rounded-full bg-[#F0B90B]/[0.04] blur-[120px]" />
+        <div className="absolute right-0 top-1/3 h-[200px] w-[200px] rounded-full bg-[#0ECB81]/[0.04] blur-[100px]" />
       </div>
 
-      <div className="relative mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div className="relative mx-auto max-w-[1680px] px-3 py-4 sm:px-5 lg:px-6">
+        {/* Top bar: back + refresh */}
+        <div className="mb-3 flex items-center justify-between">
           <Link
             href={backHref}
-            className="inline-flex items-center gap-2 text-sm font-medium text-[#9CA5B5] transition-colors hover:text-white"
+            className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#9CA5B5] transition-colors hover:text-white"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-3.5 w-3.5" />
             {copy.back}
           </Link>
-
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-[12px] text-[#AAB3C2]">
-            <Radio className="h-3.5 w-3.5 text-[#0ECB81]" />
+          <div className="inline-flex items-center gap-1.5 text-[11px] text-[#5E6673]">
+            <Radio className="h-3 w-3 text-[#0ECB81]" />
             {copy.refresh}
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-[40px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(15,20,31,0.98),rgba(8,12,19,0.98))] shadow-[0_40px_120px_rgba(0,0,0,0.42)]">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(240,185,11,0.06),transparent_24%),radial-gradient(circle_at_85%_8%,rgba(14,203,129,0.05),transparent_18%)]" />
-          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:48px_48px] opacity-[0.04]" />
-          <div className="grid border-b border-white/[0.06] xl:grid-cols-[minmax(0,1.18fr)_430px]">
-            <div className="relative p-6 md:p-8 xl:border-r xl:border-white/[0.06]">
-              <div className="text-[11px] uppercase tracking-[0.32em] text-[#F0B90B]">{copy.eyebrow}</div>
-              <h1 className="mt-4 max-w-[14ch] text-4xl font-display font-black leading-[0.95] text-white sm:text-[46px]">
-                {competition.title}
-              </h1>
-              <p className="mt-4 max-w-3xl text-sm leading-7 text-[#8E98A8]">{copy.subtitle}</p>
+        {/* Info bar — single compact row */}
+        <InfoBar
+          competition={competition}
+          refreshedAt={showcaseQuery.data.refreshedAt}
+          lang={lang}
+          isAuthenticated={isAuthenticated}
+        />
 
-              <div className="mt-6 grid gap-3 lg:grid-cols-2">
-                <StageMeta label="Tickers" value={competition.symbol} hint={copy.tickerHint} />
-                <StageMeta
-                  label={lang === 'zh' ? '赛况总览' : 'Overview'}
-                  value={`${competition.prizePool}U / ${competition.participantCount}`}
-                  hint={copy.overviewHint}
-                />
+        {/* Main content: Chart (dominant) | Chat | Leaderboard */}
+        <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px_300px]">
+          {/* ── Chart area (dominant) ── */}
+          <div className="rounded-2xl border border-white/[0.06] bg-[#0A0E16] p-4 md:p-5">
+            {/* Chart controls */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.18em] text-[#7D8798]">{chartModeLabel}</div>
+                <div className="mt-1 text-base font-semibold text-white">{copy.chartTitle}</div>
               </div>
 
-              <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                <div className="rounded-[22px] border border-white/[0.06] bg-white/[0.025] px-4 py-3.5 text-[13px] leading-6 text-[#D4DBE7]">
-                  <span className="text-[#F0B90B]">{lang === 'zh' ? 'Rule' : 'Rule'}</span>
-                  <span className="ml-2">{copy.rule}</span>
-                </div>
-                <div className="rounded-[22px] border border-white/[0.06] bg-white/[0.025] px-4 py-3.5 text-[13px] leading-6 text-[#D4DBE7]">
-                  <span className="text-[#F0B90B]">{lang === 'zh' ? 'Mode' : 'Mode'}</span>
-                  <span className="ml-2">{copy.prompt}</span>
-                </div>
-              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {chartMode === 'selected' && selectedCurve ? (
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedAgentUsername(null); setChartMode('top'); }}
+                    className="rounded-full border border-[#7AA2F7]/30 bg-[#7AA2F7]/10 px-3 py-1.5 text-[11px] font-medium text-[#7AA2F7] transition-colors hover:bg-[#7AA2F7]/14"
+                  >
+                    {selectedCurve.username} · {copy.clearCompare}
+                  </button>
+                ) : null}
 
-              <div className="mt-5 flex flex-wrap gap-3">
-                <div className="rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-[12px] text-[#D1D4DC]">
-                  {copy.updated}: {formatUpdatedAt(showcaseQuery.data.refreshedAt, lang)}
+                <div className="inline-flex rounded-full border border-white/[0.08] bg-white/[0.03] p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedAgentUsername(null); setChartMode('top'); }}
+                    className={`rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors ${
+                      chartMode === 'top' ? 'bg-[#F0B90B] text-[#0B0E11]' : 'text-[#D4DBE7]'
+                    }`}
+                  >
+                    {copy.topMode}
+                  </button>
+                  {isAuthenticated ? (
+                    <button
+                      type="button"
+                      onClick={() => { if (!canCompareMyAgent) return; setSelectedAgentUsername(null); setChartMode('my'); }}
+                      disabled={!canCompareMyAgent}
+                      className={`rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors ${
+                        chartMode === 'my'
+                          ? 'bg-[#0ECB81] text-[#0B0E11]'
+                          : !canCompareMyAgent
+                            ? 'cursor-not-allowed text-[#5E6673]'
+                            : 'text-[#D4DBE7]'
+                      }`}
+                    >
+                      {copy.myMode}
+                    </button>
+                  ) : null}
                 </div>
-                <div className="rounded-full border border-[#F0B90B]/20 bg-[#F0B90B]/10 px-4 py-2 text-[12px] text-[#F0B90B]">
-                  {copy.prize}: {competition.prizePool}U
-                </div>
-                <div className="rounded-full border border-[#0ECB81]/20 bg-[#0ECB81]/10 px-4 py-2 text-[12px] text-[#0ECB81]">
-                  {copy.participants}: {competition.participantCount}
-                </div>
-                <Link
-                  href={isAuthenticated ? `/watch/${competition.slug}` : '/login'}
-                  className="inline-flex items-center gap-2 rounded-full bg-[#F0B90B] px-4 py-2 text-[12px] font-semibold text-[#0B0E11] transition-colors hover:bg-[#F0B90B]/90"
-                >
-                  {copy.openDetail}
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Link>
               </div>
             </div>
 
-            <div className="relative p-6 md:p-8">
-              <TopDeck agents={showcaseQuery.data.topAgents} lang={lang} />
+            {/* Agent ribbon */}
+            <div className="mt-3 -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+              {(showcaseQuery.data.topAgents ?? []).slice(0, 10).map((agent, i) => (
+                <div
+                  key={agent.username}
+                  className="shrink-0 rounded-full border border-white/[0.06] bg-white/[0.02] px-3 py-1.5 text-[11px]"
+                >
+                  <span className="inline-block h-2 w-2 rounded-full mr-1.5" style={{ backgroundColor: LINE_COLORS[i % LINE_COLORS.length] }} />
+                  <span className="font-medium text-white">#{agent.rank}</span>
+                  <span className="ml-1 text-[#AAB3C2] truncate max-w-[80px] inline-block align-bottom">{agent.username}</span>
+                  <span className={`ml-1.5 font-semibold ${toneForPnl(agent.pnlPct)}`}>{formatPct(agent.pnlPct)}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Chart */}
+            <div className="relative mt-3 overflow-hidden rounded-xl border border-white/[0.05] bg-[#080C14] p-3">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(240,185,11,0.05),transparent_28%)]" />
+              <div className="relative mb-2 flex items-center justify-between text-[11px]">
+                <span className="text-[#AAB3C2]">{chartHint}</span>
+                <span className="rounded-md border border-white/[0.06] bg-white/[0.02] px-2 py-0.5 font-mono text-[#7D8798]">
+                  {competition.symbol}
+                </span>
+              </div>
+
+              <div className="relative" style={{ height: CHART_HEIGHT }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={baseChartData} margin={{ top: 14, right: 148, left: 6, bottom: 8 }}>
+                    <defs>
+                      <filter id="agent-line-glow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur stdDeviation="2.4" result="coloredBlur" />
+                        <feMerge>
+                          <feMergeNode in="coloredBlur" />
+                          <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                      </filter>
+                    </defs>
+                    <CartesianGrid stroke="rgba(255,255,255,0.055)" vertical={false} />
+                    <XAxis
+                      type="number"
+                      dataKey="timestamp"
+                      domain={[competition.startTime, competition.endTime]}
+                      ticks={timeTicks}
+                      stroke="#7D8798"
+                      tick={{ fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                      minTickGap={28}
+                      tickFormatter={(v) => formatAxisTime(Number(v), lang, competition.startTime, competition.endTime)}
+                    />
+                    <YAxis
+                      domain={[chartScale.min, chartScale.max]}
+                      ticks={chartScale.ticks}
+                      allowDataOverflow
+                      stroke="#7D8798"
+                      tick={{ fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={78}
+                      tickFormatter={(v) => formatEquity(Number(v))}
+                    />
+                    <Tooltip
+                      labelFormatter={(label) => formatAxisTime(Number(label), lang, competition.startTime, competition.endTime)}
+                      contentStyle={{
+                        background: '#0D111A',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: 12,
+                      }}
+                      formatter={(value, name) => {
+                        const normalized = Array.isArray(value) ? value[0] : value;
+                        return [
+                          typeof normalized === 'number' ? formatEquity(normalized) : '--',
+                          name === 'average' ? copy.averageShort : name,
+                        ];
+                      }}
+                    />
+                    {activeSeries.map((series) => (
+                      <Line
+                        key={series.key}
+                        type="linear"
+                        dataKey={series.key}
+                        dot={(props: { cx?: number; cy?: number; index?: number }) => (
+                          <LineEndpointDot {...props} seriesKey={series.key} labelMap={endpointMap} />
+                        )}
+                        activeDot={false}
+                        strokeWidth={series.strokeWidth}
+                        stroke={series.color}
+                        opacity={series.opacity ?? 1}
+                        strokeDasharray={series.dashed ? '6 5' : undefined}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        filter={series.dashed ? undefined : 'url(#agent-line-glow)'}
+                        connectNulls
+                        isAnimationActive={false}
+                      />
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
 
-          <div className="relative grid xl:grid-cols-[minmax(0,1.56fr)_360px_340px]">
-            <div className="relative border-b border-white/[0.06] p-5 md:p-6 xl:border-b-0 xl:border-r xl:border-white/[0.06] xl:p-8">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <div className="text-[11px] uppercase tracking-[0.18em] text-[#7D8798]">
-                    {chartModeLabel}
-                  </div>
-                  <div className="mt-2 text-lg font-semibold text-white">{copy.chartTitle}</div>
-                </div>
+          {/* ── Chat panel ── */}
+          <div className="h-[700px] xl:h-auto">
+            <AgentChatPanel messages={showcaseQuery.data.chatMessages} lang={lang} />
+          </div>
 
-                <div className="flex flex-wrap items-center gap-3">
-                  {chartMode === 'selected' && selectedCurve ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedAgentUsername(null);
-                        setChartMode('top');
-                      }}
-                      className="rounded-full border border-[#7AA2F7]/30 bg-[#7AA2F7]/10 px-3 py-2 text-[12px] font-medium text-[#7AA2F7] transition-colors hover:bg-[#7AA2F7]/14"
-                    >
-                      {selectedCurve.username} · {copy.clearCompare}
-                    </button>
-                  ) : null}
-
-                  <div className="inline-flex rounded-full border border-white/[0.08] bg-white/[0.03] p-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedAgentUsername(null);
-                        setChartMode('top');
-                      }}
-                      className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                        chartMode === 'top' ? 'bg-[#F0B90B] text-[#0B0E11]' : 'text-[#D4DBE7]'
-                      }`}
-                    >
-                      {copy.topMode}
-                    </button>
-                    {isAuthenticated ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!canCompareMyAgent) return;
-                          setSelectedAgentUsername(null);
-                          setChartMode('my');
-                        }}
-                        disabled={!canCompareMyAgent}
-                        className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                          chartMode === 'my'
-                            ? 'bg-[#0ECB81] text-[#0B0E11]'
-                            : !canCompareMyAgent
-                              ? 'cursor-not-allowed text-[#5E6673]'
-                              : 'text-[#D4DBE7]'
-                        }`}
-                      >
-                        {copy.myMode}
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-5">
-                <AgentRibbon agents={showcaseQuery.data.topAgents} />
-              </div>
-
-              <div className="relative mt-5 overflow-hidden rounded-[30px] border border-white/[0.07] bg-[linear-gradient(180deg,rgba(10,14,22,0.98),rgba(8,12,19,0.98))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] md:p-5">
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(240,185,11,0.07),transparent_28%)]" />
-                <div className="relative mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <div className="text-[12px] text-[#AAB3C2]">{chartHint}</div>
-                  <div className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-[11px] text-[#7D8798]">
-                    {competition.symbol}
-                  </div>
-                </div>
-
-                <div className="relative h-[560px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={baseChartData} margin={{ top: 14, right: 148, left: 6, bottom: 8 }}>
-                      <defs>
-                        <filter id="agent-line-glow" x="-50%" y="-50%" width="200%" height="200%">
-                          <feGaussianBlur stdDeviation="2.4" result="coloredBlur" />
-                          <feMerge>
-                            <feMergeNode in="coloredBlur" />
-                            <feMergeNode in="SourceGraphic" />
-                          </feMerge>
-                        </filter>
-                      </defs>
-                      <CartesianGrid stroke="rgba(255,255,255,0.055)" vertical={false} />
-                      <XAxis
-                        type="number"
-                        dataKey="timestamp"
-                        domain={[competition.startTime, competition.endTime]}
-                        ticks={timeTicks}
-                        stroke="#7D8798"
-                        tick={{ fontSize: 11 }}
-                        axisLine={false}
-                        tickLine={false}
-                        minTickGap={28}
-                        tickFormatter={(value) => formatAxisTime(Number(value), lang, competition.startTime, competition.endTime)}
-                      />
-                      <YAxis
-                        domain={[chartScale.min, chartScale.max]}
-                        ticks={chartScale.ticks}
-                        allowDataOverflow
-                        stroke="#7D8798"
-                        tick={{ fontSize: 11 }}
-                        axisLine={false}
-                        tickLine={false}
-                        width={78}
-                        tickFormatter={(value) => formatEquity(Number(value))}
-                      />
-                      <Tooltip
-                        labelFormatter={(label) =>
-                          formatAxisTime(Number(label), lang, competition.startTime, competition.endTime)
-                        }
-                        contentStyle={{
-                          background: '#0D111A',
-                          border: '1px solid rgba(255,255,255,0.08)',
-                          borderRadius: 16,
-                        }}
-                        formatter={(value, name) => {
-                          const normalized = Array.isArray(value) ? value[0] : value;
-                          return [
-                            typeof normalized === 'number'
-                              ? formatEquity(normalized)
-                              : '--',
-                            name === 'average' ? copy.averageShort : name,
-                          ];
-                        }}
-                      />
-
-                      {activeSeries.map((series) => (
-                        <Line
-                          key={series.key}
-                          type="linear"
-                          dataKey={series.key}
-                          dot={(props: { cx?: number; cy?: number; index?: number }) => (
-                            <LineEndpointDot {...props} seriesKey={series.key} labelMap={endpointMap} />
-                          )}
-                          activeDot={false}
-                          strokeWidth={series.strokeWidth}
-                          stroke={series.color}
-                          opacity={series.opacity ?? 1}
-                          strokeDasharray={series.dashed ? '6 5' : undefined}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          filter={series.dashed ? undefined : 'url(#agent-line-glow)'}
-                          connectNulls
-                          isAnimationActive={false}
-                        />
-                      ))}
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-
-            <div className="relative border-b border-white/[0.06] p-4 md:p-5 xl:border-b-0 xl:border-r xl:border-white/[0.06]">
-              <div className="h-[640px] xl:h-[760px]">
-                <AgentChatPanel messages={showcaseQuery.data.chatMessages} lang={lang} />
-              </div>
-            </div>
-
-            <div className="relative p-4 md:p-5">
-              <div className="h-[640px] xl:h-[760px]">
-                <LeaderboardPanel
-                  items={leaderboardItems}
-                  total={leaderboardQuery.data?.pages[0]?.total ?? competition.participantCount}
-                  myAgent={showcaseQuery.data.myAgent}
-                  lang={lang}
-                  containerRef={leaderboardContainerRef}
-                  onLoadMoreRef={loadMoreRef}
-                  isFetchingNextPage={leaderboardQuery.isFetchingNextPage}
-                  hasNextPage={!!leaderboardQuery.hasNextPage}
-                  selectedAgentUsername={selectedAgentUsername}
-                  onSelectAgent={(username) => {
-                    setSelectedAgentUsername(username);
-                    setChartMode('selected');
-                  }}
-                />
-              </div>
-            </div>
+          {/* ── Leaderboard panel ── */}
+          <div className="h-[700px] xl:h-auto">
+            <LeaderboardPanel
+              items={leaderboardItems}
+              total={leaderboardQuery.data?.pages[0]?.total ?? competition.participantCount}
+              myAgent={showcaseQuery.data.myAgent}
+              lang={lang}
+              containerRef={leaderboardContainerRef}
+              onLoadMoreRef={loadMoreRef}
+              isFetchingNextPage={leaderboardQuery.isFetchingNextPage}
+              hasNextPage={!!leaderboardQuery.hasNextPage}
+              selectedAgentUsername={selectedAgentUsername}
+              onSelectAgent={(username) => {
+                setSelectedAgentUsername(username);
+                setChartMode('selected');
+              }}
+            />
           </div>
         </div>
       </div>

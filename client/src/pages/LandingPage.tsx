@@ -2,11 +2,8 @@ import LandingNavbar from '@/components/landing/LandingNavbar';
 import HeroSection from '@/components/landing/HeroSection';
 import CompetitionShowcase from '@/components/landing/CompetitionShowcase';
 import HowItWorks from '@/components/landing/HowItWorks';
-import RulesSection from '@/components/landing/RulesSection';
-import PrizeSection from '@/components/landing/PrizeSection';
-import TierSection from '@/components/landing/TierSection';
+import HighlightsSection from '@/components/landing/HighlightsSection';
 import LeaderboardSection from '@/components/landing/LeaderboardSection';
-import FAQSection from '@/components/landing/FAQSection';
 import BottomCTA from '@/components/landing/BottomCTA';
 import Footer from '@/components/landing/Footer';
 
@@ -21,13 +18,9 @@ export default function LandingPage(_props: LandingPageProps) {
       <HeroSection />
       <CompetitionShowcase />
       <HowItWorks />
-      <RulesSection />
-      <PrizeSection />
-      <TierSection />
+      <HighlightsSection />
       <LeaderboardSection />
-      <FAQSection />
       <BottomCTA />
-
       <Footer />
     </div>
   );
